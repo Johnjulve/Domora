@@ -5,6 +5,18 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.4] - 2026-11-04
+
+### Added
+- Interactive `TodayScreen` dashboard replacing placeholder in the persistent 4-tab application shell.
+- Dedicated, unfiltered dashboard stream providers (`dashboardTasksStreamProvider`, `dashboardRecordsStreamProvider`) guaranteeing strict metric isolation from transient UI tab filters.
+- Temporal Sanctuary greeting header with time-calibrated greetings ("Good morning", "Good afternoon", "Good evening") and localized date headers.
+- Real-time summary metric cards displaying live counts for Pending Tasks, Overdue alerts, and Total Registered Assets with scale-down overflow protection.
+- Quick action shortcuts to launch `AddTaskSheet` and `AddAssetSheet` modals directly from the dashboard.
+- "Today's Focus & Deadlines" agenda with priority-sorted overdue/due-today tasks, direct completion checkoff, and calm reassurance card when all items are caught up.
+- Recent activity feed displaying chronological updates across assets and tasks with direct modal inspection.
+- 2 new widget tests covering live dashboard metrics, focus completion, quick asset creation, and strict filter tab isolation (42 total passing tests).
+
 ## [0.1.0-alpha.3] - 2026-11-04
 
 ### Added

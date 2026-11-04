@@ -12,6 +12,8 @@ import 'package:domora/features/navigation/app_shell.dart';
 import 'package:domora/features/records/data/record_repository_impl.dart';
 import 'package:domora/features/records/domain/record.dart';
 import 'package:domora/features/tasks/data/task_repository_impl.dart';
+import 'package:domora/features/tasks/domain/task_item.dart';
+import 'package:domora/features/today/presentation/today_screen.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 
 void main() {
@@ -52,7 +54,8 @@ void main() {
       // Tap Today tab
       await tester.tap(find.text('Today'));
       await tester.pumpAndSettle();
-      expect(find.text('Daily Rhythm & Insights'), findsOneWidget);
+      expect(find.text('Quick Actions'), findsOneWidget);
+      expect(find.text("Today's Focus & Deadlines"), findsOneWidget);
 
       // Tap Vault tab
       await tester.tap(find.text('Vault'));
@@ -83,7 +86,7 @@ void main() {
 
       // Interactive dialog appears with clear explanation
       expect(find.text('Feature Under Construction'), findsOneWidget);
-      expect(find.textContaining('Stage 3 & Stage 5'), findsOneWidget);
+      expect(find.textContaining('Stage 5'), findsOneWidget);
 
       // Dismiss dialog
       await tester.tap(find.text('Understood'));
@@ -324,6 +327,149 @@ void main() {
       // Completed task is present with checked icon
       expect(find.text('Clean AC Air Filter'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    testWidgets('Today tab: displays live metrics, focus tasks, quick actions, and recent activity', (WidgetTester tester) async {
+      final wsRepo = WorkspaceRepositoryImpl(inMemoryDb);
+      final taskRepo = TaskRepositoryImpl(inMemoryDb);
+      await wsRepo.getOrCreateDefaultWorkspace();
+
+      // Seed an overdue task
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      await taskRepo.createTaskRecord(
+        record: Record(
+          id: 'urgent-task',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'task',
+          title: 'Pay Electricity Bill',
+          createdAt: yesterday,
+          updatedAt: yesterday,
+        ),
+        task: TaskItem(
+          recordId: 'urgent-task',
+          dueDate: yesterday,
+          priority: 'urgent',
+          status: 'pending',
+        ),
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Switch to Today tab
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      // Verify Metrics are rendered with live data
+      expect(find.text('Pending Tasks'), findsOneWidget);
+      expect(find.text('Overdue'), findsOneWidget);
+      expect(find.text('Total Assets'), findsOneWidget);
+
+      // Verify Overdue task is displayed under Today Focus
+      expect(find.text("Today's Focus & Deadlines"), findsOneWidget);
+      expect(find.text('Pay Electricity Bill'), findsWidgets);
+      expect(find.text('OVERDUE'), findsOneWidget);
+
+      // Check off the task directly from the Today dashboard
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.radio_button_unchecked).first);
+      await tester.pumpAndSettle();
+
+      // The overdue task is completed and the calm reassurance card displays
+      expect(find.text("You're all caught up"), findsOneWidget);
+
+      // Test Quick Action: tap "Add Asset" button
+      await tester.tap(find.text('Add Asset'));
+      await tester.pumpAndSettle();
+
+      // Modal bottom sheet opens
+      expect(find.text('New Asset Record'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Asset Title *'), 'MacBook Pro M3');
+      await tester.tap(find.text('Save Asset Record'));
+      await tester.pumpAndSettle();
+
+      // Recent updates list displays the newly saved asset on TodayScreen
+      expect(find.text('Recent Records Activity'), findsOneWidget);
+      expect(find.descendant(of: find.byType(TodayScreen), matching: find.text('MacBook Pro M3')), findsOneWidget);
+      expect(find.descendant(of: find.byType(TodayScreen), matching: find.text('ASSET')), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    testWidgets('Today tab metrics remain isolated from transient filters on Tasks and Records tabs', (WidgetTester tester) async {
+      final wsRepo = WorkspaceRepositoryImpl(inMemoryDb);
+      final taskRepo = TaskRepositoryImpl(inMemoryDb);
+      final recordRepo = RecordRepositoryImpl(inMemoryDb);
+      await wsRepo.getOrCreateDefaultWorkspace();
+
+      final now = DateTime.now().toUtc();
+      // Seed 1 active asset
+      await recordRepo.createAssetRecord(
+        record: Record(
+          id: 'test-car',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'asset',
+          title: 'Toyota Camry',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: const Asset(recordId: 'test-car', brand: 'Toyota'),
+      );
+
+      // Seed 1 pending overdue task
+      final yesterday = now.subtract(const Duration(days: 2));
+      await taskRepo.createTaskRecord(
+        record: Record(
+          id: 'task-service',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'task',
+          title: 'Oil Change',
+          createdAt: yesterday,
+          updatedAt: yesterday,
+        ),
+        task: TaskItem(
+          recordId: 'task-service',
+          dueDate: yesterday,
+          priority: 'urgent',
+          status: 'pending',
+        ),
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Switch to Today tab -> 1 asset, 1 pending task, 1 overdue
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Oil Change'), findsWidgets);
+      expect(find.text('OVERDUE'), findsOneWidget);
+
+      // Switch to Tasks tab and select "Completed" filter chip
+      await tester.tap(find.text('Tasks'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Completed'));
+      await tester.pumpAndSettle();
+      expect(find.text('No Completed Tasks'), findsOneWidget);
+
+      // Switch to Records tab and enter a search query that yields no matches
+      await tester.tap(find.text('Records'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'NonExistentProduct');
+      await tester.pumpAndSettle();
+      expect(find.text('No Matching Records'), findsOneWidget);
+
+      // Return to Today tab -> metrics and focus must remain intact and completely isolated!
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pending Tasks'), findsOneWidget);
+      expect(find.text('Total Assets'), findsOneWidget);
+      expect(find.text('Oil Change'), findsWidgets);
+      expect(find.text('OVERDUE'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));

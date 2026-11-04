@@ -97,6 +97,12 @@ final activeRecordsStreamProvider = StreamProvider<List<RecordWithAsset>>((ref) 
   );
 });
 
+/// Unfiltered stream provider of active records for dashboard summary and cross-feature feeds.
+final dashboardRecordsStreamProvider = StreamProvider<List<RecordWithAsset>>((ref) {
+  final repository = ref.watch(recordRepositoryProvider);
+  return repository.watchActiveRecordsByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
 /// Notifier for task status filtering ('pending', 'completed', 'all').
 class TaskFilterNotifier extends Notifier<String> {
   @override
@@ -118,4 +124,10 @@ final activeTasksStreamProvider = StreamProvider<List<RecordWithTask>>((ref) {
     AppConstants.defaultWorkspaceId,
     statusFilter: filter == 'all' ? null : filter,
   );
+});
+
+/// Unfiltered stream provider of active tasks for dashboard summary and focus computation.
+final dashboardTasksStreamProvider = StreamProvider<List<RecordWithTask>>((ref) {
+  final repository = ref.watch(taskRepositoryProvider);
+  return repository.watchTasksByWorkspace(AppConstants.defaultWorkspaceId);
 });

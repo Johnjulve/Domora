@@ -235,7 +235,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _AddTaskSheet(),
+      builder: (_) => const AddTaskSheet(),
     );
   }
 
@@ -243,7 +243,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _TaskDetailSheet(item: item),
+      builder: (_) => TaskDetailSheet(item: item),
     );
   }
 }
@@ -419,14 +419,14 @@ class _TaskCard extends StatelessWidget {
   }
 }
 
-class _AddTaskSheet extends ConsumerStatefulWidget {
-  const _AddTaskSheet();
+class AddTaskSheet extends ConsumerStatefulWidget {
+  const AddTaskSheet({super.key});
 
   @override
-  ConsumerState<_AddTaskSheet> createState() => _AddTaskSheetState();
+  ConsumerState<AddTaskSheet> createState() => _AddTaskSheetState();
 }
 
-class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
+class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -650,10 +650,10 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
   }
 }
 
-class _TaskDetailSheet extends ConsumerWidget {
+class TaskDetailSheet extends ConsumerWidget {
   final RecordWithTask item;
 
-  const _TaskDetailSheet({required this.item});
+  const TaskDetailSheet({super.key, required this.item});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
