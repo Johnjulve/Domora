@@ -6,6 +6,9 @@ import '../../features/categories/data/category_repository_impl.dart';
 import '../../features/categories/domain/category.dart';
 import '../../features/records/data/record_repository_impl.dart';
 import '../../features/records/domain/record.dart';
+import '../../features/tasks/data/task_repository_impl.dart';
+import '../../features/tasks/domain/task_item.dart';
+import '../../features/tasks/domain/task_repository.dart';
 import '../../features/workspaces/data/workspace_repository_impl.dart';
 import '../../features/workspaces/domain/workspace.dart';
 
@@ -32,6 +35,12 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
 final recordRepositoryProvider = Provider<RecordRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return RecordRepositoryImpl(db);
+});
+
+/// Provider for [TaskRepository].
+final taskRepositoryProvider = Provider<TaskRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return TaskRepositoryImpl(db);
 });
 
 /// FutureProvider that guarantees the default personal workspace & categories are initialized.
@@ -85,5 +94,28 @@ final activeRecordsStreamProvider = StreamProvider<List<RecordWithAsset>>((ref) 
     AppConstants.defaultWorkspaceId,
     searchQuery: query.trim().isEmpty ? null : query.trim(),
     categoryId: categoryId,
+  );
+});
+
+/// Notifier for task status filtering ('pending', 'completed', 'all').
+class TaskFilterNotifier extends Notifier<String> {
+  @override
+  String build() => 'pending';
+
+  void setFilter(String filter) => state = filter;
+}
+
+final selectedTaskFilterProvider = NotifierProvider<TaskFilterNotifier, String>(
+  TaskFilterNotifier.new,
+);
+
+/// Reactive stream provider for tasks in the default workspace with active status filter.
+final activeTasksStreamProvider = StreamProvider<List<RecordWithTask>>((ref) {
+  final repository = ref.watch(taskRepositoryProvider);
+  final filter = ref.watch(selectedTaskFilterProvider);
+
+  return repository.watchTasksByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    statusFilter: filter == 'all' ? null : filter,
   );
 });

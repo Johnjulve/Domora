@@ -69,3 +69,21 @@ class Assets extends Table {
   @override
   Set<Column> get primaryKey => {recordId};
 }
+
+/// Specialized table definition for Tasks & Responsibilities, linked 1-to-1 to a parent Record.
+@DataClassName('TaskEntity')
+@TableIndex(name: 'tasks_status_due_idx', columns: {#status, #dueDate})
+class Tasks extends Table {
+  @ReferenceName('taskRecord')
+  TextColumn get recordId => text().references(Records, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  TextColumn get priority => text().withDefault(const Constant('medium'))(); // 'low', 'medium', 'high', 'urgent'
+  TextColumn get status => text().withDefault(const Constant('pending'))(); // 'pending', 'in_progress', 'completed', 'cancelled'
+  DateTimeColumn get completedAt => dateTime().nullable()();
+  TextColumn get recurrenceRule => text().nullable()(); // 'none', 'daily', 'weekly', 'monthly', 'yearly'
+  @ReferenceName('tasksForAsset')
+  TextColumn get assetRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+
+  @override
+  Set<Column> get primaryKey => {recordId};
+}
