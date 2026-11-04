@@ -40,6 +40,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+.kotlin/
 
 # Design prototypes and exports
 /docs/design/
