@@ -87,3 +87,22 @@ class Tasks extends Table {
   @override
   Set<Column> get primaryKey => {recordId};
 }
+
+/// Specialized table definition for Documents & Attachments, linked 1-to-1 to a parent Record.
+@DataClassName('DocumentEntity')
+@TableIndex(name: 'documents_linked_asset_idx', columns: {#linkedAssetRecordId})
+@TableIndex(name: 'documents_type_idx', columns: {#documentType})
+class Documents extends Table {
+  @ReferenceName('documentRecord')
+  TextColumn get recordId => text().references(Records, #id, onDelete: KeyAction.cascade)();
+  TextColumn get fileName => text().withLength(min: 1, max: 255)();
+  TextColumn get filePath => text().nullable()();
+  TextColumn get documentType => text().withDefault(const Constant('general'))(); // 'warranty', 'receipt', 'manual', 'deed', 'id', 'general'
+  IntColumn get fileSizeBytes => integer().nullable()();
+  TextColumn get mimeType => text().nullable()();
+  @ReferenceName('documentsForAsset')
+  TextColumn get linkedAssetRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+
+  @override
+  Set<Column> get primaryKey => {recordId};
+}

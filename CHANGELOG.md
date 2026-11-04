@@ -5,6 +5,21 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.5] - 2026-11-05
+
+### Added
+- Schema Migration (v3 -> v4): Added `Documents` table with dedicated foreign key index on `linkedAssetRecordId` and `documentType`, supporting full cascading deletes and `ON DELETE SET NULL` upon parent asset deletion.
+- Pure domain models `DocumentItem`, `RecordWithDocument`, and calibrated `DocumentType` enum (`warranty`, `receipt`, `manual`, `deed`, `idCard`, `general`) with formatted file size computation.
+- `DocumentRepositoryImpl` with transactional atomic record insertion, soft-deletion, and reactive filtered streams (`watchDocumentsByWorkspace`, `getDocumentsByWorkspace`).
+- Interactive `VaultScreen` in persistent 4-tab application shell replacing the final placeholder:
+  - Horizontal filter chips (`All`, `Warranty`, `Receipt`, `Manual`, `Deed / Title`, `ID Card`).
+  - Document cards with document type iconography, file metadata, and linked asset association badges.
+  - Quick document creation modal (`AddDocumentSheet`) supporting file title, filename, category selection, file size, optional notes, MIME type auto-detection, and optional asset association.
+  - Document detail inspection sheet (`DocumentDetailSheet`) with full archival metadata and soft-delete confirmation dialog.
+- Riverpod providers (`documentRepositoryProvider`, `selectedVaultFilterProvider`, `activeDocumentsStreamProvider`, `dashboardDocumentsStreamProvider`, `activeAssetsStreamProvider`).
+- Comprehensive unit and widget tests in `test/features/vault/document_repository_test.dart` and `test/features/navigation/app_shell_test.dart` (49 total passing tests, 0 analyzer issues).
+- Full application milestone reached: 100% of all 4 bottom tabs (`Today`, `Records`, `Vault`, `Tasks`) are interactive and powered by offline-first SQLite queries with zero mock metrics or inert placeholder screens.
+
 ## [0.1.0-alpha.4] - 2026-11-04
 
 ### Added

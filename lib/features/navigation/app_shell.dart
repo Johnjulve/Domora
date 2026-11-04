@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/database_providers.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
-import '../../core/widgets/under_construction_dialog.dart';
 import '../records/presentation/records_screen.dart';
 import '../tasks/presentation/tasks_screen.dart';
 import '../today/presentation/today_screen.dart';
+import '../vault/presentation/vault_screen.dart';
 
 class SelectedTabIndexNotifier extends Notifier<int> {
   @override
@@ -32,7 +31,7 @@ class AppShell extends ConsumerWidget {
     final screens = [
       const TodayScreen(),
       const RecordsScreen(),
-      const _DocumentVaultPlaceholder(),
+      const VaultScreen(),
       const TasksScreen(),
     ];
 
@@ -77,54 +76,6 @@ class AppShell extends ConsumerWidget {
               label: 'Tasks',
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DocumentVaultPlaceholder extends StatelessWidget {
-  const _DocumentVaultPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Document Vault'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: AppColors.brandAccentSage,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.lock_outline, color: AppColors.brandPrimary, size: 36),
-              ),
-              const SizedBox(height: 16),
-              const Text('Encrypted Document Storage', style: AppTypography.cardTitle),
-              const SizedBox(height: 8),
-              const Text(
-                'Warranties, property deeds, birth certificates, and vehicle registrations stored offline.',
-                style: AppTypography.bodySecondary,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton(
-                onPressed: () => showUnderConstructionNotice(
-                  context,
-                  featureName: 'Document Vault & OCR Scanner',
-                  scheduledPhase: 'Stage 5',
-                ),
-                child: const Text('View Vault Schedule'),
-              ),
-            ],
-          ),
         ),
       ),
     );

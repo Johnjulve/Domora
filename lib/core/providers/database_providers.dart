@@ -9,6 +9,9 @@ import '../../features/records/domain/record.dart';
 import '../../features/tasks/data/task_repository_impl.dart';
 import '../../features/tasks/domain/task_item.dart';
 import '../../features/tasks/domain/task_repository.dart';
+import '../../features/vault/data/document_repository_impl.dart';
+import '../../features/vault/domain/document_item.dart';
+import '../../features/vault/domain/document_repository.dart';
 import '../../features/workspaces/data/workspace_repository_impl.dart';
 import '../../features/workspaces/domain/workspace.dart';
 
@@ -41,6 +44,12 @@ final recordRepositoryProvider = Provider<RecordRepository>((ref) {
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return TaskRepositoryImpl(db);
+});
+
+/// Provider for [DocumentRepository].
+final documentRepositoryProvider = Provider<DocumentRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return DocumentRepositoryImpl(db);
 });
 
 /// FutureProvider that guarantees the default personal workspace & categories are initialized.
@@ -130,4 +139,42 @@ final activeTasksStreamProvider = StreamProvider<List<RecordWithTask>>((ref) {
 final dashboardTasksStreamProvider = StreamProvider<List<RecordWithTask>>((ref) {
   final repository = ref.watch(taskRepositoryProvider);
   return repository.watchTasksByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
+/// Notifier for document vault filter ('all', 'warranty', 'receipt', 'manual', 'deed', 'id').
+class VaultFilterNotifier extends Notifier<String> {
+  @override
+  String build() => 'all';
+
+  void setFilter(String filter) => state = filter;
+}
+
+final selectedVaultFilterProvider = NotifierProvider<VaultFilterNotifier, String>(
+  VaultFilterNotifier.new,
+);
+
+/// Reactive stream provider for documents in the default workspace with active type filter.
+final activeDocumentsStreamProvider = StreamProvider<List<RecordWithDocument>>((ref) {
+  final repository = ref.watch(documentRepositoryProvider);
+  final filter = ref.watch(selectedVaultFilterProvider);
+
+  return repository.watchDocumentsByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    documentType: filter == 'all' ? null : filter,
+  );
+});
+
+/// Unfiltered stream provider of active documents for cross-feature aggregations.
+final dashboardDocumentsStreamProvider = StreamProvider<List<RecordWithDocument>>((ref) {
+  final repository = ref.watch(documentRepositoryProvider);
+  return repository.watchDocumentsByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
+/// Reactive stream provider for active assets in the default workspace (for document linking and asset selectors).
+final activeAssetsStreamProvider = StreamProvider<List<RecordWithAsset>>((ref) {
+  final repository = ref.watch(recordRepositoryProvider);
+  return repository.watchActiveRecordsByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    recordType: 'asset',
+  );
 });
