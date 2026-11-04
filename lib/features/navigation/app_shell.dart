@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/under_construction_dialog.dart';
 import '../records/presentation/records_screen.dart';
+import '../tasks/presentation/tasks_screen.dart';
 
 class SelectedTabIndexNotifier extends Notifier<int> {
   @override
@@ -31,7 +32,7 @@ class AppShell extends ConsumerWidget {
       const _TodayDashboardPlaceholder(),
       const RecordsScreen(),
       const _DocumentVaultPlaceholder(),
-      const _TasksRoutinesPlaceholder(),
+      const TasksScreen(),
     ];
 
     return workspaceAsync.when(
@@ -108,7 +109,7 @@ class _TodayDashboardPlaceholder extends StatelessWidget {
               const Text('Daily Rhythm & Insights', style: AppTypography.cardTitle),
               const SizedBox(height: 8),
               const Text(
-                'Personalized cadence, urgent deadlines, and daily domestic routines will be aggregated here.',
+                'Personalized agenda, overdue tasks, maintenance alerts, and recent record updates.',
                 style: AppTypography.bodySecondary,
                 textAlign: TextAlign.center,
               ),
@@ -116,10 +117,10 @@ class _TodayDashboardPlaceholder extends StatelessWidget {
               OutlinedButton(
                 onPressed: () => showUnderConstructionNotice(
                   context,
-                  featureName: 'Today Dashboard Insights',
-                  scheduledPhase: 'Stage 6',
+                  featureName: 'Today Dashboard',
+                  scheduledPhase: 'Stage 4',
                 ),
-                child: const Text('Preview Milestone Status'),
+                child: const Text('View Today Schedule'),
               ),
             ],
           ),
@@ -156,7 +157,7 @@ class _DocumentVaultPlaceholder extends StatelessWidget {
               const Text('Encrypted Document Storage', style: AppTypography.cardTitle),
               const SizedBox(height: 8),
               const Text(
-                'On-device document archiving, warranty PDF attachments, and receipt scanning.',
+                'Warranties, property deeds, birth certificates, and vehicle registrations stored offline.',
                 style: AppTypography.bodySecondary,
                 textAlign: TextAlign.center,
               ),
@@ -168,54 +169,6 @@ class _DocumentVaultPlaceholder extends StatelessWidget {
                   scheduledPhase: 'Stage 3 & Stage 5',
                 ),
                 child: const Text('View Vault Schedule'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TasksRoutinesPlaceholder extends StatelessWidget {
-  const _TasksRoutinesPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tasks & Routines'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: AppColors.brandAccentSage,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.checklist_outlined, color: AppColors.brandPrimary, size: 36),
-              ),
-              const SizedBox(height: 16),
-              const Text('Maintenance & Domestic Cadence', style: AppTypography.cardTitle),
-              const SizedBox(height: 8),
-              const Text(
-                'Recurring household tasks, smoke alarm checks, vehicle servicing, and local notifications.',
-                style: AppTypography.bodySecondary,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton(
-                onPressed: () => showUnderConstructionNotice(
-                  context,
-                  featureName: 'Tasks & Recurrence Engine',
-                  scheduledPhase: 'Stage 4',
-                ),
-                child: const Text('View Responsibilities Schedule'),
               ),
             ],
           ),

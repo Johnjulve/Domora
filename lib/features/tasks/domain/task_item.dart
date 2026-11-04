@@ -93,18 +93,20 @@ class TaskItem {
   bool get isCompleted => status == 'completed';
   bool get isPending => status == 'pending' || status == 'in_progress';
 
-  bool isOverdue([DateTime? referenceDate]) {
-    if (dueDate == null || isCompleted) return false;
-    final now = referenceDate ?? DateTime.now();
-    return dueDate!.isBefore(now);
-  }
-
   bool isDueToday([DateTime? referenceDate]) {
     if (dueDate == null || isCompleted) return false;
     final now = referenceDate ?? DateTime.now();
     return dueDate!.year == now.year &&
         dueDate!.month == now.month &&
         dueDate!.day == now.day;
+  }
+
+  bool isOverdue([DateTime? referenceDate]) {
+    if (dueDate == null || isCompleted) return false;
+    final now = referenceDate ?? DateTime.now();
+    if (isDueToday(now)) return false;
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    return dueDate!.isBefore(todayMidnight);
   }
 
   TaskItem copyWith({

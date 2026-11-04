@@ -1,15 +1,18 @@
-import 'package:domora/core/constants/app_constants.dart';
-import 'package:domora/core/database/app_database.dart';
-import 'package:domora/core/providers/database_providers.dart';
-import 'package:domora/features/categories/data/category_repository_impl.dart';
-import 'package:domora/features/navigation/app_shell.dart';
-import 'package:domora/features/records/data/record_repository_impl.dart';
-import 'package:domora/features/records/domain/record.dart';
-import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:domora/core/constants/app_constants.dart';
+import 'package:domora/core/database/app_database.dart';
+import 'package:domora/core/providers/database_providers.dart';
+import 'package:domora/core/theme/app_theme.dart';
+import 'package:domora/features/categories/data/category_repository_impl.dart';
+import 'package:domora/features/navigation/app_shell.dart';
+import 'package:domora/features/records/data/record_repository_impl.dart';
+import 'package:domora/features/records/domain/record.dart';
+import 'package:domora/features/tasks/data/task_repository_impl.dart';
+import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 
 void main() {
   late AppDatabase inMemoryDb;
@@ -29,9 +32,11 @@ void main() {
         workspaceRepositoryProvider.overrideWithValue(WorkspaceRepositoryImpl(inMemoryDb)),
         categoryRepositoryProvider.overrideWithValue(CategoryRepositoryImpl(inMemoryDb)),
         recordRepositoryProvider.overrideWithValue(RecordRepositoryImpl(inMemoryDb)),
+        taskRepositoryProvider.overrideWithValue(TaskRepositoryImpl(inMemoryDb)),
       ],
-      child: const MaterialApp(
-        home: AppShell(),
+      child: MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const AppShell(),
       ),
     );
   }
@@ -57,7 +62,8 @@ void main() {
       // Tap Tasks tab
       await tester.tap(find.text('Tasks'));
       await tester.pumpAndSettle();
-      expect(find.text('Maintenance & Domestic Cadence'), findsOneWidget);
+      expect(find.text('Tasks & Cadence'), findsOneWidget);
+      expect(find.text('All Caught Up'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));
@@ -67,15 +73,15 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      // Go to Vault tab
+      // Switch to Document Vault tab
       await tester.tap(find.text('Vault'));
       await tester.pumpAndSettle();
 
-      // Tap in-progress notice button
+      // Tap View Vault Schedule button
       await tester.tap(find.text('View Vault Schedule'));
       await tester.pumpAndSettle();
 
-      // Verify notice dialog appears with explicit phase attribution
+      // Interactive dialog appears with clear explanation
       expect(find.text('Feature Under Construction'), findsOneWidget);
       expect(find.textContaining('Stage 3 & Stage 5'), findsOneWidget);
 
@@ -265,6 +271,59 @@ void main() {
       final recordsInDb = await inMemoryDb.select(inMemoryDb.records).get();
       expect(recordsInDb.length, 1);
       expect(recordsInDb.first.deletedAt, isNotNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    testWidgets('Tasks tab: can create task, toggle completion, and filter by status', (WidgetTester tester) async {
+      final wsRepo = WorkspaceRepositoryImpl(inMemoryDb);
+      await wsRepo.getOrCreateDefaultWorkspace();
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Switch to Tasks tab
+      await tester.tap(find.text('Tasks'));
+      await tester.pumpAndSettle();
+
+      // Shows empty state initially
+      expect(find.text('All Caught Up'), findsOneWidget);
+
+      // Tap "Add First Task"
+      await tester.tap(find.text('Add First Task'));
+      await tester.pumpAndSettle();
+
+      // Modal bottom sheet opens
+      expect(find.text('New Task / Responsibility'), findsOneWidget);
+
+      // Enter task title
+      await tester.enterText(find.widgetWithText(TextFormField, 'Task Title *'), 'Clean AC Air Filter');
+
+      // Save task
+      await tester.tap(find.text('Save Task'));
+      await tester.pumpAndSettle();
+
+      // Modal closes, task card is displayed in Pending list
+      expect(find.text('New Task / Responsibility'), findsNothing);
+      expect(find.text('Clean AC Air Filter'), findsOneWidget);
+      expect(find.text('MEDIUM'), findsOneWidget);
+
+      // Toggle task completion via radio button
+      await tester.tap(find.byIcon(Icons.radio_button_unchecked));
+      await tester.pumpAndSettle();
+
+      // In Pending view, task disappears because it is completed
+      expect(find.text('Clean AC Air Filter'), findsNothing);
+      expect(find.text('All Caught Up'), findsOneWidget);
+
+      // Switch filter to "Completed"
+      await tester.tap(find.text('Completed'));
+      await tester.pumpAndSettle();
+
+      // Completed task is present with checked icon
+      expect(find.text('Clean AC Air Filter'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));

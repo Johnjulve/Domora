@@ -220,5 +220,27 @@ void main() {
         task: const TaskItem(recordId: 'stream-task'),
       );
     });
+
+    test('isDueToday and isOverdue correctly distinguish same-day deadlines', () {
+      final now = DateTime(2026, 11, 4, 15, 30);
+      final todayMidnight = DateTime(2026, 11, 4, 0, 0);
+      final yesterday = DateTime(2026, 11, 3, 23, 59);
+      final tomorrow = DateTime(2026, 11, 5, 10, 0);
+
+      final taskToday = TaskItem(recordId: 't1', dueDate: todayMidnight);
+      expect(taskToday.isDueToday(now), isTrue);
+      expect(taskToday.isOverdue(now), isFalse);
+
+      final taskYesterday = TaskItem(recordId: 't2', dueDate: yesterday);
+      expect(taskYesterday.isDueToday(now), isFalse);
+      expect(taskYesterday.isOverdue(now), isTrue);
+
+      final taskTomorrow = TaskItem(recordId: 't3', dueDate: tomorrow);
+      expect(taskTomorrow.isDueToday(now), isFalse);
+      expect(taskTomorrow.isOverdue(now), isFalse);
+
+      final taskCompleted = TaskItem(recordId: 't4', dueDate: yesterday, status: 'completed');
+      expect(taskCompleted.isOverdue(now), isFalse);
+    });
   });
 }
