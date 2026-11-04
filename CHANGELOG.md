@@ -5,6 +5,21 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.3] - 2026-11-04
+
+### Added
+- Schema Migration (v2 -> v3): Added `Tasks` table with composite index (`status`, `dueDate`) and foreign key relationships (`taskRecord` cascade delete, `tasksForAsset` setNull on asset delete).
+- Domain entities `TaskItem`, `RecordWithTask`, `TaskPriority`, and `TaskStatus` with deadline calculation helpers (`isDueToday`, `isOverdue`).
+- `TaskRepositoryImpl` with transactional creation, status toggles, soft deletion, and reactive Drift streams.
+- Interactive `TasksScreen` in persistent 4-tab shell with:
+  - Scrollable filter chips (`Pending`, `Completed`, `All`).
+  - Interactive status checkbox toggles with immediate database persistence.
+  - Priority badges (`Urgent`, `High`, `Medium`, `Low`) aligned with Sanctuary design tokens.
+  - Overflow-protected linked asset badges and deadline indicators.
+  - Quick task creation bottom sheet (`_AddTaskSheet`) with date picker and optional asset linking.
+  - Task detail inspection sheet (`_TaskDetailSheet`) with status toggles and safe soft-delete confirmation.
+- 7 new automated unit and widget tests covering task creation, asset link cascading `setNull`, deadline discrimination, and UI tab workflows (40 total passing tests).
+
 ## [0.1.0-alpha.2] - 2026-11-04
 
 ### Added
