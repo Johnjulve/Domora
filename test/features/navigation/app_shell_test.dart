@@ -7,6 +7,7 @@ import 'package:domora/core/constants/app_constants.dart';
 import 'package:domora/core/database/app_database.dart';
 import 'package:domora/core/providers/database_providers.dart';
 import 'package:domora/core/theme/app_theme.dart';
+import 'package:domora/core/widgets/under_construction_dialog.dart';
 import 'package:domora/features/categories/data/category_repository_impl.dart';
 import 'package:domora/features/navigation/app_shell.dart';
 import 'package:domora/features/records/data/record_repository_impl.dart';
@@ -14,6 +15,7 @@ import 'package:domora/features/records/domain/record.dart';
 import 'package:domora/features/tasks/data/task_repository_impl.dart';
 import 'package:domora/features/tasks/domain/task_item.dart';
 import 'package:domora/features/today/presentation/today_screen.dart';
+import 'package:domora/features/vault/data/document_repository_impl.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 
 void main() {
@@ -35,6 +37,7 @@ void main() {
         categoryRepositoryProvider.overrideWithValue(CategoryRepositoryImpl(inMemoryDb)),
         recordRepositoryProvider.overrideWithValue(RecordRepositoryImpl(inMemoryDb)),
         taskRepositoryProvider.overrideWithValue(TaskRepositoryImpl(inMemoryDb)),
+        documentRepositoryProvider.overrideWithValue(DocumentRepositoryImpl(inMemoryDb)),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
@@ -60,7 +63,8 @@ void main() {
       // Tap Vault tab
       await tester.tap(find.text('Vault'));
       await tester.pumpAndSettle();
-      expect(find.text('Encrypted Document Storage'), findsOneWidget);
+      expect(find.text('Document Vault'), findsOneWidget);
+      expect(find.text('Encrypted Vault Empty'), findsOneWidget);
 
       // Tap Tasks tab
       await tester.tap(find.text('Tasks'));
@@ -72,21 +76,35 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     });
 
-    testWidgets('Noticeable in-progress feedback dialog triggers on unfinished features', (WidgetTester tester) async {
-      await tester.pumpWidget(buildTestWidget());
+    testWidgets('showUnderConstructionNotice renders notice dialog explicitly', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showUnderConstructionNotice(
+                    context,
+                    featureName: 'Cloud Sync',
+                    scheduledPhase: 'Stage 6',
+                  ),
+                  child: const Text('Trigger Notice'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      // Switch to Document Vault tab
-      await tester.tap(find.text('Vault'));
-      await tester.pumpAndSettle();
-
-      // Tap View Vault Schedule button
-      await tester.tap(find.text('View Vault Schedule'));
+      // Tap button to trigger notice
+      await tester.tap(find.text('Trigger Notice'));
       await tester.pumpAndSettle();
 
       // Interactive dialog appears with clear explanation
       expect(find.text('Feature Under Construction'), findsOneWidget);
-      expect(find.textContaining('Stage 5'), findsOneWidget);
+      expect(find.textContaining('Stage 6'), findsOneWidget);
 
       // Dismiss dialog
       await tester.tap(find.text('Understood'));
@@ -470,6 +488,93 @@ void main() {
       expect(find.text('Total Assets'), findsOneWidget);
       expect(find.text('Oil Change'), findsWidgets);
       expect(find.text('OVERDUE'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    testWidgets('Vault tab: can create document, view details, filter by category, and soft-delete', (WidgetTester tester) async {
+      final wsRepo = WorkspaceRepositoryImpl(inMemoryDb);
+      await wsRepo.getOrCreateDefaultWorkspace();
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Switch to Vault tab
+      await tester.tap(find.text('Vault'));
+      await tester.pumpAndSettle();
+
+      // Empty state card
+      expect(find.text('Encrypted Vault Empty'), findsOneWidget);
+
+      // Tap Add First Document
+      await tester.tap(find.text('Add First Document'));
+      await tester.pumpAndSettle();
+
+      // New Vault Document modal
+      expect(find.text('New Vault Document'), findsOneWidget);
+
+      // Fill fields
+      await tester.enterText(find.widgetWithText(TextFormField, 'Document Title *'), 'Samsung Refrigerator Warranty');
+      await tester.enterText(find.widgetWithText(TextFormField, 'File Name *'), 'warranty.pdf');
+      await tester.enterText(find.widgetWithText(TextFormField, 'File Size (KB)'), '1024');
+
+      // Save document
+      await tester.tap(find.text('Save Document'));
+      await tester.pumpAndSettle();
+
+      // Modal closes, document card rendered
+      expect(find.text('New Vault Document'), findsNothing);
+      expect(find.text('Samsung Refrigerator Warranty'), findsOneWidget);
+      expect(find.text('WARRANTY'), findsOneWidget);
+      expect(find.text('warranty.pdf • 1.0 MB'), findsOneWidget);
+
+      // Switch to Warranty filter chip -> still visible
+      await tester.tap(find.text('Warranty'));
+      await tester.pumpAndSettle();
+      expect(find.text('Samsung Refrigerator Warranty'), findsOneWidget);
+
+      // Switch to Receipt filter chip -> empty state rendered
+      await tester.tap(find.text('Receipt'));
+      await tester.pumpAndSettle();
+      expect(find.text('Samsung Refrigerator Warranty'), findsNothing);
+      expect(find.text('No Matching Documents'), findsOneWidget);
+
+      // Switch back to All filter chip
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.text('Samsung Refrigerator Warranty'), findsOneWidget);
+
+      // Tap document card to open detail sheet
+      await tester.tap(find.text('Samsung Refrigerator Warranty'));
+      await tester.pumpAndSettle();
+
+      // Verify detail sheet attributes
+      expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('warranty.pdf')), findsOneWidget);
+      expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('WARRANTY')), findsOneWidget);
+
+      // Tap Move to Trash button
+      await tester.tap(find.text('Move to Trash'));
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog appears
+      expect(find.text('Move to Trash?'), findsOneWidget);
+
+      // Confirm deletion
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Move to Trash'));
+      await tester.pumpAndSettle();
+
+      // SnackBar confirmation appears
+      expect(find.text('Moved "Samsung Refrigerator Warranty" to trash'), findsOneWidget);
+
+      // Document is removed from active vault view
+      expect(find.text('Samsung Refrigerator Warranty'), findsNothing);
+      expect(find.text('Encrypted Vault Empty'), findsOneWidget);
+
+      // Verify soft deletion directly in Drift SQLite database
+      final docsInDb = await inMemoryDb.select(inMemoryDb.records).get();
+      expect(docsInDb.length, 1);
+      expect(docsInDb.first.deletedAt, isNotNull);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));

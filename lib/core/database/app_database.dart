@@ -9,7 +9,7 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Workspaces, Categories, Records, Assets, Tasks])
+@DriftDatabase(tables: [Workspaces, Categories, Records, Assets, Tasks, Documents])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -31,6 +31,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           await m.createTable(tasks);
+        }
+        if (from < 4) {
+          await m.createTable(documents);
         }
       },
       beforeOpen: (details) async {
