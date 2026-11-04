@@ -7,6 +7,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/under_construction_dialog.dart';
 import '../records/presentation/records_screen.dart';
 import '../tasks/presentation/tasks_screen.dart';
+import '../today/presentation/today_screen.dart';
 
 class SelectedTabIndexNotifier extends Notifier<int> {
   @override
@@ -29,7 +30,7 @@ class AppShell extends ConsumerWidget {
     final selectedIndex = ref.watch(selectedTabIndexProvider);
 
     final screens = [
-      const _TodayDashboardPlaceholder(),
+      const TodayScreen(),
       const RecordsScreen(),
       const _DocumentVaultPlaceholder(),
       const TasksScreen(),
@@ -82,54 +83,6 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-class _TodayDashboardPlaceholder extends StatelessWidget {
-  const _TodayDashboardPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Today'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: AppColors.brandAccentSage,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.wb_sunny_outlined, color: AppColors.brandPrimary, size: 36),
-              ),
-              const SizedBox(height: 16),
-              const Text('Daily Rhythm & Insights', style: AppTypography.cardTitle),
-              const SizedBox(height: 8),
-              const Text(
-                'Personalized agenda, overdue tasks, maintenance alerts, and recent record updates.',
-                style: AppTypography.bodySecondary,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              OutlinedButton(
-                onPressed: () => showUnderConstructionNotice(
-                  context,
-                  featureName: 'Today Dashboard',
-                  scheduledPhase: 'Stage 4',
-                ),
-                child: const Text('View Today Schedule'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DocumentVaultPlaceholder extends StatelessWidget {
   const _DocumentVaultPlaceholder();
 
@@ -166,7 +119,7 @@ class _DocumentVaultPlaceholder extends StatelessWidget {
                 onPressed: () => showUnderConstructionNotice(
                   context,
                   featureName: 'Document Vault & OCR Scanner',
-                  scheduledPhase: 'Stage 3 & Stage 5',
+                  scheduledPhase: 'Stage 5',
                 ),
                 child: const Text('View Vault Schedule'),
               ),

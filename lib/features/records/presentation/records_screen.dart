@@ -309,7 +309,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _AddAssetSheet(),
+      builder: (_) => const AddAssetSheet(),
     );
   }
 
@@ -317,19 +317,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _AssetDetailSheet(item: item),
+      builder: (_) => AssetDetailSheet(item: item),
     );
   }
 }
 
-class _AddAssetSheet extends ConsumerStatefulWidget {
-  const _AddAssetSheet();
+class AddAssetSheet extends ConsumerStatefulWidget {
+  const AddAssetSheet({super.key});
 
   @override
-  ConsumerState<_AddAssetSheet> createState() => _AddAssetSheetState();
+  ConsumerState<AddAssetSheet> createState() => _AddAssetSheetState();
 }
 
-class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
+class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _brandController = TextEditingController();
@@ -558,10 +558,10 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
   }
 }
 
-class _AssetDetailSheet extends ConsumerWidget {
+class AssetDetailSheet extends ConsumerWidget {
   final RecordWithAsset item;
 
-  const _AssetDetailSheet({required this.item});
+  const AssetDetailSheet({super.key, required this.item});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
