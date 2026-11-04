@@ -41,5 +41,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Design prototypes and exports
+/docs/design/
+
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
