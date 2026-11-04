@@ -1,5 +1,6 @@
 import 'package:domora/core/constants/app_constants.dart';
 import 'package:domora/core/database/app_database.dart';
+import 'package:domora/features/categories/data/category_repository_impl.dart';
 import 'package:domora/features/records/data/record_repository_impl.dart';
 import 'package:domora/features/records/domain/record.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
@@ -11,14 +12,17 @@ void main() {
   late AppDatabase db;
   late RecordRepository recordRepository;
   late WorkspaceRepository workspaceRepository;
+  late CategoryRepositoryImpl categoryRepository;
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     recordRepository = RecordRepositoryImpl(db);
     workspaceRepository = WorkspaceRepositoryImpl(db);
+    categoryRepository = CategoryRepositoryImpl(db);
 
-    // Bootstrap default personal workspace
+    // Bootstrap default personal workspace and system categories
     await workspaceRepository.getOrCreateDefaultWorkspace();
+    await categoryRepository.seedDefaultCategories(AppConstants.defaultWorkspaceId);
   });
 
   tearDown(() async {
@@ -226,6 +230,114 @@ void main() {
           updatedAt: now,
         ),
       );
+    });
+
+    test('Querying active records filters by categoryId', () async {
+      final now = DateTime.utc(2026, 11, 4, 12, 0, 0);
+
+      await recordRepository.createAssetRecord(
+        record: Record(
+          id: 'rec-cat-appliances',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          categoryId: 'cat-appliances',
+          recordType: 'asset',
+          title: 'Bosch Series 8 Dishwasher',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: const Asset(recordId: 'rec-cat-appliances', brand: 'Bosch'),
+      );
+
+      await recordRepository.createAssetRecord(
+        record: Record(
+          id: 'rec-cat-vehicles',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          categoryId: 'cat-vehicles',
+          recordType: 'asset',
+          title: 'Mazda CX-5',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: const Asset(recordId: 'rec-cat-vehicles', brand: 'Mazda'),
+      );
+
+      final appliances = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        categoryId: 'cat-appliances',
+      );
+      expect(appliances.length, 1);
+      expect(appliances.first.record.title, 'Bosch Series 8 Dishwasher');
+
+      final vehicles = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        categoryId: 'cat-vehicles',
+      );
+      expect(vehicles.length, 1);
+      expect(vehicles.first.record.title, 'Mazda CX-5');
+    });
+
+    test('Querying active records searches across title, brand, model, and location', () async {
+      final now = DateTime.utc(2026, 11, 4, 12, 0, 0);
+
+      await recordRepository.createAssetRecord(
+        record: Record(
+          id: 'rec-search-1',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'asset',
+          title: 'Workstation Laptop',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: const Asset(
+          recordId: 'rec-search-1',
+          brand: 'Apple',
+          model: 'MacBook Pro 16',
+          serialNumber: 'C02XYZ999',
+          locationDescription: 'Attic Office',
+        ),
+      );
+
+      // Match by title
+      final matchTitle = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        searchQuery: 'laptop',
+      );
+      expect(matchTitle.length, 1);
+
+      // Match by brand
+      final matchBrand = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        searchQuery: 'apple',
+      );
+      expect(matchBrand.length, 1);
+
+      // Match by model
+      final matchModel = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        searchQuery: 'macbook',
+      );
+      expect(matchModel.length, 1);
+
+      // Match by serial number
+      final matchSerial = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        searchQuery: 'XYZ999',
+      );
+      expect(matchSerial.length, 1);
+
+      // Match by location
+      final matchLoc = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        searchQuery: 'attic',
+      );
+      expect(matchLoc.length, 1);
+
+      // Non-matching query returns empty
+      final noMatch = await recordRepository.getActiveRecordsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+        searchQuery: 'NonExistentThing',
+      );
+      expect(noMatch.isEmpty, isTrue);
     });
   });
 }
