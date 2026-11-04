@@ -63,8 +63,15 @@ class RecordRepositoryImpl implements RecordRepository {
   Future<List<RecordWithAsset>> getActiveRecordsByWorkspace(
     String workspaceId, {
     String? recordType,
+    String? categoryId,
+    String? searchQuery,
   }) async {
-    final query = _buildActiveWorkspaceQuery(workspaceId, recordType: recordType);
+    final query = _buildActiveWorkspaceQuery(
+      workspaceId,
+      recordType: recordType,
+      categoryId: categoryId,
+      searchQuery: searchQuery,
+    );
     final rows = await query.get();
 
     return rows.map((row) {
@@ -81,8 +88,15 @@ class RecordRepositoryImpl implements RecordRepository {
   Stream<List<RecordWithAsset>> watchActiveRecordsByWorkspace(
     String workspaceId, {
     String? recordType,
+    String? categoryId,
+    String? searchQuery,
   }) {
-    final query = _buildActiveWorkspaceQuery(workspaceId, recordType: recordType);
+    final query = _buildActiveWorkspaceQuery(
+      workspaceId,
+      recordType: recordType,
+      categoryId: categoryId,
+      searchQuery: searchQuery,
+    );
 
     return query.watch().map((rows) {
       return rows.map((row) {
@@ -127,7 +141,12 @@ class RecordRepositoryImpl implements RecordRepository {
     );
   }
 
-  JoinedSelectStatement _buildActiveWorkspaceQuery(String workspaceId, {String? recordType}) {
+  JoinedSelectStatement _buildActiveWorkspaceQuery(
+    String workspaceId, {
+    String? recordType,
+    String? categoryId,
+    String? searchQuery,
+  }) {
     final query = _db.select(_db.records).join([
       leftOuterJoin(_db.assets, _db.assets.recordId.equalsExp(_db.records.id)),
     ]);
@@ -135,6 +154,19 @@ class RecordRepositoryImpl implements RecordRepository {
     var filter = _db.records.workspaceId.equals(workspaceId) & _db.records.deletedAt.isNull();
     if (recordType != null) {
       filter = filter & _db.records.recordType.equals(recordType);
+    }
+    if (categoryId != null) {
+      filter = filter & _db.records.categoryId.equals(categoryId);
+    }
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final term = '%${searchQuery.trim().toLowerCase()}%';
+      final searchExp = _db.records.title.lower().like(term) |
+          _db.records.description.lower().like(term) |
+          _db.assets.brand.lower().like(term) |
+          _db.assets.model.lower().like(term) |
+          _db.assets.serialNumber.lower().like(term) |
+          _db.assets.locationDescription.lower().like(term);
+      filter = filter & searchExp;
     }
 
     query
@@ -148,6 +180,7 @@ class RecordRepositoryImpl implements RecordRepository {
     return Record(
       id: entity.id,
       workspaceId: entity.workspaceId,
+      categoryId: entity.categoryId,
       recordType: entity.recordType,
       title: entity.title,
       description: entity.description,
@@ -179,6 +212,7 @@ class RecordRepositoryImpl implements RecordRepository {
     return RecordsCompanion(
       id: Value(record.id),
       workspaceId: Value(record.workspaceId),
+      categoryId: Value(record.categoryId),
       recordType: Value(record.recordType),
       title: Value(record.title),
       description: Value(record.description),

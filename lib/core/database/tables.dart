@@ -15,12 +15,29 @@ class Workspaces extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Table definition for Categories (Properties, Vehicles, Appliances, Electronics, etc.).
+@DataClassName('CategoryEntity')
+class Categories extends Table {
+  TextColumn get id => text()();
+  TextColumn get workspaceId => text().references(Workspaces, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text().withLength(min: 1, max: 100)();
+  TextColumn get iconKey => text().nullable()();
+  TextColumn get colorHex => text().nullable()();
+  BoolColumn get isSystem => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Universal table definition for Records.
 @DataClassName('RecordEntity')
 @TableIndex(name: 'records_workspace_deleted_idx', columns: {#workspaceId, #deletedAt})
+@TableIndex(name: 'records_category_idx', columns: {#categoryId})
 class Records extends Table {
   TextColumn get id => text()();
   TextColumn get workspaceId => text().references(Workspaces, #id, onDelete: KeyAction.cascade)();
+  TextColumn get categoryId => text().nullable().references(Categories, #id, onDelete: KeyAction.setNull)();
   TextColumn get recordType => text()(); // e.g. 'asset', 'task', 'expense', 'bill', 'document'
   TextColumn get title => text().withLength(min: 1, max: 500)();
   TextColumn get description => text().nullable()();

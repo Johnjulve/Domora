@@ -5,8 +5,8 @@ class AppConstants {
   /// Product name
   static const String appName = 'Domora';
 
-  /// Initial SQLite schema version for Drift
-  static const int schemaVersion = 1;
+  /// SQLite schema version for Drift (v2: Categories & record categorization)
+  static const int schemaVersion = 2;
 
   /// Default personal workspace identifier (deterministic fallback before multi-workspace)
   static const String defaultWorkspaceId = 'default-personal-workspace';

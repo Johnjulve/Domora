@@ -2,6 +2,7 @@
 class Record {
   final String id;
   final String workspaceId;
+  final String? categoryId; // References Category.id
   final String recordType; // e.g. 'asset', 'task', 'expense', 'bill', 'document'
   final String title;
   final String? description;
@@ -14,6 +15,7 @@ class Record {
   const Record({
     required this.id,
     required this.workspaceId,
+    this.categoryId,
     required this.recordType,
     required this.title,
     this.description,
@@ -30,6 +32,7 @@ class Record {
   Record copyWith({
     String? id,
     String? workspaceId,
+    String? categoryId,
     String? recordType,
     String? title,
     String? description,
@@ -42,6 +45,7 @@ class Record {
     return Record(
       id: id ?? this.id,
       workspaceId: workspaceId ?? this.workspaceId,
+      categoryId: categoryId ?? this.categoryId,
       recordType: recordType ?? this.recordType,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -60,6 +64,7 @@ class Record {
           runtimeType == other.runtimeType &&
           id == other.id &&
           workspaceId == other.workspaceId &&
+          categoryId == other.categoryId &&
           recordType == other.recordType &&
           title == other.title &&
           description == other.description &&
@@ -73,6 +78,7 @@ class Record {
   int get hashCode => Object.hash(
         id,
         workspaceId,
+        categoryId,
         recordType,
         title,
         description,
@@ -209,16 +215,20 @@ abstract class RecordRepository {
   /// Retrieves a record along with its asset details if present.
   Future<RecordWithAsset?> getRecordWithAsset(String recordId);
 
-  /// Retrieves active (non-deleted) records for a workspace, optionally filtered by type.
+  /// Retrieves active records for a workspace, with optional type, category, and search query filters.
   Future<List<RecordWithAsset>> getActiveRecordsByWorkspace(
     String workspaceId, {
     String? recordType,
+    String? categoryId,
+    String? searchQuery,
   });
 
-  /// Watches active records for a workspace reactively.
+  /// Watches active records for a workspace reactively, with optional type, category, and search query filters.
   Stream<List<RecordWithAsset>> watchActiveRecordsByWorkspace(
     String workspaceId, {
     String? recordType,
+    String? categoryId,
+    String? searchQuery,
   });
 
   /// Updates universal record attributes, auto-stamping `updatedAt`.
