@@ -9,7 +9,7 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Workspaces, Records, Assets])
+@DriftDatabase(tables: [Workspaces, Categories, Records, Assets])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -25,7 +25,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Incremental migrations will be defined here as schema evolves
+        if (from < 2) {
+          await m.createTable(categories);
+          await m.addColumn(records, records.categoryId);
+        }
       },
       beforeOpen: (details) async {
         // Enforce SQLite Foreign Key constraints and enable WAL mode for concurrent reliability
