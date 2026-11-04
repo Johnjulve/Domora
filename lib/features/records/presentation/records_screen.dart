@@ -8,12 +8,34 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../domain/record.dart';
 
-class RecordsScreen extends ConsumerWidget {
+class RecordsScreen extends ConsumerStatefulWidget {
   const RecordsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RecordsScreen> createState() => _RecordsScreenState();
+}
+
+class _RecordsScreenState extends ConsumerState<RecordsScreen> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final recordsAsync = ref.watch(activeRecordsStreamProvider);
+    final categoriesAsync = ref.watch(defaultCategoriesStreamProvider);
+    final selectedCategoryId = ref.watch(selectedCategoryFilterProvider);
+    final searchQuery = ref.watch(recordSearchQueryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -26,132 +48,259 @@ class RecordsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: recordsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.brandPrimary),
-        ),
-        error: (err, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, color: AppColors.statusDangerStroke, size: 48),
-                const SizedBox(height: 12),
-                const Text('Failed to load records', style: AppTypography.cardTitle),
-                const SizedBox(height: 8),
-                Text(err.toString(), style: AppTypography.bodySecondary, textAlign: TextAlign.center),
-              ],
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by title, brand, model, location...',
+                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                suffixIcon: searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(recordSearchQueryProvider.notifier).clear();
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onChanged: (val) => ref.read(recordSearchQueryProvider.notifier).setQuery(val),
             ),
           ),
-        ),
-        data: (records) {
-          if (records.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: const BoxDecoration(
-                            color: AppColors.brandAccentSage,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.brandPrimary, size: 36),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text('No Life Records Yet', style: AppTypography.cardTitle),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Keep your property, vehicle, appliance warranties, and receipts organized in one place.',
-                          style: AppTypography.bodySecondary,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => _openAddAssetModal(context),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add First Asset'),
-                        ),
-                      ],
+
+          // Category Filter Chips
+          categoriesAsync.when(
+            loading: () => const SizedBox(height: 44),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (categories) {
+              return SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    _buildFilterChip(
+                      label: 'All',
+                      isSelected: selectedCategoryId == null,
+                      onTap: () => ref.read(selectedCategoryFilterProvider.notifier).selectCategory(null),
                     ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            itemCount: records.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (ctx, index) {
-              final item = records[index];
-              final asset = item.asset;
-
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.record.title,
-                              style: AppTypography.cardTitle,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.brandAccentSage,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              item.record.recordType.toUpperCase(),
-                              style: AppTypography.badge,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (asset != null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            if (asset.brand != null)
-                              Text('${asset.brand} ', style: AppTypography.bodySecondary),
-                            if (asset.model != null)
-                              Text('• ${asset.model} ', style: AppTypography.bodySecondary),
-                            if (asset.locationDescription != null)
-                              Text('• ${asset.locationDescription}', style: AppTypography.bodySecondary),
-                          ],
+                    const SizedBox(width: 8),
+                    ...categories.map(
+                      (cat) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _buildFilterChip(
+                          label: cat.name,
+                          isSelected: selectedCategoryId == cat.id,
+                          onTap: () => ref.read(selectedCategoryFilterProvider.notifier).selectCategory(cat.id),
                         ),
-                        if (asset.purchaseAmountMinor != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            'Value: ${asset.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
-                            style: AppTypography.bodyPrimary.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.brandPrimary,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
-          );
-        },
+          ),
+          const SizedBox(height: 8),
+
+          // Records List
+          Expanded(
+            child: recordsAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.brandPrimary),
+              ),
+              error: (err, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, color: AppColors.statusDangerStroke, size: 48),
+                      const SizedBox(height: 12),
+                      const Text('Failed to load records', style: AppTypography.cardTitle),
+                      const SizedBox(height: 8),
+                      Text(err.toString(), style: AppTypography.bodySecondary, textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+              ),
+              data: (records) {
+                if (records.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.brandAccentSage,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.inventory_2_outlined, color: AppColors.brandPrimary, size: 36),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                searchQuery.isNotEmpty || selectedCategoryId != null
+                                    ? 'No Matching Records'
+                                    : 'No Life Records Yet',
+                                style: AppTypography.cardTitle,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                searchQuery.isNotEmpty || selectedCategoryId != null
+                                    ? 'Try adjusting your search query or selecting a different category.'
+                                    : 'Keep your property, vehicle, appliance warranties, and receipts organized in one place.',
+                                style: AppTypography.bodySecondary,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              if (searchQuery.isEmpty && selectedCategoryId == null)
+                                ElevatedButton.icon(
+                                  onPressed: () => _openAddAssetModal(context),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add First Asset'),
+                                )
+                              else
+                                OutlinedButton(
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    ref.read(recordSearchQueryProvider.notifier).clear();
+                                    ref.read(selectedCategoryFilterProvider.notifier).selectCategory(null);
+                                  },
+                                  child: const Text('Clear Filters'),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  itemCount: records.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (ctx, index) {
+                    final item = records[index];
+                    final asset = item.asset;
+
+                    return Card(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _openAssetDetailModal(context, item),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.record.title,
+                                      style: AppTypography.cardTitle,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.brandAccentSage,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      item.record.recordType.toUpperCase(),
+                                      style: AppTypography.badge,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (asset != null) ...[
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 2,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    if (asset.brand != null)
+                                      Text(asset.brand!, style: AppTypography.bodySecondary),
+                                    if (asset.model != null)
+                                      Text('• ${asset.model}', style: AppTypography.bodySecondary),
+                                    if (asset.locationDescription != null)
+                                      Text('• ${asset.locationDescription}', style: AppTypography.bodySecondary),
+                                  ],
+                                ),
+                                if (asset.purchaseAmountMinor != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Value: ${asset.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
+                                    style: AppTypography.bodyPrimary.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.brandPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$label category filter',
+      child: GestureDetector(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.brandPrimary : AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? AppColors.brandOnPrimary : AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -161,6 +310,14 @@ class RecordsScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => const _AddAssetSheet(),
+    );
+  }
+
+  void _openAssetDetailModal(BuildContext context, RecordWithAsset item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AssetDetailSheet(item: item),
     );
   }
 }
@@ -177,8 +334,11 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
   final _titleController = TextEditingController();
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
+  final _serialController = TextEditingController();
   final _amountController = TextEditingController();
   final _locationController = TextEditingController();
+  String? _selectedCategoryId;
+  String _condition = 'Good';
   bool _isSubmitting = false;
 
   @override
@@ -186,6 +346,7 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
     _titleController.dispose();
     _brandController.dispose();
     _modelController.dispose();
+    _serialController.dispose();
     _amountController.dispose();
     _locationController.dispose();
     super.dispose();
@@ -210,6 +371,7 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
         record: Record(
           id: recordId,
           workspaceId: AppConstants.defaultWorkspaceId,
+          categoryId: _selectedCategoryId,
           recordType: 'asset',
           title: _titleController.text.trim(),
           createdAt: now,
@@ -219,6 +381,8 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
           recordId: recordId,
           brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
           model: _modelController.text.trim().isEmpty ? null : _modelController.text.trim(),
+          serialNumber: _serialController.text.trim().isEmpty ? null : _serialController.text.trim(),
+          condition: _condition,
           purchaseAmountMinor: amountMinor,
           purchaseCurrency: AppConstants.defaultCurrency,
           locationDescription:
@@ -244,6 +408,8 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(defaultCategoriesStreamProvider);
+
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -281,14 +447,74 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
                 },
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _brandController,
-                decoration: const InputDecoration(labelText: 'Brand', hintText: 'e.g. Sony'),
+              // Category Selection Dropdown
+              categoriesAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (categories) {
+                  return DropdownButtonFormField<String>(
+                    initialValue: _selectedCategoryId,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('General / Uncategorized'),
+                      ),
+                      ...categories.map(
+                        (cat) => DropdownMenuItem<String>(
+                          value: cat.id,
+                          child: Text(cat.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) => setState(() => _selectedCategoryId = val),
+                  );
+                },
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _modelController,
-                decoration: const InputDecoration(labelText: 'Model', hintText: 'e.g. Bravia 65" 4K'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _brandController,
+                      decoration: const InputDecoration(labelText: 'Brand', hintText: 'e.g. Sony'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _modelController,
+                      decoration: const InputDecoration(labelText: 'Model', hintText: 'e.g. Bravia 65"'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _serialController,
+                      decoration: const InputDecoration(labelText: 'Serial No.', hintText: 'e.g. SN-49281'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _condition,
+                      decoration: const InputDecoration(labelText: 'Condition'),
+                      items: const [
+                        DropdownMenuItem(value: 'Mint', child: Text('Mint')),
+                        DropdownMenuItem(value: 'Good', child: Text('Good')),
+                        DropdownMenuItem(value: 'Fair', child: Text('Fair')),
+                        DropdownMenuItem(value: 'Needs Repair', child: Text('Needs Repair')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _condition = val);
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -327,6 +553,173 @@ class _AddAssetSheetState extends ConsumerState<_AddAssetSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AssetDetailSheet extends ConsumerWidget {
+  final RecordWithAsset item;
+
+  const _AssetDetailSheet({required this.item});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final record = item.record;
+    final asset = item.asset;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    record.title,
+                    style: AppTypography.pageHeader.copyWith(fontSize: 22),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    _buildDetailRow('Record Type', record.recordType.toUpperCase()),
+                    if (asset?.brand != null) ...[
+                      const Divider(),
+                      _buildDetailRow('Brand', asset!.brand!),
+                    ],
+                    if (asset?.model != null) ...[
+                      const Divider(),
+                      _buildDetailRow('Model', asset!.model!),
+                    ],
+                    if (asset?.serialNumber != null) ...[
+                      const Divider(),
+                      _buildDetailRow('Serial Number', asset!.serialNumber!),
+                    ],
+                    if (asset?.condition != null) ...[
+                      const Divider(),
+                      _buildDetailRow('Condition', asset!.condition!),
+                    ],
+                    if (asset?.locationDescription != null) ...[
+                      const Divider(),
+                      _buildDetailRow('Location', asset!.locationDescription!),
+                    ],
+                    if (asset?.purchaseAmountMinor != null) ...[
+                      const Divider(),
+                      _buildDetailRow(
+                        'Estimated Value',
+                        '${asset!.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.statusDangerText,
+                side: const BorderSide(color: AppColors.statusDangerStroke),
+              ),
+              onPressed: () => _confirmSoftDelete(context, ref, record.id, record.title),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Move to Trash'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTypography.bodySecondary),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: AppTypography.bodyPrimary.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmSoftDelete(BuildContext context, WidgetRef ref, String recordId, String title) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        title: const Text('Move to Trash?', style: AppTypography.cardTitle),
+        content: Text(
+          'Are you sure you want to remove "$title"? You can restore it later from your settings archive.',
+          style: AppTypography.bodyPrimary,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusDangerStroke,
+              minimumSize: const Size(120, 44),
+            ),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              Navigator.of(ctx).pop(); // Close dialog
+              Navigator.of(context).pop(); // Close detail sheet
+
+              try {
+                final repo = ref.read(recordRepositoryProvider);
+                await repo.softDeleteRecord(recordId);
+
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Moved "$title" to trash'),
+                    backgroundColor: AppColors.brandPrimary,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to delete record: $e'),
+                    backgroundColor: AppColors.statusDangerStroke,
+                  ),
+                );
+              }
+            },
+            child: const Text('Move to Trash'),
+          ),
+        ],
       ),
     );
   }
