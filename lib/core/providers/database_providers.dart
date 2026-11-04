@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/app_constants.dart';
 import '../database/app_database.dart';
 import '../../features/records/data/record_repository_impl.dart';
 import '../../features/records/domain/record.dart';
@@ -29,4 +30,10 @@ final recordRepositoryProvider = Provider<RecordRepository>((ref) {
 final defaultWorkspaceProvider = FutureProvider<Workspace>((ref) async {
   final repository = ref.watch(workspaceRepositoryProvider);
   return repository.getOrCreateDefaultWorkspace();
+});
+
+/// Reactive stream provider for all active records in the default workspace.
+final activeRecordsStreamProvider = StreamProvider<List<RecordWithAsset>>((ref) {
+  final repository = ref.watch(recordRepositoryProvider);
+  return repository.watchActiveRecordsByWorkspace(AppConstants.defaultWorkspaceId);
 });
