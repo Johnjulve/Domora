@@ -5,6 +5,27 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.7] - 2026-11-06
+
+### Added
+- Schema Migration (v4 -> v5): Added `Expenses` table with foreign key indices on `linkedAssetRecordId`, `linkedTaskRecordId`, and `transactionDate`. Enforces exact financial minor-unit integer precision (`amountMinor`), ISO currency codes (`currencyCode`), and `ON DELETE SET NULL` upon parent asset or task deletion.
+- Pure domain models `ExpenseItem`, `RecordWithExpense`, and `ExpenseCategory` enum (`maintenance`, `purchase`, `utility`, `service`, `subscription`, `other`) with currency formatting and payment method mapping.
+- `ExpenseRepositoryImpl` providing atomic dual-table record transactions, reactive filtered streams (`watchExpensesByWorkspace`), and parent-decoupling outer joins enforcing `deletedAt.isNull()`.
+- Total Cost of Ownership (TCO) Engine:
+  - `AssetDetailSheet` computes and displays purchase price, accumulated maintenance/expenses, and Total Ownership Cost (Purchase Price + Maintenance) via reactive `assetTotalExpensesProvider`.
+  - Direct "Log Maintenance / Expense" shortcut action on `AssetDetailSheet` pre-populating the linked asset record.
+- Today Dashboard Financial Rollup:
+  - Added live `Recorded Expenses` metric card bound to `workspaceTotalExpensesProvider`.
+  - Added `Log Cost` quick action button opening `AddExpenseSheet`.
+  - Integrated expense activity into `Recent Records Activity` feed with dedicated `EXPENSE` tag and `ExpenseDetailSheet` inspection.
+- 9 new automated unit and widget tests covering expense lifecycle, task/asset linking, cascading nullification, TCO calculations, and dashboard financial feeds (58 total passing tests, 0 analysis issues).
+
+## [0.1.0-alpha.6] - 2026-11-05
+
+### Added
+- Flutter Web platform compilation support with `drift_flutter` and official WebAssembly SQLite binaries (`sqlite3.wasm` and `drift_worker.js` in `web/`).
+- Shared database connection abstraction (`_openConnection`) providing native SQLite on mobile/desktop and WebAssembly in browsers.
+
 ## [0.1.0-alpha.5] - 2026-11-05
 
 ### Added
