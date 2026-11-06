@@ -106,3 +106,25 @@ class Documents extends Table {
   @override
   Set<Column> get primaryKey => {recordId};
 }
+
+/// Specialized table definition for Expenses & Maintenance Costs, linked 1-to-1 to a parent Record.
+@DataClassName('ExpenseEntity')
+@TableIndex(name: 'expenses_asset_idx', columns: {#linkedAssetRecordId})
+@TableIndex(name: 'expenses_task_idx', columns: {#linkedTaskRecordId})
+@TableIndex(name: 'expenses_date_idx', columns: {#transactionDate})
+class Expenses extends Table {
+  @ReferenceName('expenseRecord')
+  TextColumn get recordId => text().references(Records, #id, onDelete: KeyAction.cascade)();
+  IntColumn get amountMinor => integer()(); // Financial integer precision in minor units (e.g. cents)
+  TextColumn get currencyCode => text().withDefault(const Constant('PHP'))();
+  DateTimeColumn get transactionDate => dateTime()();
+  TextColumn get paymentMethod => text().nullable()(); // 'cash', 'card', 'bank_transfer', 'e_wallet', 'other'
+  TextColumn get expenseCategory => text().withDefault(const Constant('maintenance'))(); // 'maintenance', 'purchase', 'utility', 'service', 'subscription', 'other'
+  @ReferenceName('expensesForAsset')
+  TextColumn get linkedAssetRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+  @ReferenceName('expensesForTask')
+  TextColumn get linkedTaskRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+
+  @override
+  Set<Column> get primaryKey => {recordId};
+}

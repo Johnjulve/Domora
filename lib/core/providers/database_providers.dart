@@ -4,6 +4,9 @@ import '../constants/app_constants.dart';
 import '../database/app_database.dart';
 import '../../features/categories/data/category_repository_impl.dart';
 import '../../features/categories/domain/category.dart';
+import '../../features/expenses/data/expense_repository_impl.dart';
+import '../../features/expenses/domain/expense_item.dart';
+import '../../features/expenses/domain/expense_repository.dart';
 import '../../features/records/data/record_repository_impl.dart';
 import '../../features/records/domain/record.dart';
 import '../../features/tasks/data/task_repository_impl.dart';
@@ -50,6 +53,12 @@ final taskRepositoryProvider = Provider<TaskRepository>((ref) {
 final documentRepositoryProvider = Provider<DocumentRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return DocumentRepositoryImpl(db);
+});
+
+/// Provider for [ExpenseRepository].
+final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return ExpenseRepositoryImpl(db);
 });
 
 /// FutureProvider that guarantees the default personal workspace & categories are initialized.
@@ -177,4 +186,45 @@ final activeAssetsStreamProvider = StreamProvider<List<RecordWithAsset>>((ref) {
     AppConstants.defaultWorkspaceId,
     recordType: 'asset',
   );
+});
+
+/// Notifier for expense category filter ('all', 'maintenance', 'purchase', 'utility', 'service', 'subscription', 'other').
+class ExpenseFilterNotifier extends Notifier<String> {
+  @override
+  String build() => 'all';
+
+  void setFilter(String filter) => state = filter;
+}
+
+final selectedExpenseFilterProvider = NotifierProvider<ExpenseFilterNotifier, String>(
+  ExpenseFilterNotifier.new,
+);
+
+/// Reactive stream provider for expenses in the default workspace with active category filter.
+final activeExpensesStreamProvider = StreamProvider<List<RecordWithExpense>>((ref) {
+  final repository = ref.watch(expenseRepositoryProvider);
+  final filter = ref.watch(selectedExpenseFilterProvider);
+
+  return repository.watchExpensesByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    category: filter == 'all' ? null : filter,
+  );
+});
+
+/// Unfiltered stream provider of active expenses for dashboard aggregations.
+final dashboardExpensesStreamProvider = StreamProvider<List<RecordWithExpense>>((ref) {
+  final repository = ref.watch(expenseRepositoryProvider);
+  return repository.watchExpensesByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
+/// Reactive stream provider for total maintenance/expense amount in minor units for a specific asset.
+final assetTotalExpensesProvider = StreamProvider.family<int, String>((ref, assetId) {
+  final repository = ref.watch(expenseRepositoryProvider);
+  return repository.watchTotalExpensesByAsset(assetId);
+});
+
+/// Reactive stream provider for total workspace expenses in minor units.
+final workspaceTotalExpensesProvider = StreamProvider<int>((ref) {
+  final repository = ref.watch(expenseRepositoryProvider);
+  return repository.watchTotalWorkspaceExpenses(AppConstants.defaultWorkspaceId);
 });

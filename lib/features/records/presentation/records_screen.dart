@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../expenses/presentation/add_expense_sheet.dart';
 import '../domain/record.dart';
 
 class RecordsScreen extends ConsumerStatefulWidget {
@@ -567,6 +568,13 @@ class AssetDetailSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final record = item.record;
     final asset = item.asset;
+    final totalExpensesAsync = ref.watch(assetTotalExpensesProvider(record.id));
+    final hasExpenseError = totalExpensesAsync.hasError;
+    final maintenanceCostsMinor = totalExpensesAsync.value ?? 0;
+    final currency = asset?.purchaseCurrency ?? 'PHP';
+    final hasPurchasePrice = asset?.purchaseAmountMinor != null;
+    final purchasePriceMinor = asset?.purchaseAmountMinor ?? 0;
+    final totalOwnershipCostMinor = purchasePriceMinor + maintenanceCostsMinor;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -626,14 +634,46 @@ class AssetDetailSheet extends ConsumerWidget {
                       const Divider(),
                       _buildDetailRow(
                         'Estimated Value',
-                        '${asset!.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
+                        '$currency ${(asset!.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
                       ),
+                    ],
+                    if (hasExpenseError) ...[
+                      const Divider(),
+                      _buildDetailRow(
+                        'Maintenance Costs',
+                        'Failed to load',
+                      ),
+                    ] else if (maintenanceCostsMinor > 0) ...[
+                      const Divider(),
+                      _buildDetailRow(
+                        'Maintenance Costs',
+                        '$currency ${(maintenanceCostsMinor / 100).toStringAsFixed(2)}',
+                      ),
+                      if (hasPurchasePrice) ...[
+                        const Divider(),
+                        _buildDetailRow(
+                          'Total Ownership Cost',
+                          '$currency ${(totalOwnershipCostMinor / 100).toStringAsFixed(2)}',
+                        ),
+                      ],
                     ],
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => AddExpenseSheet(initialAssetRecordId: record.id),
+                );
+              },
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: const Text('Log Maintenance / Expense'),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.statusDangerText,
@@ -648,7 +688,6 @@ class AssetDetailSheet extends ConsumerWidget {
       ),
     );
   }
-
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),

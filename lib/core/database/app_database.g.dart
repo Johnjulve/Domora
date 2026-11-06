@@ -3342,6 +3342,581 @@ class DocumentsCompanion extends UpdateCompanion<DocumentEntity> {
   }
 }
 
+class $ExpensesTable extends Expenses
+    with TableInfo<$ExpensesTable, ExpenseEntity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ExpensesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _recordIdMeta = const VerificationMeta(
+    'recordId',
+  );
+  @override
+  late final GeneratedColumn<String> recordId = GeneratedColumn<String>(
+    'record_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES records (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _amountMinorMeta = const VerificationMeta(
+    'amountMinor',
+  );
+  @override
+  late final GeneratedColumn<int> amountMinor = GeneratedColumn<int>(
+    'amount_minor',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('PHP'),
+  );
+  static const VerificationMeta _transactionDateMeta = const VerificationMeta(
+    'transactionDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> transactionDate =
+      GeneratedColumn<DateTime>(
+        'transaction_date',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _paymentMethodMeta = const VerificationMeta(
+    'paymentMethod',
+  );
+  @override
+  late final GeneratedColumn<String> paymentMethod = GeneratedColumn<String>(
+    'payment_method',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _expenseCategoryMeta = const VerificationMeta(
+    'expenseCategory',
+  );
+  @override
+  late final GeneratedColumn<String> expenseCategory = GeneratedColumn<String>(
+    'expense_category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('maintenance'),
+  );
+  static const VerificationMeta _linkedAssetRecordIdMeta =
+      const VerificationMeta('linkedAssetRecordId');
+  @override
+  late final GeneratedColumn<String> linkedAssetRecordId =
+      GeneratedColumn<String>(
+        'linked_asset_record_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES records (id) ON DELETE SET NULL',
+        ),
+      );
+  static const VerificationMeta _linkedTaskRecordIdMeta =
+      const VerificationMeta('linkedTaskRecordId');
+  @override
+  late final GeneratedColumn<String> linkedTaskRecordId =
+      GeneratedColumn<String>(
+        'linked_task_record_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES records (id) ON DELETE SET NULL',
+        ),
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    recordId,
+    amountMinor,
+    currencyCode,
+    transactionDate,
+    paymentMethod,
+    expenseCategory,
+    linkedAssetRecordId,
+    linkedTaskRecordId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'expenses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ExpenseEntity> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('record_id')) {
+      context.handle(
+        _recordIdMeta,
+        recordId.isAcceptableOrUnknown(data['record_id']!, _recordIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordIdMeta);
+    }
+    if (data.containsKey('amount_minor')) {
+      context.handle(
+        _amountMinorMeta,
+        amountMinor.isAcceptableOrUnknown(
+          data['amount_minor']!,
+          _amountMinorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMinorMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('transaction_date')) {
+      context.handle(
+        _transactionDateMeta,
+        transactionDate.isAcceptableOrUnknown(
+          data['transaction_date']!,
+          _transactionDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transactionDateMeta);
+    }
+    if (data.containsKey('payment_method')) {
+      context.handle(
+        _paymentMethodMeta,
+        paymentMethod.isAcceptableOrUnknown(
+          data['payment_method']!,
+          _paymentMethodMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expense_category')) {
+      context.handle(
+        _expenseCategoryMeta,
+        expenseCategory.isAcceptableOrUnknown(
+          data['expense_category']!,
+          _expenseCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('linked_asset_record_id')) {
+      context.handle(
+        _linkedAssetRecordIdMeta,
+        linkedAssetRecordId.isAcceptableOrUnknown(
+          data['linked_asset_record_id']!,
+          _linkedAssetRecordIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('linked_task_record_id')) {
+      context.handle(
+        _linkedTaskRecordIdMeta,
+        linkedTaskRecordId.isAcceptableOrUnknown(
+          data['linked_task_record_id']!,
+          _linkedTaskRecordIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {recordId};
+  @override
+  ExpenseEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ExpenseEntity(
+      recordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_id'],
+      )!,
+      amountMinor: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount_minor'],
+      )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      transactionDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}transaction_date'],
+      )!,
+      paymentMethod: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_method'],
+      ),
+      expenseCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}expense_category'],
+      )!,
+      linkedAssetRecordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_asset_record_id'],
+      ),
+      linkedTaskRecordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_task_record_id'],
+      ),
+    );
+  }
+
+  @override
+  $ExpensesTable createAlias(String alias) {
+    return $ExpensesTable(attachedDatabase, alias);
+  }
+}
+
+class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
+  final String recordId;
+  final int amountMinor;
+  final String currencyCode;
+  final DateTime transactionDate;
+  final String? paymentMethod;
+  final String expenseCategory;
+  final String? linkedAssetRecordId;
+  final String? linkedTaskRecordId;
+  const ExpenseEntity({
+    required this.recordId,
+    required this.amountMinor,
+    required this.currencyCode,
+    required this.transactionDate,
+    this.paymentMethod,
+    required this.expenseCategory,
+    this.linkedAssetRecordId,
+    this.linkedTaskRecordId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['record_id'] = Variable<String>(recordId);
+    map['amount_minor'] = Variable<int>(amountMinor);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['transaction_date'] = Variable<DateTime>(transactionDate);
+    if (!nullToAbsent || paymentMethod != null) {
+      map['payment_method'] = Variable<String>(paymentMethod);
+    }
+    map['expense_category'] = Variable<String>(expenseCategory);
+    if (!nullToAbsent || linkedAssetRecordId != null) {
+      map['linked_asset_record_id'] = Variable<String>(linkedAssetRecordId);
+    }
+    if (!nullToAbsent || linkedTaskRecordId != null) {
+      map['linked_task_record_id'] = Variable<String>(linkedTaskRecordId);
+    }
+    return map;
+  }
+
+  ExpensesCompanion toCompanion(bool nullToAbsent) {
+    return ExpensesCompanion(
+      recordId: Value(recordId),
+      amountMinor: Value(amountMinor),
+      currencyCode: Value(currencyCode),
+      transactionDate: Value(transactionDate),
+      paymentMethod: paymentMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paymentMethod),
+      expenseCategory: Value(expenseCategory),
+      linkedAssetRecordId: linkedAssetRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedAssetRecordId),
+      linkedTaskRecordId: linkedTaskRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedTaskRecordId),
+    );
+  }
+
+  factory ExpenseEntity.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ExpenseEntity(
+      recordId: serializer.fromJson<String>(json['recordId']),
+      amountMinor: serializer.fromJson<int>(json['amountMinor']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      transactionDate: serializer.fromJson<DateTime>(json['transactionDate']),
+      paymentMethod: serializer.fromJson<String?>(json['paymentMethod']),
+      expenseCategory: serializer.fromJson<String>(json['expenseCategory']),
+      linkedAssetRecordId: serializer.fromJson<String?>(
+        json['linkedAssetRecordId'],
+      ),
+      linkedTaskRecordId: serializer.fromJson<String?>(
+        json['linkedTaskRecordId'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'recordId': serializer.toJson<String>(recordId),
+      'amountMinor': serializer.toJson<int>(amountMinor),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'transactionDate': serializer.toJson<DateTime>(transactionDate),
+      'paymentMethod': serializer.toJson<String?>(paymentMethod),
+      'expenseCategory': serializer.toJson<String>(expenseCategory),
+      'linkedAssetRecordId': serializer.toJson<String?>(linkedAssetRecordId),
+      'linkedTaskRecordId': serializer.toJson<String?>(linkedTaskRecordId),
+    };
+  }
+
+  ExpenseEntity copyWith({
+    String? recordId,
+    int? amountMinor,
+    String? currencyCode,
+    DateTime? transactionDate,
+    Value<String?> paymentMethod = const Value.absent(),
+    String? expenseCategory,
+    Value<String?> linkedAssetRecordId = const Value.absent(),
+    Value<String?> linkedTaskRecordId = const Value.absent(),
+  }) => ExpenseEntity(
+    recordId: recordId ?? this.recordId,
+    amountMinor: amountMinor ?? this.amountMinor,
+    currencyCode: currencyCode ?? this.currencyCode,
+    transactionDate: transactionDate ?? this.transactionDate,
+    paymentMethod: paymentMethod.present
+        ? paymentMethod.value
+        : this.paymentMethod,
+    expenseCategory: expenseCategory ?? this.expenseCategory,
+    linkedAssetRecordId: linkedAssetRecordId.present
+        ? linkedAssetRecordId.value
+        : this.linkedAssetRecordId,
+    linkedTaskRecordId: linkedTaskRecordId.present
+        ? linkedTaskRecordId.value
+        : this.linkedTaskRecordId,
+  );
+  ExpenseEntity copyWithCompanion(ExpensesCompanion data) {
+    return ExpenseEntity(
+      recordId: data.recordId.present ? data.recordId.value : this.recordId,
+      amountMinor: data.amountMinor.present
+          ? data.amountMinor.value
+          : this.amountMinor,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      transactionDate: data.transactionDate.present
+          ? data.transactionDate.value
+          : this.transactionDate,
+      paymentMethod: data.paymentMethod.present
+          ? data.paymentMethod.value
+          : this.paymentMethod,
+      expenseCategory: data.expenseCategory.present
+          ? data.expenseCategory.value
+          : this.expenseCategory,
+      linkedAssetRecordId: data.linkedAssetRecordId.present
+          ? data.linkedAssetRecordId.value
+          : this.linkedAssetRecordId,
+      linkedTaskRecordId: data.linkedTaskRecordId.present
+          ? data.linkedTaskRecordId.value
+          : this.linkedTaskRecordId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExpenseEntity(')
+          ..write('recordId: $recordId, ')
+          ..write('amountMinor: $amountMinor, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('transactionDate: $transactionDate, ')
+          ..write('paymentMethod: $paymentMethod, ')
+          ..write('expenseCategory: $expenseCategory, ')
+          ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
+          ..write('linkedTaskRecordId: $linkedTaskRecordId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    recordId,
+    amountMinor,
+    currencyCode,
+    transactionDate,
+    paymentMethod,
+    expenseCategory,
+    linkedAssetRecordId,
+    linkedTaskRecordId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ExpenseEntity &&
+          other.recordId == this.recordId &&
+          other.amountMinor == this.amountMinor &&
+          other.currencyCode == this.currencyCode &&
+          other.transactionDate == this.transactionDate &&
+          other.paymentMethod == this.paymentMethod &&
+          other.expenseCategory == this.expenseCategory &&
+          other.linkedAssetRecordId == this.linkedAssetRecordId &&
+          other.linkedTaskRecordId == this.linkedTaskRecordId);
+}
+
+class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
+  final Value<String> recordId;
+  final Value<int> amountMinor;
+  final Value<String> currencyCode;
+  final Value<DateTime> transactionDate;
+  final Value<String?> paymentMethod;
+  final Value<String> expenseCategory;
+  final Value<String?> linkedAssetRecordId;
+  final Value<String?> linkedTaskRecordId;
+  final Value<int> rowid;
+  const ExpensesCompanion({
+    this.recordId = const Value.absent(),
+    this.amountMinor = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.transactionDate = const Value.absent(),
+    this.paymentMethod = const Value.absent(),
+    this.expenseCategory = const Value.absent(),
+    this.linkedAssetRecordId = const Value.absent(),
+    this.linkedTaskRecordId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ExpensesCompanion.insert({
+    required String recordId,
+    required int amountMinor,
+    this.currencyCode = const Value.absent(),
+    required DateTime transactionDate,
+    this.paymentMethod = const Value.absent(),
+    this.expenseCategory = const Value.absent(),
+    this.linkedAssetRecordId = const Value.absent(),
+    this.linkedTaskRecordId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : recordId = Value(recordId),
+       amountMinor = Value(amountMinor),
+       transactionDate = Value(transactionDate);
+  static Insertable<ExpenseEntity> custom({
+    Expression<String>? recordId,
+    Expression<int>? amountMinor,
+    Expression<String>? currencyCode,
+    Expression<DateTime>? transactionDate,
+    Expression<String>? paymentMethod,
+    Expression<String>? expenseCategory,
+    Expression<String>? linkedAssetRecordId,
+    Expression<String>? linkedTaskRecordId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (recordId != null) 'record_id': recordId,
+      if (amountMinor != null) 'amount_minor': amountMinor,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (transactionDate != null) 'transaction_date': transactionDate,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (expenseCategory != null) 'expense_category': expenseCategory,
+      if (linkedAssetRecordId != null)
+        'linked_asset_record_id': linkedAssetRecordId,
+      if (linkedTaskRecordId != null)
+        'linked_task_record_id': linkedTaskRecordId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ExpensesCompanion copyWith({
+    Value<String>? recordId,
+    Value<int>? amountMinor,
+    Value<String>? currencyCode,
+    Value<DateTime>? transactionDate,
+    Value<String?>? paymentMethod,
+    Value<String>? expenseCategory,
+    Value<String?>? linkedAssetRecordId,
+    Value<String?>? linkedTaskRecordId,
+    Value<int>? rowid,
+  }) {
+    return ExpensesCompanion(
+      recordId: recordId ?? this.recordId,
+      amountMinor: amountMinor ?? this.amountMinor,
+      currencyCode: currencyCode ?? this.currencyCode,
+      transactionDate: transactionDate ?? this.transactionDate,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      expenseCategory: expenseCategory ?? this.expenseCategory,
+      linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
+      linkedTaskRecordId: linkedTaskRecordId ?? this.linkedTaskRecordId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (recordId.present) {
+      map['record_id'] = Variable<String>(recordId.value);
+    }
+    if (amountMinor.present) {
+      map['amount_minor'] = Variable<int>(amountMinor.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (transactionDate.present) {
+      map['transaction_date'] = Variable<DateTime>(transactionDate.value);
+    }
+    if (paymentMethod.present) {
+      map['payment_method'] = Variable<String>(paymentMethod.value);
+    }
+    if (expenseCategory.present) {
+      map['expense_category'] = Variable<String>(expenseCategory.value);
+    }
+    if (linkedAssetRecordId.present) {
+      map['linked_asset_record_id'] = Variable<String>(
+        linkedAssetRecordId.value,
+      );
+    }
+    if (linkedTaskRecordId.present) {
+      map['linked_task_record_id'] = Variable<String>(linkedTaskRecordId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ExpensesCompanion(')
+          ..write('recordId: $recordId, ')
+          ..write('amountMinor: $amountMinor, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('transactionDate: $transactionDate, ')
+          ..write('paymentMethod: $paymentMethod, ')
+          ..write('expenseCategory: $expenseCategory, ')
+          ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
+          ..write('linkedTaskRecordId: $linkedTaskRecordId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3351,6 +3926,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AssetsTable assets = $AssetsTable(this);
   late final $TasksTable tasks = $TasksTable(this);
   late final $DocumentsTable documents = $DocumentsTable(this);
+  late final $ExpensesTable expenses = $ExpensesTable(this);
   late final Index recordsWorkspaceDeletedIdx = Index(
     'records_workspace_deleted_idx',
     'CREATE INDEX records_workspace_deleted_idx ON records (workspace_id, deleted_at)',
@@ -3371,6 +3947,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'documents_type_idx',
     'CREATE INDEX documents_type_idx ON documents (document_type)',
   );
+  late final Index expensesAssetIdx = Index(
+    'expenses_asset_idx',
+    'CREATE INDEX expenses_asset_idx ON expenses (linked_asset_record_id)',
+  );
+  late final Index expensesTaskIdx = Index(
+    'expenses_task_idx',
+    'CREATE INDEX expenses_task_idx ON expenses (linked_task_record_id)',
+  );
+  late final Index expensesDateIdx = Index(
+    'expenses_date_idx',
+    'CREATE INDEX expenses_date_idx ON expenses (transaction_date)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3382,11 +3970,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     assets,
     tasks,
     documents,
+    expenses,
     recordsWorkspaceDeletedIdx,
     recordsCategoryIdx,
     tasksStatusDueIdx,
     documentsLinkedAssetIdx,
     documentsTypeIdx,
+    expensesAssetIdx,
+    expensesTaskIdx,
+    expensesDateIdx,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3445,6 +4037,27 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('documents', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('expenses', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('expenses', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('expenses', kind: UpdateKind.update)],
     ),
   ]);
 }
@@ -4489,6 +5102,58 @@ final class $$RecordsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ExpensesTable, List<ExpenseEntity>>
+  _expenseRecordTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.expenses,
+    aliasName: 'records__id__expenses__record_id',
+  );
+
+  $$ExpensesTableProcessedTableManager get expenseRecord {
+    final manager = $$ExpensesTableTableManager(
+      $_db,
+      $_db.expenses,
+    ).filter((f) => f.recordId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_expenseRecordTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ExpensesTable, List<ExpenseEntity>>
+  _expensesForAssetTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.expenses,
+    aliasName: 'records__id__expenses__linked_asset_record_id',
+  );
+
+  $$ExpensesTableProcessedTableManager get expensesForAsset {
+    final manager = $$ExpensesTableTableManager($_db, $_db.expenses).filter(
+      (f) => f.linkedAssetRecordId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_expensesForAssetTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ExpensesTable, List<ExpenseEntity>>
+  _expensesForTaskTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.expenses,
+    aliasName: 'records__id__expenses__linked_task_record_id',
+  );
+
+  $$ExpensesTableProcessedTableManager get expensesForTask {
+    final manager = $$ExpensesTableTableManager($_db, $_db.expenses).filter(
+      (f) => f.linkedTaskRecordId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_expensesForTaskTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$RecordsTableFilterComposer
@@ -4707,6 +5372,81 @@ class $$RecordsTableFilterComposer
           }) => $$DocumentsTableFilterComposer(
             $db: $db,
             $table: $db.documents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> expenseRecord(
+    Expression<bool> Function($$ExpensesTableFilterComposer f) f,
+  ) {
+    final $$ExpensesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.recordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableFilterComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> expensesForAsset(
+    Expression<bool> Function($$ExpensesTableFilterComposer f) f,
+  ) {
+    final $$ExpensesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.linkedAssetRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableFilterComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> expensesForTask(
+    Expression<bool> Function($$ExpensesTableFilterComposer f) f,
+  ) {
+    final $$ExpensesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.linkedTaskRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableFilterComposer(
+            $db: $db,
+            $table: $db.expenses,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5030,6 +5770,81 @@ class $$RecordsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> expenseRecord<T extends Object>(
+    Expression<T> Function($$ExpensesTableAnnotationComposer a) f,
+  ) {
+    final $$ExpensesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.recordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> expensesForAsset<T extends Object>(
+    Expression<T> Function($$ExpensesTableAnnotationComposer a) f,
+  ) {
+    final $$ExpensesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.linkedAssetRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> expensesForTask<T extends Object>(
+    Expression<T> Function($$ExpensesTableAnnotationComposer a) f,
+  ) {
+    final $$ExpensesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.linkedTaskRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RecordsTableTableManager
@@ -5053,6 +5868,9 @@ class $$RecordsTableTableManager
             bool tasksForAsset,
             bool documentRecord,
             bool documentsForAsset,
+            bool expenseRecord,
+            bool expensesForAsset,
+            bool expensesForTask,
           })
         > {
   $$RecordsTableTableManager(_$AppDatabase db, $RecordsTable table)
@@ -5139,6 +5957,9 @@ class $$RecordsTableTableManager
                 tasksForAsset = false,
                 documentRecord = false,
                 documentsForAsset = false,
+                expenseRecord = false,
+                expensesForAsset = false,
+                expensesForTask = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -5148,6 +5969,9 @@ class $$RecordsTableTableManager
                     if (tasksForAsset) db.tasks,
                     if (documentRecord) db.documents,
                     if (documentsForAsset) db.documents,
+                    if (expenseRecord) db.expenses,
+                    if (expensesForAsset) db.expenses,
+                    if (expensesForTask) db.expenses,
                   ],
                   addJoins:
                       <
@@ -5296,6 +6120,66 @@ class $$RecordsTableTableManager
                           referencedColumn: 'linked_asset_record_id',
                           typedResults: items,
                         ),
+                      if (expenseRecord)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          ExpenseEntity,
+                          $ExpensesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._expenseRecordTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).expenseRecord,
+                          currentColumn: 'id',
+                          referencedColumn: 'record_id',
+                          typedResults: items,
+                        ),
+                      if (expensesForAsset)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          ExpenseEntity,
+                          $ExpensesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._expensesForAssetTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).expensesForAsset,
+                          currentColumn: 'id',
+                          referencedColumn: 'linked_asset_record_id',
+                          typedResults: items,
+                        ),
+                      if (expensesForTask)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          ExpenseEntity,
+                          $ExpensesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._expensesForTaskTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).expensesForTask,
+                          currentColumn: 'id',
+                          referencedColumn: 'linked_task_record_id',
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -5324,6 +6208,9 @@ typedef $$RecordsTableProcessedTableManager =
         bool tasksForAsset,
         bool documentRecord,
         bool documentsForAsset,
+        bool expenseRecord,
+        bool expensesForAsset,
+        bool expensesForTask,
       })
     >;
 typedef $$AssetsTableCreateCompanionBuilder =
@@ -6661,6 +7548,575 @@ typedef $$DocumentsTableProcessedTableManager =
       DocumentEntity,
       PrefetchHooks Function({bool recordId, bool linkedAssetRecordId})
     >;
+typedef $$ExpensesTableCreateCompanionBuilder =
+    ExpensesCompanion Function({
+      required String recordId,
+      required int amountMinor,
+      Value<String> currencyCode,
+      required DateTime transactionDate,
+      Value<String?> paymentMethod,
+      Value<String> expenseCategory,
+      Value<String?> linkedAssetRecordId,
+      Value<String?> linkedTaskRecordId,
+      Value<int> rowid,
+    });
+typedef $$ExpensesTableUpdateCompanionBuilder =
+    ExpensesCompanion Function({
+      Value<String> recordId,
+      Value<int> amountMinor,
+      Value<String> currencyCode,
+      Value<DateTime> transactionDate,
+      Value<String?> paymentMethod,
+      Value<String> expenseCategory,
+      Value<String?> linkedAssetRecordId,
+      Value<String?> linkedTaskRecordId,
+      Value<int> rowid,
+    });
+
+final class $$ExpensesTableReferences
+    extends BaseReferences<_$AppDatabase, $ExpensesTable, ExpenseEntity> {
+  $$ExpensesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $RecordsTable _recordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('expenses__record_id__records__id');
+
+  $$RecordsTableProcessedTableManager get recordId {
+    final $_column = $_itemColumn<String>('record_id')!;
+
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_recordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RecordsTable _linkedAssetRecordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('expenses__linked_asset_record_id__records__id');
+
+  $$RecordsTableProcessedTableManager? get linkedAssetRecordId {
+    final $_column = $_itemColumn<String>('linked_asset_record_id');
+    if ($_column == null) return null;
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_linkedAssetRecordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RecordsTable _linkedTaskRecordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('expenses__linked_task_record_id__records__id');
+
+  $$RecordsTableProcessedTableManager? get linkedTaskRecordId {
+    final $_column = $_itemColumn<String>('linked_task_record_id');
+    if ($_column == null) return null;
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_linkedTaskRecordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ExpensesTableFilterComposer
+    extends Composer<_$AppDatabase, $ExpensesTable> {
+  $$ExpensesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get amountMinor => $composableBuilder(
+    column: $table.amountMinor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get transactionDate => $composableBuilder(
+    column: $table.transactionDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get expenseCategory => $composableBuilder(
+    column: $table.expenseCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$RecordsTableFilterComposer get recordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableFilterComposer get linkedAssetRecordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedAssetRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableFilterComposer get linkedTaskRecordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedTaskRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ExpensesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ExpensesTable> {
+  $$ExpensesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get amountMinor => $composableBuilder(
+    column: $table.amountMinor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get transactionDate => $composableBuilder(
+    column: $table.transactionDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get expenseCategory => $composableBuilder(
+    column: $table.expenseCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$RecordsTableOrderingComposer get recordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableOrderingComposer get linkedAssetRecordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedAssetRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableOrderingComposer get linkedTaskRecordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedTaskRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ExpensesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ExpensesTable> {
+  $$ExpensesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get amountMinor => $composableBuilder(
+    column: $table.amountMinor,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get transactionDate => $composableBuilder(
+    column: $table.transactionDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get expenseCategory => $composableBuilder(
+    column: $table.expenseCategory,
+    builder: (column) => column,
+  );
+
+  $$RecordsTableAnnotationComposer get recordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableAnnotationComposer get linkedAssetRecordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedAssetRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableAnnotationComposer get linkedTaskRecordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedTaskRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ExpensesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ExpensesTable,
+          ExpenseEntity,
+          $$ExpensesTableFilterComposer,
+          $$ExpensesTableOrderingComposer,
+          $$ExpensesTableAnnotationComposer,
+          $$ExpensesTableCreateCompanionBuilder,
+          $$ExpensesTableUpdateCompanionBuilder,
+          (ExpenseEntity, $$ExpensesTableReferences),
+          ExpenseEntity,
+          PrefetchHooks Function({
+            bool recordId,
+            bool linkedAssetRecordId,
+            bool linkedTaskRecordId,
+          })
+        > {
+  $$ExpensesTableTableManager(_$AppDatabase db, $ExpensesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ExpensesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ExpensesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ExpensesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> recordId = const Value.absent(),
+                Value<int> amountMinor = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<DateTime> transactionDate = const Value.absent(),
+                Value<String?> paymentMethod = const Value.absent(),
+                Value<String> expenseCategory = const Value.absent(),
+                Value<String?> linkedAssetRecordId = const Value.absent(),
+                Value<String?> linkedTaskRecordId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExpensesCompanion(
+                recordId: recordId,
+                amountMinor: amountMinor,
+                currencyCode: currencyCode,
+                transactionDate: transactionDate,
+                paymentMethod: paymentMethod,
+                expenseCategory: expenseCategory,
+                linkedAssetRecordId: linkedAssetRecordId,
+                linkedTaskRecordId: linkedTaskRecordId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String recordId,
+                required int amountMinor,
+                Value<String> currencyCode = const Value.absent(),
+                required DateTime transactionDate,
+                Value<String?> paymentMethod = const Value.absent(),
+                Value<String> expenseCategory = const Value.absent(),
+                Value<String?> linkedAssetRecordId = const Value.absent(),
+                Value<String?> linkedTaskRecordId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ExpensesCompanion.insert(
+                recordId: recordId,
+                amountMinor: amountMinor,
+                currencyCode: currencyCode,
+                transactionDate: transactionDate,
+                paymentMethod: paymentMethod,
+                expenseCategory: expenseCategory,
+                linkedAssetRecordId: linkedAssetRecordId,
+                linkedTaskRecordId: linkedTaskRecordId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ExpensesTable, ExpenseEntity>(table),
+                  $$ExpensesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                recordId = false,
+                linkedAssetRecordId = false,
+                linkedTaskRecordId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (recordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.recordId,
+                                    referencedTable: $$ExpensesTableReferences
+                                        ._recordIdTable(db),
+                                    referencedColumn: $$ExpensesTableReferences
+                                        ._recordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (linkedAssetRecordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.linkedAssetRecordId,
+                                    referencedTable: $$ExpensesTableReferences
+                                        ._linkedAssetRecordIdTable(db),
+                                    referencedColumn: $$ExpensesTableReferences
+                                        ._linkedAssetRecordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (linkedTaskRecordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.linkedTaskRecordId,
+                                    referencedTable: $$ExpensesTableReferences
+                                        ._linkedTaskRecordIdTable(db),
+                                    referencedColumn: $$ExpensesTableReferences
+                                        ._linkedTaskRecordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ExpensesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ExpensesTable,
+      ExpenseEntity,
+      $$ExpensesTableFilterComposer,
+      $$ExpensesTableOrderingComposer,
+      $$ExpensesTableAnnotationComposer,
+      $$ExpensesTableCreateCompanionBuilder,
+      $$ExpensesTableUpdateCompanionBuilder,
+      (ExpenseEntity, $$ExpensesTableReferences),
+      ExpenseEntity,
+      PrefetchHooks Function({
+        bool recordId,
+        bool linkedAssetRecordId,
+        bool linkedTaskRecordId,
+      })
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6677,4 +8133,6 @@ class $AppDatabaseManager {
       $$TasksTableTableManager(_db, _db.tasks);
   $$DocumentsTableTableManager get documents =>
       $$DocumentsTableTableManager(_db, _db.documents);
+  $$ExpensesTableTableManager get expenses =>
+      $$ExpensesTableTableManager(_db, _db.expenses);
 }
