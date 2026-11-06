@@ -16,6 +16,7 @@ import 'package:domora/features/tasks/data/task_repository_impl.dart';
 import 'package:domora/features/tasks/domain/task_item.dart';
 import 'package:domora/features/today/presentation/today_screen.dart';
 import 'package:domora/features/vault/data/document_repository_impl.dart';
+import 'package:domora/features/expenses/data/expense_repository_impl.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 
 void main() {
@@ -38,6 +39,7 @@ void main() {
         recordRepositoryProvider.overrideWithValue(RecordRepositoryImpl(inMemoryDb)),
         taskRepositoryProvider.overrideWithValue(TaskRepositoryImpl(inMemoryDb)),
         documentRepositoryProvider.overrideWithValue(DocumentRepositoryImpl(inMemoryDb)),
+        expenseRepositoryProvider.overrideWithValue(ExpenseRepositoryImpl(inMemoryDb)),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
@@ -392,7 +394,10 @@ void main() {
       expect(find.text('OVERDUE'), findsOneWidget);
 
       // Check off the task directly from the Today dashboard
-      await tester.tap(find.widgetWithIcon(IconButton, Icons.radio_button_unchecked).first);
+      final radioFinder = find.widgetWithIcon(IconButton, Icons.radio_button_unchecked).first;
+      await tester.ensureVisible(radioFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(radioFinder);
       await tester.pumpAndSettle();
 
       // The overdue task is completed and the calm reassurance card displays
@@ -575,6 +580,87 @@ void main() {
       final docsInDb = await inMemoryDb.select(inMemoryDb.records).get();
       expect(docsInDb.length, 1);
       expect(docsInDb.first.deletedAt, isNotNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+    testWidgets('Expenses workflow: log maintenance expense on asset, verify TCO rollup and Today dashboard', (WidgetTester tester) async {
+      final wsRepo = WorkspaceRepositoryImpl(inMemoryDb);
+      final recordRepo = RecordRepositoryImpl(inMemoryDb);
+      await wsRepo.getOrCreateDefaultWorkspace();
+
+      // Seed an asset with purchase price PHP 25,000 (2,500,000 minor units)
+      final now = DateTime.now().toUtc();
+      await recordRepo.createAssetRecord(
+        record: Record(
+          id: 'asset-generator-1',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'asset',
+          title: 'Honda Generator EU2200i',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: const Asset(
+          recordId: 'asset-generator-1',
+          brand: 'Honda',
+          purchaseAmountMinor: 2500000,
+          purchaseCurrency: 'PHP',
+        ),
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Starts at Records tab, asset is visible
+      expect(find.text('Honda Generator EU2200i'), findsOneWidget);
+
+      // Tap the asset to inspect
+      await tester.tap(find.text('Honda Generator EU2200i'));
+      await tester.pumpAndSettle();
+
+      // Verify Estimated Value is displayed
+      expect(find.text('PHP 25000.00'), findsOneWidget);
+      expect(find.text('Log Maintenance / Expense'), findsOneWidget);
+
+      // Tap Log Maintenance / Expense
+      await tester.tap(find.text('Log Maintenance / Expense'));
+      await tester.pumpAndSettle();
+
+      // AddExpenseSheet opens with linked asset
+      expect(find.text('Log Expense / Maintenance'), findsOneWidget);
+
+      // Fill in expense details: Title, Amount, Category
+      await tester.enterText(find.widgetWithText(TextFormField, 'Expense Title *'), 'Synthetic Oil & Spark Plug');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Amount (PHP) *'), '1250.00');
+
+      // Submit the form
+      await tester.tap(find.text('Save Expense'));
+      await tester.pumpAndSettle();
+
+      // SnackBar feedback appears
+      expect(find.text('Logged expense: Synthetic Oil & Spark Plug (PHP 1250.00)'), findsOneWidget);
+
+      // AssetDetailSheet beneath is revealed and reactively updated with Maintenance Costs and Total Ownership Cost (25,000 + 1,250 = 26,250)
+      expect(find.text('Maintenance Costs'), findsOneWidget);
+      expect(find.text('PHP 1250.00'), findsOneWidget);
+      expect(find.text('Total Ownership Cost'), findsOneWidget);
+      expect(find.text('PHP 26250.00'), findsOneWidget);
+
+      // Close sheet
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      // Switch to Today tab
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      // Verify dashboard metrics reflect the recorded expense
+      expect(find.text('Recorded Expenses'), findsOneWidget);
+      expect(find.text('PHP 1250.00'), findsOneWidget);
+
+      // Verify Recent Records Activity shows the expense
+      expect(find.text('Synthetic Oil & Spark Plug'), findsOneWidget);
+      expect(find.text('EXPENSE'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));

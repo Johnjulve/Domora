@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/presentation/records_screen.dart';
 import '../../tasks/domain/task_item.dart';
 import '../../tasks/presentation/tasks_screen.dart';
+import '../../expenses/presentation/add_expense_sheet.dart';
+import '../../expenses/presentation/expense_detail_sheet.dart';
 
 const List<String> _daysOfWeek = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -47,6 +50,8 @@ class TodayScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(dashboardRecordsStreamProvider);
           ref.invalidate(dashboardTasksStreamProvider);
+          ref.invalidate(dashboardExpensesStreamProvider);
+          ref.invalidate(workspaceTotalExpensesProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -135,69 +140,105 @@ class _TodayMetricsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(dashboardTasksStreamProvider);
     final recordsAsync = ref.watch(dashboardRecordsStreamProvider);
+    final expensesTotalAsync = ref.watch(workspaceTotalExpensesProvider);
 
-    return tasksAsync.when(
-      loading: () => const Center(
+    // Guard: Loading state
+    if (tasksAsync.isLoading || recordsAsync.isLoading) {
+      return const Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
           child: CircularProgressIndicator(color: AppColors.brandPrimary),
         ),
-      ),
-      error: (err, _) => Padding(
+      );
+    }
+
+    // Guard: Error states surfaced loudly
+    if (tasksAsync.hasError) {
+      return Padding(
         padding: const EdgeInsets.all(8.0),
         child: Text(
-          'Failed to load task metrics: $err',
+          'Failed to load task metrics: ${tasksAsync.error}',
           style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
         ),
-      ),
-      data: (tasks) {
-        return recordsAsync.when(
-          loading: () => const SizedBox.shrink(),
-          error: (err, _) => Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Failed to load record metrics: $err',
-              style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
-            ),
-          ),
-          data: (records) {
-            final activeAssets = records.where((r) => r.record.recordType == 'asset').length;
-            final pendingTasks = tasks.where((t) => t.task.isPending).length;
-            final overdueTasks = tasks.where((t) => t.task.isOverdue(now)).length;
+      );
+    }
+    if (recordsAsync.hasError) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Failed to load record metrics: ${recordsAsync.error}',
+          style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+        ),
+      );
+    }
 
-            return Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Pending Tasks',
-                    value: pendingTasks.toString(),
-                    icon: Icons.checklist_outlined,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Overdue',
-                    value: overdueTasks.toString(),
-                    icon: Icons.alarm_outlined,
-                    valueColor: overdueTasks > 0
-                        ? AppColors.statusDangerText
-                        : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MetricCard(
-                    label: 'Total Assets',
-                    value: activeAssets.toString(),
-                    icon: Icons.inventory_2_outlined,
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+    final tasks = tasksAsync.requireValue;
+    final records = recordsAsync.requireValue;
+
+    final activeAssets = records.where((r) => r.record.recordType == 'asset').length;
+    final pendingTasks = tasks.where((t) => t.task.isPending).length;
+    final overdueTasks = tasks.where((t) => t.task.isOverdue(now)).length;
+
+    final String formattedExpenses;
+    final Color? expenseColor;
+    if (expensesTotalAsync.hasError) {
+      formattedExpenses = 'ERR';
+      expenseColor = AppColors.statusDangerText;
+    } else if (expensesTotalAsync.isLoading) {
+      formattedExpenses = '...';
+      expenseColor = null;
+    } else {
+      final totalExpensesMinor = expensesTotalAsync.value ?? 0;
+      formattedExpenses = '${AppConstants.defaultCurrency} ${(totalExpensesMinor / 100).toStringAsFixed(2)}';
+      expenseColor = null;
+    }
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                label: 'Pending Tasks',
+                value: pendingTasks.toString(),
+                icon: Icons.checklist_outlined,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MetricCard(
+                label: 'Overdue',
+                value: overdueTasks.toString(),
+                icon: Icons.alarm_outlined,
+                valueColor: overdueTasks > 0
+                    ? AppColors.statusDangerText
+                    : AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                label: 'Total Assets',
+                value: activeAssets.toString(),
+                icon: Icons.inventory_2_outlined,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MetricCard(
+                label: 'Recorded Expenses',
+                value: formattedExpenses,
+                icon: Icons.receipt_long_outlined,
+                valueColor: expenseColor,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -265,30 +306,47 @@ class _QuickActionBar extends StatelessWidget {
             Expanded(
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   side: const BorderSide(color: AppColors.brandPrimary),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => _openAddTask(context),
-                icon: const Icon(Icons.add_task, color: AppColors.brandPrimary, size: 20),
+                icon: const Icon(Icons.add_task, color: AppColors.brandPrimary, size: 18),
                 label: const Text(
                   'Add Task',
-                  style: TextStyle(color: AppColors.brandPrimary),
+                  style: TextStyle(color: AppColors.brandPrimary, fontSize: 13),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => _openAddAsset(context),
-                icon: const Icon(Icons.add_circle_outline, size: 20),
+                icon: const Icon(Icons.add_circle_outline, size: 18),
                 label: const Text(
                   'Add Asset',
+                  style: TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => _openAddExpense(context),
+                icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                label: const Text(
+                  'Log Cost',
+                  style: TextStyle(fontSize: 13),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -312,6 +370,14 @@ class _QuickActionBar extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => const AddAssetSheet(),
+    );
+  }
+
+  void _openAddExpense(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const AddExpenseSheet(),
     );
   }
 }
@@ -542,132 +608,180 @@ class _RecentActivitySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final recordsAsync = ref.watch(dashboardRecordsStreamProvider);
     final tasksAsync = ref.watch(dashboardTasksStreamProvider);
+    final expensesAsync = ref.watch(dashboardExpensesStreamProvider);
+
+    // Guard: Loading state
+    if (recordsAsync.isLoading && tasksAsync.isLoading && expensesAsync.isLoading) {
+      return const SizedBox.shrink();
+    }
+
+    // Guard: Error states surfaced loudly
+    if (recordsAsync.hasError) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Error loading activity records: ${recordsAsync.error}',
+          style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+        ),
+      );
+    }
+    if (tasksAsync.hasError) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Error loading activity tasks: ${tasksAsync.error}',
+          style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+        ),
+      );
+    }
+    if (expensesAsync.hasError) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Error loading activity expenses: ${expensesAsync.error}',
+          style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+        ),
+      );
+    }
+
+    final records = recordsAsync.value ?? const [];
+    final tasks = tasksAsync.value ?? const [];
+    final expenses = expensesAsync.value ?? const [];
+
+    final allItems = <_RecentActivityItem>[];
+
+    for (final r in records) {
+      if (r.record.recordType == 'asset') {
+        allItems.add(
+          _RecentActivityItem(
+            title: r.record.title,
+            type: 'ASSET',
+            updatedAt: r.record.updatedAt,
+            onTap: () {
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => AssetDetailSheet(item: r),
+              );
+            },
+          ),
+        );
+      }
+    }
+
+    for (final t in tasks) {
+      allItems.add(
+        _RecentActivityItem(
+          title: t.record.title,
+          type: 'TASK',
+          updatedAt: t.record.updatedAt,
+          onTap: () {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => TaskDetailSheet(item: t),
+            );
+          },
+        ),
+      );
+    }
+
+    for (final e in expenses) {
+      allItems.add(
+        _RecentActivityItem(
+          title: e.record.title,
+          type: 'EXPENSE',
+          updatedAt: e.record.updatedAt,
+          onTap: () {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ExpenseDetailSheet(item: e),
+            );
+          },
+        ),
+      );
+    }
+
+    allItems.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final recentDisplay = allItems.take(4).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Recent Records Activity', style: AppTypography.sectionTitle),
         const SizedBox(height: 12),
-        recordsAsync.when(
-          loading: () => const SizedBox.shrink(),
-          error: (err, _) => Padding(
-            padding: const EdgeInsets.all(8.0),
+        if (recentDisplay.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Text(
-              'Error loading activity records: $err',
-              style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+              'No recent activity recorded yet.',
+              style: AppTypography.bodySecondary,
             ),
-          ),
-          data: (records) {
-            return tasksAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (err, _) => Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Error loading activity tasks: $err',
-                  style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recentDisplay.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (ctx, index) {
+              final item = recentDisplay[index];
+              final isAsset = item.type == 'ASSET';
+              final isExpense = item.type == 'EXPENSE';
+
+              final Color badgeBg;
+              final Color iconColor;
+              final IconData iconData;
+
+              if (isAsset) {
+                badgeBg = AppColors.brandAccentSage;
+                iconColor = AppColors.brandPrimary;
+                iconData = Icons.inventory_2_outlined;
+              } else if (isExpense) {
+                badgeBg = AppColors.statusWarningFill;
+                iconColor = AppColors.statusWarningText;
+                iconData = Icons.receipt_long_outlined;
+              } else {
+                badgeBg = AppColors.surfaceContainerLow;
+                iconColor = AppColors.textSecondary;
+                iconData = Icons.checklist_outlined;
+              }
+
+              return Card(
+                child: ListTile(
+                  onTap: item.onTap,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      iconData,
+                      color: iconColor,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    item.title,
+                    style: AppTypography.cardTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Text(item.type, style: AppTypography.badge),
+                  ),
                 ),
-              ),
-              data: (tasks) {
-                final allItems = <_RecentActivityItem>[];
-
-                for (final r in records) {
-                  if (r.record.recordType == 'asset') {
-                    allItems.add(
-                      _RecentActivityItem(
-                        title: r.record.title,
-                        type: 'ASSET',
-                        updatedAt: r.record.updatedAt,
-                        onTap: () {
-                          showModalBottomSheet<void>(
-                            context: context,
-                            isScrollControlled: true,
-                            builder: (_) => AssetDetailSheet(item: r),
-                          );
-                        },
-                      ),
-                    );
-                  }
-                }
-
-                for (final t in tasks) {
-                  allItems.add(
-                    _RecentActivityItem(
-                      title: t.record.title,
-                      type: 'TASK',
-                      updatedAt: t.record.updatedAt,
-                      onTap: () {
-                        showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (_) => TaskDetailSheet(item: t),
-                        );
-                      },
-                    ),
-                  );
-                }
-
-                allItems.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-                final recentDisplay = allItems.take(4).toList();
-
-                if (recentDisplay.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No recent activity recorded yet.',
-                      style: AppTypography.bodySecondary,
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentDisplay.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (ctx, index) {
-                    final item = recentDisplay[index];
-                    final isAsset = item.type == 'ASSET';
-
-                    return Card(
-                      child: ListTile(
-                        onTap: item.onTap,
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: isAsset
-                                ? AppColors.brandAccentSage
-                                : AppColors.surfaceContainerLow,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isAsset ? Icons.inventory_2_outlined : Icons.checklist_outlined,
-                            color: isAsset ? AppColors.brandPrimary : AppColors.textSecondary,
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          item.title,
-                          style: AppTypography.cardTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.borderSubtle),
-                          ),
-                          child: Text(item.type, style: AppTypography.badge),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            );
-          },
-        ),
+              );
+            },
+          ),
       ],
     );
   }
