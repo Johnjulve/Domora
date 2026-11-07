@@ -7,6 +7,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/domain/record.dart';
+import '../../records/presentation/widgets/asset_picker_sheet.dart';
 import '../domain/bill_item.dart';
 
 class AddBillSheet extends ConsumerStatefulWidget {
@@ -152,270 +153,243 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final assetsAsync = ref.watch(activeAssetsStreamProvider);
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Add Utility Bill', style: AppTypography.sectionTitle),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Title
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Bill Title *',
-                  hintText: 'e.g. Meralco Electricity Bill - Oct',
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Add Utility Bill', style: AppTypography.sectionTitle),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
                 ),
-                autofocus: true,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Bill title is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-              // Amount Due & Utility Type
-              Row(
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: TextFormField(
-                      controller: _amountDueController,
-                      decoration: const InputDecoration(
-                        labelText: 'Amount Due (PHP) *',
-                        hintText: 'e.g. 2450.00',
-                        prefixText: '₱ ',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return 'Amount is required';
-                        }
-                        final parsed = double.tryParse(val.trim());
-                        if (parsed == null || parsed <= 0) {
-                          return 'Enter valid amount';
-                        }
-                        return null;
-                      },
-                    ),
+                // Title
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bill Title *',
+                    hintText: 'e.g. Meralco Electricity Bill - Oct',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 5,
-                    child: DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: _utilityType,
-                      decoration: const InputDecoration(labelText: 'Utility Type'),
-                      items: UtilityType.values.map((type) {
-                        return DropdownMenuItem<String>(
-                          value: type.value,
-                          child: Row(
-                            children: [
-                              Icon(type.icon, size: 16, color: AppColors.brandPrimary),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  type.label,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _utilityType = val);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Provider & Account/Ref No.
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _providerController,
-                      decoration: const InputDecoration(
-                        labelText: 'Provider / Issuer',
-                        hintText: 'e.g. Meralco, PLDT',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _accountController,
-                      decoration: const InputDecoration(
-                        labelText: 'Account / Ref No.',
-                        hintText: 'e.g. 1029384756',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Due Date Selector
-              InkWell(
-                onTap: () => _pickDueDate(context),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.event, size: 20, color: AppColors.brandPrimary),
-                      const SizedBox(width: 10),
-                      Text(
-                        _dueDate == null
-                            ? 'Select Due Date *'
-                            : 'Due Date: ${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}',
-                        style: AppTypography.bodyPrimary,
-                      ),
-                    ],
-                  ),
+                  autofocus: true,
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Bill title is required';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Billing Period Row (Optional)
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () => _pickBillingPeriod(context, isStart: true),
-                      icon: const Icon(Icons.date_range, size: 16),
-                      label: Text(
-                        _billingPeriodStart == null
-                            ? 'Period Start'
-                            : '${_billingPeriodStart!.month}/${_billingPeriodStart!.day}/${_billingPeriodStart!.year}',
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () => _pickBillingPeriod(context, isStart: false),
-                      icon: const Icon(Icons.date_range, size: 16),
-                      label: Text(
-                        _billingPeriodEnd == null
-                            ? 'Period End'
-                            : '${_billingPeriodEnd!.month}/${_billingPeriodEnd!.day}/${_billingPeriodEnd!.year}',
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Linked Asset Dropdown (Optional)
-              assetsAsync.when(
-                data: (assets) {
-                  if (assets.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: _selectedAssetRecordId,
-                      decoration: const InputDecoration(
-                        labelText: 'Associated Property / Asset (Optional)',
-                      ),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text(
-                            'None (General Household Bill)',
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                // Amount Due & Utility Type
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: TextFormField(
+                        controller: _amountDueController,
+                        decoration: const InputDecoration(
+                          labelText: 'Amount Due (PHP) *',
+                          hintText: 'e.g. 2450.00',
+                          prefixText: '₱ ',
                         ),
-                        ...assets.map((a) {
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Amount is required';
+                          }
+                          final parsed = double.tryParse(val.trim());
+                          if (parsed == null || parsed <= 0) {
+                            return 'Enter valid amount';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 5,
+                      child: DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: _utilityType,
+                        decoration: const InputDecoration(labelText: 'Utility Type'),
+                        items: UtilityType.values.map((type) {
                           return DropdownMenuItem<String>(
-                            value: a.record.id,
-                            child: Text(
-                              a.record.title,
-                              overflow: TextOverflow.ellipsis,
+                            value: type.value,
+                            child: Row(
+                              children: [
+                                Icon(type.icon, size: 16, color: AppColors.brandPrimary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    type.label,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
-                        }),
-                      ],
-                      onChanged: (val) => setState(() => _selectedAssetRecordId = val),
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _utilityType = val);
+                        },
+                      ),
                     ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-
-              // Notes
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes / Payment Instructions',
-                  hintText: 'e.g. Disconnection warning if unpaid by due date',
+                  ],
                 ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
-              // Save Button
-              ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.brandOnPrimary,
+                // Provider & Account/Ref No.
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _providerController,
+                        decoration: const InputDecoration(
+                          labelText: 'Provider / Issuer',
+                          hintText: 'e.g. Meralco, PLDT',
                         ),
-                      )
-                    : const Text('Save Bill'),
-              ),
-            ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _accountController,
+                        decoration: const InputDecoration(
+                          labelText: 'Account / Ref No.',
+                          hintText: 'e.g. 1029384756',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Due Date Selector
+                InkWell(
+                  onTap: () => _pickDueDate(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event, size: 20, color: AppColors.brandPrimary),
+                        const SizedBox(width: 10),
+                        Text(
+                          _dueDate == null
+                              ? 'Select Due Date *'
+                              : 'Due Date: ${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}',
+                          style: AppTypography.bodyPrimary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Billing Period Row (Optional)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => _pickBillingPeriod(context, isStart: true),
+                        icon: const Icon(Icons.date_range, size: 16),
+                        label: Text(
+                          _billingPeriodStart == null
+                              ? 'Period Start'
+                              : '${_billingPeriodStart!.month}/${_billingPeriodStart!.day}/${_billingPeriodStart!.year}',
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => _pickBillingPeriod(context, isStart: false),
+                        icon: const Icon(Icons.date_range, size: 16),
+                        label: Text(
+                          _billingPeriodEnd == null
+                              ? 'Period End'
+                              : '${_billingPeriodEnd!.month}/${_billingPeriodEnd!.day}/${_billingPeriodEnd!.year}',
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Linked Asset Selector (Clean reusable widget with async states)
+                AssetPickerTile(
+                  selectedAssetRecordId: _selectedAssetRecordId,
+                  noneLabel: 'None (General Household Bill)',
+                  onAssetChanged: (id) => setState(() => _selectedAssetRecordId = id),
+                ),
+
+                // Notes
+                TextFormField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes / Payment Instructions',
+                    hintText: 'e.g. Disconnection warning if unpaid by due date',
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 24),
+
+                // Save Button
+                ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.brandOnPrimary,
+                          ),
+                        )
+                      : const Text('Save Bill'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

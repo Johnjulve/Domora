@@ -73,6 +73,7 @@ class ExpenseItem {
   final String? linkedAssetRecordId;
   final String? linkedTaskRecordId;
   final String? linkedBillRecordId;
+  final int? odometerReading;
 
   const ExpenseItem({
     required this.recordId,
@@ -84,6 +85,7 @@ class ExpenseItem {
     this.linkedAssetRecordId,
     this.linkedTaskRecordId,
     this.linkedBillRecordId,
+    this.odometerReading,
   });
 
   /// Formatted currency string with minor unit conversion (e.g. 150050 -> "PHP 1500.50").
@@ -102,6 +104,7 @@ class ExpenseItem {
     String? linkedAssetRecordId,
     String? linkedTaskRecordId,
     String? linkedBillRecordId,
+    int? odometerReading,
   }) {
     return ExpenseItem(
       recordId: recordId ?? this.recordId,
@@ -113,6 +116,7 @@ class ExpenseItem {
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedTaskRecordId: linkedTaskRecordId ?? this.linkedTaskRecordId,
       linkedBillRecordId: linkedBillRecordId ?? this.linkedBillRecordId,
+      odometerReading: odometerReading ?? this.odometerReading,
     );
   }
 
@@ -129,7 +133,8 @@ class ExpenseItem {
           expenseCategory == other.expenseCategory &&
           linkedAssetRecordId == other.linkedAssetRecordId &&
           linkedTaskRecordId == other.linkedTaskRecordId &&
-          linkedBillRecordId == other.linkedBillRecordId;
+          linkedBillRecordId == other.linkedBillRecordId &&
+          odometerReading == other.odometerReading;
 
   @override
   int get hashCode =>
@@ -141,7 +146,8 @@ class ExpenseItem {
       expenseCategory.hashCode ^
       linkedAssetRecordId.hashCode ^
       linkedTaskRecordId.hashCode ^
-      linkedBillRecordId.hashCode;
+      linkedBillRecordId.hashCode ^
+      odometerReading.hashCode;
 }
 
 /// Composite projection bundling universal Record with specialized ExpenseItem and optional link targets.

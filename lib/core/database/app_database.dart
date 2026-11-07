@@ -39,6 +39,14 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(bills);
           await m.addColumn(expenses, expenses.linkedBillRecordId);
         }
+        if (from < 7) {
+          await m.addColumn(assets, assets.odometerReading);
+          await m.addColumn(assets, assets.pmsDistanceIntervalKm);
+          await m.addColumn(assets, assets.pmsTimeIntervalMonths);
+          await m.addColumn(assets, assets.nextPmsDueDate);
+          await m.addColumn(assets, assets.nextPmsOdometerTarget);
+          await m.addColumn(expenses, expenses.odometerReading);
+        }
       },
       beforeOpen: (details) async {
         // Enforce SQLite Foreign Key constraints and enable WAL mode for concurrent reliability

@@ -70,6 +70,11 @@ class Assets extends Table {
   TextColumn get locationDescription => text().nullable()();
   TextColumn get acquiredFrom => text().nullable()();
   DateTimeColumn get disposedAt => dateTime().nullable()();
+  IntColumn get odometerReading => integer().nullable()(); // Vehicle mileage (e.g. km)
+  IntColumn get pmsDistanceIntervalKm => integer().nullable()(); // PMS distance cycle (e.g. 5000 km)
+  IntColumn get pmsTimeIntervalMonths => integer().nullable()(); // PMS time cycle (e.g. 3 or 6 months)
+  DateTimeColumn get nextPmsDueDate => dateTime().nullable()(); // Next target PMS calendar date
+  IntColumn get nextPmsOdometerTarget => integer().nullable()(); // Next target PMS odometer reading (km)
 
   @override
   Set<Column> get primaryKey => {recordId};
@@ -132,6 +137,7 @@ class Expenses extends Table {
   TextColumn get linkedTaskRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
   @ReferenceName('expensesForBill')
   TextColumn get linkedBillRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+  IntColumn get odometerReading => integer().nullable()(); // Mileage recorded during service
 
   @override
   Set<Column> get primaryKey => {recordId};
