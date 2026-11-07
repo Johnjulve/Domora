@@ -163,6 +163,10 @@ class _BackupSheetState extends ConsumerState<BackupSheet> {
       ref.invalidate(activeExpensesStreamProvider);
       ref.invalidate(dashboardExpensesStreamProvider);
       ref.invalidate(workspaceTotalExpensesProvider);
+      ref.invalidate(activeBillsStreamProvider);
+      ref.invalidate(dashboardBillsStreamProvider);
+      ref.invalidate(upcomingBillsStreamProvider);
+      ref.invalidate(workspaceTotalUnpaidBillsProvider);
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -299,6 +303,7 @@ class _BackupSheetState extends ConsumerState<BackupSheet> {
     final tasksAsync = ref.watch(dashboardTasksStreamProvider);
     final docsAsync = ref.watch(dashboardDocumentsStreamProvider);
     final expensesAsync = ref.watch(dashboardExpensesStreamProvider);
+    final billsAsync = ref.watch(dashboardBillsStreamProvider);
 
     final String recordsDisplay = recordsAsync.when(
       data: (items) => '${items.length}',
@@ -316,6 +321,11 @@ class _BackupSheetState extends ConsumerState<BackupSheet> {
       error: (_, _) => '!',
     );
     final String expensesDisplay = expensesAsync.when(
+      data: (items) => '${items.length}',
+      loading: () => '...',
+      error: (_, _) => '!',
+    );
+    final String billsDisplay = billsAsync.when(
       data: (items) => '${items.length}',
       loading: () => '...',
       error: (_, _) => '!',
@@ -355,7 +365,8 @@ class _BackupSheetState extends ConsumerState<BackupSheet> {
                 children: [
                   _MetricPill(label: 'Records', value: recordsDisplay),
                   _MetricPill(label: 'Tasks', value: tasksDisplay),
-                  _MetricPill(label: 'Vault Docs', value: docsDisplay),
+                  _MetricPill(label: 'Docs', value: docsDisplay),
+                  _MetricPill(label: 'Bills', value: billsDisplay),
                   _MetricPill(label: 'Expenses', value: expensesDisplay),
                 ],
               ),
@@ -670,7 +681,7 @@ class _BackupSheetState extends ConsumerState<BackupSheet> {
                     'Total items: ${_validationResult!.manifest!.counts.totalItems} '
                     '(${_validationResult!.manifest!.counts.records} records, '
                     '${_validationResult!.manifest!.counts.tasks} tasks, '
-                    '${_validationResult!.manifest!.counts.documents} docs, '
+                    '${_validationResult!.manifest!.counts.bills} bills, '
                     '${_validationResult!.manifest!.counts.expenses} expenses)',
                     style: AppTypography.caption,
                   ),

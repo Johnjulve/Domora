@@ -5,6 +5,20 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.9] - 2026-11-07
+
+### Added
+- Household Utilities & Recurring Bills Engine (Stage 8):
+  - Schema Migration (v5 -> v6): Added `Bills` specialized table linked 1-to-1 to a parent universal `Record` with financial integer precision in minor units (`amountDueMinor`), ISO currency codes (`currencyCode`), utility type taxonomy (`electricity`, `water`, `internet`, `rent`, `insurance`, `subscription`, `trash`, `other`), provider/account details, billing period, due date, payment status (`unpaid`, `paid`, `overdue`, `cancelled`), and payment timestamp (`paidAt`). Added `linkedBillRecordId` on `Expenses` table.
+  - Automated Transactional Bridge: Calling `markBillAsPaid` automatically logs a linked `Expense` entity with `expenseCategory: 'utility'`, bridges relationships between the bills and expenses tables, and updates bill status atomically within a single SQLite transaction, preventing duplicate entry and rolling into total workspace expenses.
+  - Backup & Dataset Portability Integration (Schema v6): `BackupManifest` and `BackupRepositoryImpl` serialize, validate SHA-256 integrity, and atomically restore `bills` with complete topological foreign-key ordering and zero data corruption.
+  - Presentation & UI Engine:
+    - `AddBillSheet`: Full utility bill obligation creation with utility type selector, integer minor precision, date pickers for billing period and due date, optional asset linking, and validation.
+    - `BillDetailSheet`: Detailed inspection modal showing utility type icons, due date, account/provider details, 1-tap "Mark as Paid" with payment confirmation dialog, and "Move to Trash" soft deletion.
+    - `TodayScreen`: Dedicated "Upcoming & Overdue Bills" focus section with `_BillFocusTile`, status badges (`DUE SOON`, `OVERDUE`), and reactive update feeds.
+    - `RecordsScreen`: Added `Add Utility Bill` action in AppBar and polymorphic card tapping routing `bill` records directly to `BillDetailSheet`.
+- 8 new automated unit and widget tests covering Drift schema v6, automated expense bridge, date boundary logic (`isDueToday`, `isPastDueAt`), backup/restore integrity, and AppShell UI navigation flows (76 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.8] - 2026-11-06
 
 ### Added

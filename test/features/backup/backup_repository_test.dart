@@ -9,6 +9,8 @@ import 'package:domora/features/backup/domain/backup_manifest.dart';
 import 'package:domora/features/categories/data/category_repository_impl.dart';
 import 'package:domora/features/expenses/data/expense_repository_impl.dart';
 import 'package:domora/features/expenses/domain/expense_item.dart';
+import 'package:domora/features/bills/data/bill_repository_impl.dart';
+import 'package:domora/features/bills/domain/bill_item.dart';
 import 'package:domora/features/records/data/record_repository_impl.dart';
 import 'package:domora/features/records/domain/record.dart';
 import 'package:domora/features/tasks/data/task_repository_impl.dart';
@@ -25,6 +27,7 @@ void main() {
   late TaskRepositoryImpl taskRepo;
   late DocumentRepositoryImpl documentRepo;
   late ExpenseRepositoryImpl expenseRepo;
+  late BillRepositoryImpl billRepo;
   late BackupRepositoryImpl backupRepo;
 
   setUp(() async {
@@ -35,6 +38,7 @@ void main() {
     taskRepo = TaskRepositoryImpl(db);
     documentRepo = DocumentRepositoryImpl(db);
     expenseRepo = ExpenseRepositoryImpl(db);
+    billRepo = BillRepositoryImpl(db);
     backupRepo = BackupRepositoryImpl(db);
 
     final ws = await workspaceRepo.getOrCreateDefaultWorkspace();
@@ -135,6 +139,26 @@ void main() {
         ),
       );
 
+      // Seed 1 Bill linked to asset
+      await billRepo.createBillRecord(
+        record: Record(
+          id: 'bill-generator-fuel',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'bill',
+          title: 'Generator Fuel Reserve',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        bill: BillItem(
+          recordId: 'bill-generator-fuel',
+          utilityType: 'utility',
+          amountDueMinor: 150000,
+          currencyCode: 'PHP',
+          paymentStatus: 'unpaid',
+          linkedAssetRecordId: 'asset-generator',
+        ),
+      );
+
       // Execute createBackup
       final payload = await backupRepo.createBackup(AppConstants.defaultWorkspaceId);
 
@@ -143,12 +167,13 @@ void main() {
       expect(payload.manifest.workspaceId, equals(AppConstants.defaultWorkspaceId));
       expect(payload.manifest.counts.workspaces, equals(1));
       expect(payload.manifest.counts.categories, equals(5)); // 5 default categories seeded
-      expect(payload.manifest.counts.records, equals(4)); // asset, task, doc, expense
+      expect(payload.manifest.counts.records, equals(5)); // asset, task, doc, expense, bill
       expect(payload.manifest.counts.assets, equals(1));
       expect(payload.manifest.counts.tasks, equals(1));
       expect(payload.manifest.counts.documents, equals(1));
       expect(payload.manifest.counts.expenses, equals(1));
-      expect(payload.manifest.counts.totalItems, equals(14));
+      expect(payload.manifest.counts.bills, equals(1));
+      expect(payload.manifest.counts.totalItems, equals(16));
 
       // Verify SHA-256 Checksum integrity
       final rawDataMap = (payload.toJson()['data'] as Map<String, dynamic>);
@@ -296,6 +321,23 @@ void main() {
         ),
       );
 
+      await billRepo.createBillRecord(
+        record: Record(
+          id: 'bill-appliance-insurance',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'bill',
+          title: 'Appliance Extended Warranty Bill',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        bill: const BillItem(
+          recordId: 'bill-appliance-insurance',
+          utilityType: 'insurance',
+          amountDueMinor: 120000,
+          linkedAssetRecordId: 'asset-fridge',
+        ),
+      );
+
       // Create backup from source DB
       final backupJson = await backupRepo.exportBackupToJson(AppConstants.defaultWorkspaceId);
 
@@ -305,6 +347,7 @@ void main() {
       final recordRepo2 = RecordRepositoryImpl(db2);
       final taskRepo2 = TaskRepositoryImpl(db2);
       final expenseRepo2 = ExpenseRepositoryImpl(db2);
+      final billRepo2 = BillRepositoryImpl(db2);
 
       // Validate & Restore in Target DB
       final val = await backupRepo2.validateBackup(backupJson);
@@ -316,7 +359,15 @@ void main() {
       final restoredRecords = await recordRepo2.watchActiveRecordsByWorkspace(
         AppConstants.defaultWorkspaceId,
       ).first;
-      expect(restoredRecords.length, equals(3)); // asset, task, expense
+      expect(restoredRecords.length, equals(4)); // asset, task, expense, bill
+
+      final restoredBills = await billRepo2.watchBillsByWorkspace(
+        AppConstants.defaultWorkspaceId,
+      ).first;
+      expect(restoredBills.length, equals(1));
+      expect(restoredBills.first.record.title, equals('Appliance Extended Warranty Bill'));
+      expect(restoredBills.first.bill.amountDueMinor, equals(120000));
+      expect(restoredBills.first.bill.linkedAssetRecordId, equals('asset-fridge'));
 
       final restoredTasks = await taskRepo2.watchTasksByWorkspace(
         AppConstants.defaultWorkspaceId,

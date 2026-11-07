@@ -1,6 +1,6 @@
 import '../../records/domain/record.dart';
 
-/// Categories of expenses and maintenance costs.
+/// Semantic category definitions for financial expenses and maintenance costs.
 enum ExpenseCategory {
   maintenance,
   purchase,
@@ -9,8 +9,9 @@ enum ExpenseCategory {
   subscription,
   other;
 
-  static ExpenseCategory fromString(String? val) {
-    switch (val?.toLowerCase()) {
+  static ExpenseCategory fromString(String? value) {
+    if (value == null) return ExpenseCategory.maintenance;
+    switch (value.toLowerCase().trim()) {
       case 'maintenance':
         return ExpenseCategory.maintenance;
       case 'purchase':
@@ -21,7 +22,6 @@ enum ExpenseCategory {
         return ExpenseCategory.service;
       case 'subscription':
         return ExpenseCategory.subscription;
-      case 'other':
       default:
         return ExpenseCategory.other;
     }
@@ -72,6 +72,7 @@ class ExpenseItem {
   final String expenseCategory;
   final String? linkedAssetRecordId;
   final String? linkedTaskRecordId;
+  final String? linkedBillRecordId;
 
   const ExpenseItem({
     required this.recordId,
@@ -82,6 +83,7 @@ class ExpenseItem {
     this.expenseCategory = 'maintenance',
     this.linkedAssetRecordId,
     this.linkedTaskRecordId,
+    this.linkedBillRecordId,
   });
 
   /// Formatted currency string with minor unit conversion (e.g. 150050 -> "PHP 1500.50").
@@ -99,6 +101,7 @@ class ExpenseItem {
     String? expenseCategory,
     String? linkedAssetRecordId,
     String? linkedTaskRecordId,
+    String? linkedBillRecordId,
   }) {
     return ExpenseItem(
       recordId: recordId ?? this.recordId,
@@ -109,6 +112,7 @@ class ExpenseItem {
       expenseCategory: expenseCategory ?? this.expenseCategory,
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedTaskRecordId: linkedTaskRecordId ?? this.linkedTaskRecordId,
+      linkedBillRecordId: linkedBillRecordId ?? this.linkedBillRecordId,
     );
   }
 
@@ -124,45 +128,35 @@ class ExpenseItem {
           paymentMethod == other.paymentMethod &&
           expenseCategory == other.expenseCategory &&
           linkedAssetRecordId == other.linkedAssetRecordId &&
-          linkedTaskRecordId == other.linkedTaskRecordId;
+          linkedTaskRecordId == other.linkedTaskRecordId &&
+          linkedBillRecordId == other.linkedBillRecordId;
 
   @override
-  int get hashCode => Object.hash(
-        recordId,
-        amountMinor,
-        currencyCode,
-        transactionDate,
-        paymentMethod,
-        expenseCategory,
-        linkedAssetRecordId,
-        linkedTaskRecordId,
-      );
+  int get hashCode =>
+      recordId.hashCode ^
+      amountMinor.hashCode ^
+      currencyCode.hashCode ^
+      transactionDate.hashCode ^
+      paymentMethod.hashCode ^
+      expenseCategory.hashCode ^
+      linkedAssetRecordId.hashCode ^
+      linkedTaskRecordId.hashCode ^
+      linkedBillRecordId.hashCode;
 }
 
-/// Composite domain entity holding a universal Record and its linked specialized Expense metadata.
+/// Composite projection bundling universal Record with specialized ExpenseItem and optional link targets.
 class RecordWithExpense {
   final Record record;
   final ExpenseItem expense;
   final String? linkedAssetTitle;
   final String? linkedTaskTitle;
+  final String? linkedBillTitle;
 
   const RecordWithExpense({
     required this.record,
     required this.expense,
     this.linkedAssetTitle,
     this.linkedTaskTitle,
+    this.linkedBillTitle,
   });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecordWithExpense &&
-          runtimeType == other.runtimeType &&
-          record == other.record &&
-          expense == other.expense &&
-          linkedAssetTitle == other.linkedAssetTitle &&
-          linkedTaskTitle == other.linkedTaskTitle;
-
-  @override
-  int get hashCode => Object.hash(record, expense, linkedAssetTitle, linkedTaskTitle);
 }

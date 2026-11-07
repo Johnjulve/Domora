@@ -11,6 +11,9 @@ import '../../tasks/domain/task_item.dart';
 import '../../tasks/presentation/tasks_screen.dart';
 import '../../expenses/presentation/add_expense_sheet.dart';
 import '../../expenses/presentation/expense_detail_sheet.dart';
+import '../../bills/domain/bill_item.dart';
+import '../../bills/presentation/add_bill_sheet.dart';
+import '../../bills/presentation/bill_detail_sheet.dart';
 
 const List<String> _daysOfWeek = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -53,6 +56,10 @@ class TodayScreen extends ConsumerWidget {
           ref.invalidate(dashboardTasksStreamProvider);
           ref.invalidate(dashboardExpensesStreamProvider);
           ref.invalidate(workspaceTotalExpensesProvider);
+          ref.invalidate(activeBillsStreamProvider);
+          ref.invalidate(dashboardBillsStreamProvider);
+          ref.invalidate(upcomingBillsStreamProvider);
+          ref.invalidate(workspaceTotalUnpaidBillsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -67,6 +74,8 @@ class TodayScreen extends ConsumerWidget {
               const _QuickActionBar(),
               const SizedBox(height: 28),
               _TodayFocusSection(now: now),
+              const SizedBox(height: 28),
+              _TodayBillsSection(now: now),
               const SizedBox(height: 28),
               const _RecentActivitySection(),
             ],
@@ -616,6 +625,242 @@ class _FocusTaskTile extends ConsumerWidget {
   }
 }
 
+
+class _TodayBillsSection extends ConsumerWidget {
+  final DateTime now;
+
+  const _TodayBillsSection({required this.now});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcomingBillsAsync = ref.watch(upcomingBillsStreamProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Upcoming & Overdue Bills', style: AppTypography.sectionTitle),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              onPressed: () => _openAddBill(context),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add Bill'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        upcomingBillsAsync.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(color: AppColors.brandPrimary),
+            ),
+          ),
+          error: (err, _) => Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Error loading bills: $err',
+              style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+            ),
+          ),
+          data: (bills) {
+            if (bills.isEmpty) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: AppColors.brandAccentSage,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_circle_outline, color: AppColors.brandPrimary, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('All Bills Up to Date', style: AppTypography.cardTitle),
+                            SizedBox(height: 4),
+                            Text(
+                              'No pending utility bills or obligations due in the next 30 days.',
+                              style: AppTypography.bodySecondary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: bills.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (ctx, index) {
+                return _BillFocusTile(item: bills[index], now: now);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _openAddBill(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddBillSheet(),
+    );
+  }
+}
+
+class _BillFocusTile extends ConsumerWidget {
+  final RecordWithBill item;
+  final DateTime now;
+
+  const _BillFocusTile({
+    required this.item,
+    required this.now,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bill = item.bill;
+    final isOverdue = bill.isPastDue;
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => BillDetailSheet(item: item),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isOverdue ? AppColors.statusDangerFill : AppColors.brandAccentSage,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isOverdue ? AppColors.statusDangerStroke : AppColors.brandAccentBorder,
+                  ),
+                ),
+                child: Icon(
+                  bill.utilityTypeEnum.icon,
+                  color: isOverdue ? AppColors.statusDangerText : AppColors.brandPrimary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.record.title,
+                      style: AppTypography.cardTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isOverdue
+                                ? AppColors.statusDangerFill
+                                : AppColors.statusWarningFill,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isOverdue ? 'OVERDUE' : 'DUE SOON',
+                            style: AppTypography.badge.copyWith(
+                              color: isOverdue
+                                  ? AppColors.statusDangerText
+                                  : AppColors.statusWarningText,
+                            ),
+                          ),
+                        ),
+                        if (bill.dueDate != null)
+                          Text(
+                            'Due: ${bill.dueDate!.month}/${bill.dueDate!.day}',
+                            style: AppTypography.caption,
+                          ),
+                        if (bill.providerName != null)
+                          Text(
+                            '• ${bill.providerName}',
+                            style: AppTypography.caption,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    bill.formattedAmountDue,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => BillDetailSheet(item: item),
+                      );
+                    },
+                    child: const Text('Pay', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RecentActivitySection extends ConsumerWidget {
   const _RecentActivitySection();
 
@@ -624,9 +869,10 @@ class _RecentActivitySection extends ConsumerWidget {
     final recordsAsync = ref.watch(dashboardRecordsStreamProvider);
     final tasksAsync = ref.watch(dashboardTasksStreamProvider);
     final expensesAsync = ref.watch(dashboardExpensesStreamProvider);
+    final billsAsync = ref.watch(dashboardBillsStreamProvider);
 
     // Guard: Loading state
-    if (recordsAsync.isLoading && tasksAsync.isLoading && expensesAsync.isLoading) {
+    if (recordsAsync.isLoading && tasksAsync.isLoading && expensesAsync.isLoading && billsAsync.isLoading) {
       return const SizedBox.shrink();
     }
 
@@ -662,6 +908,7 @@ class _RecentActivitySection extends ConsumerWidget {
     final records = recordsAsync.value ?? const [];
     final tasks = tasksAsync.value ?? const [];
     final expenses = expensesAsync.value ?? const [];
+    final bills = billsAsync.value ?? const [];
 
     final allItems = <_RecentActivityItem>[];
 
@@ -718,6 +965,24 @@ class _RecentActivitySection extends ConsumerWidget {
       );
     }
 
+    for (final b in bills) {
+      allItems.add(
+        _RecentActivityItem(
+          title: b.record.title,
+          type: 'BILL',
+          updatedAt: b.record.updatedAt,
+          onTap: () {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => BillDetailSheet(item: b),
+            );
+          },
+        ),
+      );
+    }
+
     allItems.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     final recentDisplay = allItems.take(4).toList();
 
@@ -744,12 +1009,17 @@ class _RecentActivitySection extends ConsumerWidget {
               final item = recentDisplay[index];
               final isAsset = item.type == 'ASSET';
               final isExpense = item.type == 'EXPENSE';
+              final isBill = item.type == 'BILL';
 
               final Color badgeBg;
               final Color iconColor;
               final IconData iconData;
 
-              if (isAsset) {
+              if (isBill) {
+                badgeBg = AppColors.brandAccentSage;
+                iconColor = AppColors.brandPrimary;
+                iconData = Icons.receipt_long;
+              } else if (isAsset) {
                 badgeBg = AppColors.brandAccentSage;
                 iconColor = AppColors.brandPrimary;
                 iconData = Icons.inventory_2_outlined;

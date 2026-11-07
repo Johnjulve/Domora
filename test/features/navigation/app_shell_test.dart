@@ -17,6 +17,7 @@ import 'package:domora/features/tasks/domain/task_item.dart';
 import 'package:domora/features/today/presentation/today_screen.dart';
 import 'package:domora/features/vault/data/document_repository_impl.dart';
 import 'package:domora/features/expenses/data/expense_repository_impl.dart';
+import 'package:domora/features/bills/data/bill_repository_impl.dart';
 import 'package:domora/features/backup/data/backup_repository_impl.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 
@@ -41,6 +42,7 @@ void main() {
         taskRepositoryProvider.overrideWithValue(TaskRepositoryImpl(inMemoryDb)),
         documentRepositoryProvider.overrideWithValue(DocumentRepositoryImpl(inMemoryDb)),
         expenseRepositoryProvider.overrideWithValue(ExpenseRepositoryImpl(inMemoryDb)),
+        billRepositoryProvider.overrideWithValue(BillRepositoryImpl(inMemoryDb)),
         backupRepositoryProvider.overrideWithValue(BackupRepositoryImpl(inMemoryDb)),
       ],
       child: MaterialApp(
@@ -406,6 +408,8 @@ void main() {
       expect(find.text("You're all caught up"), findsOneWidget);
 
       // Test Quick Action: tap "Add Asset" button
+      await tester.ensureVisible(find.text('Add Asset'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Add Asset'));
       await tester.pumpAndSettle();
 
@@ -713,6 +717,73 @@ void main() {
       // Dismiss sheet
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    testWidgets('Tapping Add Utility Bill records obligation, displays in Today focus, and Mark as Paid creates linked expense', (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Starts at Records screen. Tap 'Add Utility Bill' action in AppBar
+      final addBillAction = find.byTooltip('Add Utility Bill');
+      expect(addBillAction, findsOneWidget);
+      await tester.tap(addBillAction);
+      await tester.pumpAndSettle();
+
+      // Add Utility Bill bottom sheet opens
+      expect(find.text('Add Utility Bill'), findsOneWidget);
+
+      // Fill in details
+      await tester.enterText(find.widgetWithText(TextFormField, 'Bill Title *'), 'Meralco Electric Bill');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Amount Due (PHP) *'), '3450.50');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Provider / Issuer'), 'Meralco Power');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Account / Ref No.'), 'ACC-987654');
+
+      // Scroll to Save button and tap
+      await tester.ensureVisible(find.text('Save Bill'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save Bill'));
+      await tester.pumpAndSettle();
+
+      // Navigate to Today screen
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      // Verify Upcoming & Overdue Bills section displays the bill
+      expect(find.text('Upcoming & Overdue Bills'), findsOneWidget);
+      expect(find.text('Meralco Electric Bill'), findsWidgets);
+      expect(find.text('PHP 3450.50'), findsWidgets);
+      expect(find.text('DUE SOON'), findsWidgets);
+
+      // Tap on the bill tile to open BillDetailSheet
+      final billTile = find.text('Meralco Electric Bill').first;
+      await tester.ensureVisible(billTile);
+      await tester.pumpAndSettle();
+      await tester.tap(billTile);
+      await tester.pumpAndSettle();
+
+      // BillDetailSheet is displayed
+      expect(find.text('ACC-987654'), findsOneWidget);
+      expect(find.text('Meralco Power'), findsOneWidget);
+      expect(find.text('Mark as Paid'), findsOneWidget);
+      expect(find.text('UNPAID'), findsOneWidget);
+
+      // Scroll to 'Mark as Paid' and tap
+      await tester.ensureVisible(find.text('Mark as Paid'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mark as Paid'));
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog appears; confirm payment & expense bridge
+      expect(find.text('Confirm Payment'), findsOneWidget);
+      await tester.tap(find.text('Mark Paid & Log Expense'));
+      await tester.pumpAndSettle();
+
+      // In TodayScreen, verify Recorded Expenses now includes the PHP 3450.50 utility expense
+      expect(find.text('Recorded Expenses'), findsOneWidget);
+      expect(find.text('PHP 3450.50'), findsWidgets);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));

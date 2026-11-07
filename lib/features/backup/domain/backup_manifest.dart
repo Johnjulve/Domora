@@ -12,6 +12,7 @@ class BackupCounts {
   final int tasks;
   final int documents;
   final int expenses;
+  final int bills;
 
   const BackupCounts({
     required this.workspaces,
@@ -21,10 +22,11 @@ class BackupCounts {
     required this.tasks,
     required this.documents,
     required this.expenses,
+    this.bills = 0,
   });
 
   int get totalItems =>
-      workspaces + categories + records + assets + tasks + documents + expenses;
+      workspaces + categories + records + assets + tasks + documents + expenses + bills;
 
   Map<String, dynamic> toJson() => {
         'workspaces': workspaces,
@@ -34,6 +36,7 @@ class BackupCounts {
         'tasks': tasks,
         'documents': documents,
         'expenses': expenses,
+        'bills': bills,
       };
 
   factory BackupCounts.fromJson(Map<String, dynamic> json) => BackupCounts(
@@ -44,6 +47,7 @@ class BackupCounts {
         tasks: json['tasks'] as int? ?? 0,
         documents: json['documents'] as int? ?? 0,
         expenses: json['expenses'] as int? ?? 0,
+        bills: json['bills'] as int? ?? 0,
       );
 }
 
@@ -100,6 +104,7 @@ class BackupPayload {
   final List<Map<String, dynamic>> tasks;
   final List<Map<String, dynamic>> documents;
   final List<Map<String, dynamic>> expenses;
+  final List<Map<String, dynamic>> bills;
 
   const BackupPayload({
     required this.manifest,
@@ -110,6 +115,7 @@ class BackupPayload {
     required this.tasks,
     required this.documents,
     required this.expenses,
+    this.bills = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -122,6 +128,7 @@ class BackupPayload {
           'tasks': tasks,
           'documents': documents,
           'expenses': expenses,
+          'bills': bills,
         },
       };
 

@@ -17,8 +17,10 @@ class Workspaces extends Table {
 
 /// Table definition for Categories (Properties, Vehicles, Appliances, Electronics, etc.).
 @DataClassName('CategoryEntity')
+@TableIndex(name: 'categories_workspace_name_idx', columns: {#workspaceId, #name})
 class Categories extends Table {
   TextColumn get id => text()();
+  @ReferenceName('categoriesInWorkspace')
   TextColumn get workspaceId => text().references(Workspaces, #id, onDelete: KeyAction.cascade)();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   TextColumn get iconKey => text().nullable()();
@@ -32,11 +34,13 @@ class Categories extends Table {
 
 /// Universal table definition for Records.
 @DataClassName('RecordEntity')
-@TableIndex(name: 'records_workspace_deleted_idx', columns: {#workspaceId, #deletedAt})
-@TableIndex(name: 'records_category_idx', columns: {#categoryId})
+@TableIndex(name: 'records_workspace_type_idx', columns: {#workspaceId, #recordType})
+@TableIndex(name: 'records_deleted_idx', columns: {#deletedAt})
 class Records extends Table {
   TextColumn get id => text()();
+  @ReferenceName('recordsInWorkspace')
   TextColumn get workspaceId => text().references(Workspaces, #id, onDelete: KeyAction.cascade)();
+  @ReferenceName('recordsInCategory')
   TextColumn get categoryId => text().nullable().references(Categories, #id, onDelete: KeyAction.setNull)();
   TextColumn get recordType => text()(); // e.g. 'asset', 'task', 'expense', 'bill', 'document'
   TextColumn get title => text().withLength(min: 1, max: 500)();
@@ -54,6 +58,7 @@ class Records extends Table {
 /// Specialized table definition for Assets, linked 1-to-1 to a parent Record.
 @DataClassName('AssetEntity')
 class Assets extends Table {
+  @ReferenceName('assetRecord')
   TextColumn get recordId => text().references(Records, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get purchaseDate => dateTime().nullable()();
   IntColumn get purchaseAmountMinor => integer().nullable()(); // Financial integer precision in minor units (e.g. cents)
@@ -111,6 +116,7 @@ class Documents extends Table {
 @DataClassName('ExpenseEntity')
 @TableIndex(name: 'expenses_asset_idx', columns: {#linkedAssetRecordId})
 @TableIndex(name: 'expenses_task_idx', columns: {#linkedTaskRecordId})
+@TableIndex(name: 'expenses_bill_idx', columns: {#linkedBillRecordId})
 @TableIndex(name: 'expenses_date_idx', columns: {#transactionDate})
 class Expenses extends Table {
   @ReferenceName('expenseRecord')
@@ -124,6 +130,34 @@ class Expenses extends Table {
   TextColumn get linkedAssetRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
   @ReferenceName('expensesForTask')
   TextColumn get linkedTaskRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+  @ReferenceName('expensesForBill')
+  TextColumn get linkedBillRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+
+  @override
+  Set<Column> get primaryKey => {recordId};
+}
+
+/// Specialized table definition for Household Utilities & Bills, linked 1-to-1 to a parent Record.
+@DataClassName('BillEntity')
+@TableIndex(name: 'bills_status_due_idx', columns: {#paymentStatus, #dueDate})
+@TableIndex(name: 'bills_asset_idx', columns: {#linkedAssetRecordId})
+class Bills extends Table {
+  @ReferenceName('billRecord')
+  TextColumn get recordId => text().references(Records, #id, onDelete: KeyAction.cascade)();
+  TextColumn get utilityType => text().withDefault(const Constant('utility'))(); // 'electricity', 'water', 'internet', 'rent', 'insurance', 'subscription', 'trash', 'other'
+  TextColumn get providerName => text().nullable()(); // e.g. 'Meralco', 'Manila Water', 'PLDT'
+  TextColumn get accountNumber => text().nullable()();
+  DateTimeColumn get billingPeriodStart => dateTime().nullable()();
+  DateTimeColumn get billingPeriodEnd => dateTime().nullable()();
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  IntColumn get amountDueMinor => integer()(); // Financial integer precision in minor units (e.g. cents)
+  TextColumn get currencyCode => text().withDefault(const Constant('PHP'))();
+  TextColumn get paymentStatus => text().withDefault(const Constant('unpaid'))(); // 'unpaid', 'paid', 'overdue', 'cancelled'
+  DateTimeColumn get paidAt => dateTime().nullable()();
+  @ReferenceName('billsForAsset')
+  TextColumn get linkedAssetRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
+  @ReferenceName('billLinkedExpense')
+  TextColumn get linkedExpenseRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
 
   @override
   Set<Column> get primaryKey => {recordId};
