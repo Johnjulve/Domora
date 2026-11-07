@@ -7,6 +7,8 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../expenses/presentation/add_expense_sheet.dart';
+import '../../bills/presentation/add_bill_sheet.dart';
+import '../../bills/presentation/bill_detail_sheet.dart';
 import '../domain/record.dart';
 
 class RecordsScreen extends ConsumerStatefulWidget {
@@ -42,6 +44,11 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       appBar: AppBar(
         title: const Text('Life Records'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined, color: AppColors.brandPrimary),
+            tooltip: 'Add Utility Bill',
+            onPressed: () => _openAddBillModal(context),
+          ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: AppColors.brandPrimary),
             tooltip: 'Add Record',
@@ -198,7 +205,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                     return Card(
                       child: InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: () => _openAssetDetailModal(context, item),
+                        onTap: () => _openRecordDetailModal(context, item),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
@@ -306,12 +313,39 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
+
+  void _openAddBillModal(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddBillSheet(),
+    );
+  }
+
   void _openAddAssetModal(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (_) => const AddAssetSheet(),
     );
+  }
+
+  Future<void> _openRecordDetailModal(BuildContext context, RecordWithAsset item) async {
+    if (item.record.recordType == 'bill') {
+      final billRepo = ref.read(billRepositoryProvider);
+      final billItem = await billRepo.getBillById(item.record.id);
+      if (billItem != null && context.mounted) {
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => BillDetailSheet(item: billItem),
+        );
+      }
+    } else {
+      _openAssetDetailModal(context, item);
+    }
   }
 
   void _openAssetDetailModal(BuildContext context, RecordWithAsset item) {
