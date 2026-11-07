@@ -17,6 +17,7 @@ import 'package:domora/features/tasks/domain/task_item.dart';
 import 'package:domora/features/today/presentation/today_screen.dart';
 import 'package:domora/features/vault/data/document_repository_impl.dart';
 import 'package:domora/features/expenses/data/expense_repository_impl.dart';
+import 'package:domora/features/backup/data/backup_repository_impl.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 
 void main() {
@@ -40,6 +41,7 @@ void main() {
         taskRepositoryProvider.overrideWithValue(TaskRepositoryImpl(inMemoryDb)),
         documentRepositoryProvider.overrideWithValue(DocumentRepositoryImpl(inMemoryDb)),
         expenseRepositoryProvider.overrideWithValue(ExpenseRepositoryImpl(inMemoryDb)),
+        backupRepositoryProvider.overrideWithValue(BackupRepositoryImpl(inMemoryDb)),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
@@ -661,6 +663,56 @@ void main() {
       // Verify Recent Records Activity shows the expense
       expect(find.text('Synthetic Oil & Spark Plug'), findsOneWidget);
       expect(find.text('EXPENSE'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    testWidgets('Tapping Sanctuary badge opens Sanctuary Archival sheet, exports backup and validates payload', (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Navigate to Today screen
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      // Tap Sanctuary badge
+      expect(find.text('Sanctuary'), findsOneWidget);
+      await tester.tap(find.text('Sanctuary'));
+      await tester.pumpAndSettle();
+
+      // Sanctuary Archival bottom sheet is displayed
+      expect(find.text('Sanctuary Archival'), findsOneWidget);
+      expect(find.text('Export Vault'), findsOneWidget);
+      expect(find.text('Restore Vault'), findsOneWidget);
+      expect(find.text('Current Vault State'), findsOneWidget);
+
+      // Tap 'Create Backup Archive'
+      await tester.tap(find.text('Create Backup Archive'));
+      await tester.pumpAndSettle();
+
+      // Verify Archive results card appears with checksum
+      expect(find.text('Archive Generated & Verified'), findsOneWidget);
+      expect(find.text('Copy JSON'), findsOneWidget);
+      expect(find.text('Preview'), findsOneWidget);
+
+      // Switch to 'Restore Vault' tab
+      await tester.tap(find.text('Restore Vault'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Validate Archive Integrity'), findsOneWidget);
+
+      // Enter invalid json
+      await tester.enterText(find.widgetWithText(TextField, 'Backup Archive JSON *'), 'CORRUPTED_JSON_DATA');
+      await tester.tap(find.text('Validate Archive Integrity'));
+      await tester.pumpAndSettle();
+
+      // Error banner is displayed
+      expect(find.text('Archive Rejected: CORRUPTED'), findsOneWidget);
+
+      // Dismiss sheet
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));

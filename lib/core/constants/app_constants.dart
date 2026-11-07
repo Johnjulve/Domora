@@ -2,8 +2,9 @@
 class AppConstants {
   AppConstants._();
 
-  /// Product name
+  /// Product name and active release version
   static const String appName = 'Domora';
+  static const String appVersion = '0.1.0';
 
   /// SQLite schema version for Drift (v5: Expenses & Maintenance Cost Engine)
   static const int schemaVersion = 5;
