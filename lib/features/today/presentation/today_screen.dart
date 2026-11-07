@@ -6,6 +6,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../backup/presentation/backup_sheet.dart';
+import 'settings_sheet.dart';
 import '../../records/presentation/records_screen.dart';
 import '../../tasks/domain/task_item.dart';
 import '../../tasks/presentation/tasks_screen.dart';
@@ -46,8 +47,23 @@ class TodayScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Today'),
-        actions: const [
-          _SanctuaryBadge(),
+        actions: [
+          const _SanctuaryBadge(),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: AppColors.brandPrimary),
+            tooltip: 'Settings & Updates',
+            onPressed: () {
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                isDismissible: false,
+                enableDrag: false,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const SettingsSheet(),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
