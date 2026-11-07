@@ -17,7 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added Vehicle PMS Limits & Odometer configuration section to `AddAssetSheet` and inspection rows to `AssetDetailSheet`.
     - Protected bottom sheets against accidental dismissal and draft reset during app switching.
     - Added subtle version indicator (`Domora v0.1.0 • Offline Sanctuary`) at the footer of `TodayScreen`.
-  - Added automated unit test suite in `test/features/records/vehicle_pms_test.dart` (79 total passing tests, 0 failures).
+- Vehicle Service History Timeline & Asset Attachments:
+  - Interactive `_AssetServiceHistorySection` in `AssetDetailSheet` rendering chronological maintenance events, recorded odometer mileage, mileage delta from previous service (`+$delta km delta`), and costs.
+  - Direct 1-tap document attachment button on assets and reactive `_AssetLinkedDocumentsSection` displaying attached warranties, manuals, or titles.
+- Device File Picker & Sanctuary Document Vault Storage:
+  - Integrated `file_picker` and Android storage permissions in `AddDocumentSheet` to select device files (PDF, images, Office docs, text) with automatic extraction of file name, byte size, and MIME type.
+  - Local persistence copying picked files into the app documents vault folder (`app_flutter/vault/`) with persistent `filePath`.
+  - Integrated `open_filex` for 1-tap local document opening and inspection in `DocumentDetailSheet`.
+- App Settings & Live GitHub Software Update Checker:
+  - Added Settings & Preferences sheet (`SettingsSheet`) triggered from upper-right app bar action in `TodayScreen`.
+  - Declared `INTERNET` and `ACCESS_NETWORK_STATE` permissions in `AndroidManifest.xml`.
+  - Automated network update checker querying GitHub Releases API with offline fallback and direct release download launcher via `url_launcher`.
+- Automated test suites in `test/features/records/service_history_test.dart` and `test/features/today/settings_sheet_test.dart` (83 total passing tests, 0 analyzer issues).
 
 ## [0.1.0-alpha.9] - 2026-11-07
 

@@ -9,6 +9,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../expenses/presentation/add_expense_sheet.dart';
 import '../../bills/presentation/add_bill_sheet.dart';
 import '../../bills/presentation/bill_detail_sheet.dart';
+import '../../expenses/presentation/expense_detail_sheet.dart';
+import '../../vault/presentation/vault_screen.dart';
 import '../domain/record.dart';
 
 class RecordsScreen extends ConsumerStatefulWidget {
@@ -826,17 +828,45 @@ class AssetDetailSheet extends ConsumerWidget {
                 ),
               ),
             ),
+            if (asset?.odometerReading != null || asset?.pmsDistanceIntervalKm != null || maintenanceCostsMinor > 0) ...[
+              const SizedBox(height: 16),
+              _AssetServiceHistorySection(assetRecordId: record.id, currency: currency),
+            ],
             const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: () {
-                showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => AddExpenseSheet(initialAssetRecordId: record.id),
-                );
-              },
-              icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('Log Maintenance / Expense'),
+            _AssetLinkedDocumentsSection(assetRecordId: record.id, assetTitle: record.title),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        isDismissible: false,
+                        enableDrag: false,
+                        builder: (_) => AddExpenseSheet(initialAssetRecordId: record.id),
+                      );
+                    },
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                    label: const Text('Log Maintenance / Expense'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Attach Vault Document',
+                  onPressed: () {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      isDismissible: false,
+                      enableDrag: false,
+                      builder: (_) => AddDocumentSheet(initialAssetRecordId: record.id),
+                    );
+                  },
+                  icon: const Icon(Icons.note_add_outlined, size: 20),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -925,6 +955,304 @@ class AssetDetailSheet extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+class _AssetServiceHistorySection extends ConsumerWidget {
+  final String assetRecordId;
+  final String currency;
+
+  const _AssetServiceHistorySection({
+    required this.assetRecordId,
+    required this.currency,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final expensesAsync = ref.watch(assetExpensesStreamProvider(assetRecordId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history_toggle_off_outlined, size: 18, color: AppColors.brandPrimary),
+                const SizedBox(width: 6),
+                Text(
+                  'Service & Maintenance History',
+                  style: AppTypography.cardTitle.copyWith(fontSize: 16),
+                ),
+              ],
+            ),
+            expensesAsync.when(
+              data: (list) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Text(
+                  '${list.length}',
+                  style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        expensesAsync.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+            ),
+          ),
+          error: (err, _) => Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text('Failed to load service logs: $err', style: AppTypography.caption),
+          ),
+          data: (expenses) {
+            if (expenses.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.car_repair_outlined, size: 28, color: AppColors.textTertiary),
+                    const SizedBox(height: 6),
+                    Text(
+                      'No maintenance logged yet',
+                      style: AppTypography.bodySecondary.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Service logs and odometer updates will appear here in chronological timeline.',
+                      style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: expenses.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = expenses[index];
+                final expense = item.expense;
+                final date = expense.transactionDate;
+                final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+                int? deltaKm;
+                if (expense.odometerReading != null && index + 1 < expenses.length) {
+                  final prevOdo = expenses[index + 1].expense.odometerReading;
+                  if (prevOdo != null) {
+                    final diff = expense.odometerReading! - prevOdo;
+                    if (diff > 0) deltaKm = diff;
+                  }
+                }
+
+                return Card(
+                  margin: EdgeInsets.zero,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        isDismissible: false,
+                        enableDrag: false,
+                        builder: (_) => ExpenseDetailSheet(item: item),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandAccentSage,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.build_outlined, size: 18, color: AppColors.brandPrimary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.record.title,
+                                        style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Cost: $currency ${(expense.amountMinor / 100).toStringAsFixed(2)}',
+                                      style: AppTypography.cardTitle.copyWith(
+                                        fontSize: 14,
+                                        color: AppColors.brandPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(dateStr, style: AppTypography.caption.copyWith(color: AppColors.textTertiary)),
+                                    if (expense.odometerReading != null) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceContainerLow,
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: AppColors.borderSubtle),
+                                        ),
+                                        child: Text(
+                                          '${expense.odometerReading} km',
+                                          style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                    if (deltaKm != null) ...[
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '+$deltaKm km delta',
+                                        style: AppTypography.caption.copyWith(
+                                          color: AppColors.brandPrimary,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AssetLinkedDocumentsSection extends ConsumerWidget {
+  final String assetRecordId;
+  final String assetTitle;
+
+  const _AssetLinkedDocumentsSection({
+    required this.assetRecordId,
+    required this.assetTitle,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final docsAsync = ref.watch(assetDocumentsStreamProvider(assetRecordId));
+
+    return docsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (docs) {
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.folder_shared_outlined, size: 18, color: AppColors.brandPrimary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Vault Documents & Attachments',
+                      style: AppTypography.cardTitle.copyWith(fontSize: 16),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline, size: 20, color: AppColors.brandPrimary),
+                  tooltip: 'Attach Document',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      isDismissible: false,
+                      enableDrag: false,
+                      builder: (_) => AddDocumentSheet(initialAssetRecordId: assetRecordId),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: docs.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final item = docs[index];
+                return Card(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.description_outlined, color: AppColors.brandPrimary, size: 20),
+                    title: Text(item.record.title, style: AppTypography.cardTitle.copyWith(fontSize: 13)),
+                    subtitle: Text(
+                      '${item.document.fileName} • ${item.document.formattedFileSize}',
+                      style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, size: 18),
+                    onTap: () {
+                      showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        isDismissible: false,
+                        enableDrag: false,
+                        builder: (_) => DocumentDetailSheet(item: item),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        );
+      },
     );
   }
 }
