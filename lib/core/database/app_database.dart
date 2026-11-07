@@ -6,7 +6,7 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Workspaces, Categories, Records, Assets, Tasks, Documents, Expenses])
+@DriftDatabase(tables: [Workspaces, Categories, Records, Assets, Tasks, Documents, Expenses, Bills])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -34,6 +34,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 5) {
           await m.createTable(expenses);
+        }
+        if (from < 6) {
+          await m.createTable(bills);
+          await m.addColumn(expenses, expenses.linkedBillRecordId);
         }
       },
       beforeOpen: (details) async {

@@ -200,5 +200,49 @@ void main() {
       final allRecords = await (db.select(db.records)..where((r) => r.workspaceId.equals(workspaceId))).get();
       expect(allRecords.length, 2);
     });
+ 
+    test('Can create universal Record and linked specialized Bill entity', () async {
+      final now = DateTime.utc(2026, 11, 7, 12, 0, 0);
+      const workspaceId = 'ws-test-bills';
+      const recordId = 'rec-bill-1';
+
+      await db.into(db.workspaces).insert(
+            WorkspacesCompanion.insert(
+              id: workspaceId,
+              name: 'Personal',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      await db.into(db.records).insert(
+            RecordsCompanion.insert(
+              id: recordId,
+              workspaceId: workspaceId,
+              recordType: 'bill',
+              title: 'Meralco Electric Bill',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      await db.into(db.bills).insert(
+            BillsCompanion.insert(
+              recordId: recordId,
+              amountDueMinor: 250000,
+              providerName: const Value('Meralco'),
+              utilityType: const Value('electricity'),
+              dueDate: Value(now.add(const Duration(days: 7))),
+            ),
+          );
+
+      final bills = await db.select(db.bills).get();
+      expect(bills.length, 1);
+      expect(bills.first.recordId, recordId);
+      expect(bills.first.amountDueMinor, 250000);
+      expect(bills.first.providerName, 'Meralco');
+      expect(bills.first.utilityType, 'electricity');
+      expect(bills.first.paymentStatus, 'unpaid');
+    });
   });
 }

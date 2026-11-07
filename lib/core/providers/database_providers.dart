@@ -4,6 +4,9 @@ import '../constants/app_constants.dart';
 import '../database/app_database.dart';
 import '../../features/backup/data/backup_repository_impl.dart';
 import '../../features/backup/domain/backup_repository.dart';
+import '../../features/bills/data/bill_repository_impl.dart';
+import '../../features/bills/domain/bill_item.dart';
+import '../../features/bills/domain/bill_repository.dart';
 import '../../features/categories/data/category_repository_impl.dart';
 import '../../features/categories/domain/category.dart';
 import '../../features/expenses/data/expense_repository_impl.dart';
@@ -67,6 +70,12 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
 final backupRepositoryProvider = Provider<BackupRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return BackupRepositoryImpl(db);
+});
+
+/// Provider for [BillRepository].
+final billRepositoryProvider = Provider<BillRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return BillRepositoryImpl(db);
 });
 
 /// FutureProvider that guarantees the default personal workspace & categories are initialized.
@@ -236,3 +245,45 @@ final workspaceTotalExpensesProvider = StreamProvider<int>((ref) {
   final repository = ref.watch(expenseRepositoryProvider);
   return repository.watchTotalWorkspaceExpenses(AppConstants.defaultWorkspaceId);
 });
+
+/// Notifier for bill status filter ('all', 'unpaid', 'paid', 'overdue').
+class BillFilterNotifier extends Notifier<String> {
+  @override
+  String build() => 'unpaid';
+
+  void setFilter(String filter) => state = filter;
+}
+
+final selectedBillFilterProvider = NotifierProvider<BillFilterNotifier, String>(
+  BillFilterNotifier.new,
+);
+
+/// Reactive stream provider for bills in the default workspace with active status filter.
+final activeBillsStreamProvider = StreamProvider<List<RecordWithBill>>((ref) {
+  final repository = ref.watch(billRepositoryProvider);
+  final filter = ref.watch(selectedBillFilterProvider);
+
+  return repository.watchBillsByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    paymentStatus: filter == 'all' ? null : filter,
+  );
+});
+
+/// Unfiltered stream provider of active bills for dashboard summary and focus feeds.
+final dashboardBillsStreamProvider = StreamProvider<List<RecordWithBill>>((ref) {
+  final repository = ref.watch(billRepositoryProvider);
+  return repository.watchBillsByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
+/// Reactive stream provider for upcoming and overdue bills due within 30 days.
+final upcomingBillsStreamProvider = StreamProvider<List<RecordWithBill>>((ref) {
+  final repository = ref.watch(billRepositoryProvider);
+  return repository.watchUpcomingBillsByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
+/// Reactive stream provider for total unpaid bills amount in minor units.
+final workspaceTotalUnpaidBillsProvider = StreamProvider<int>((ref) {
+  final repository = ref.watch(billRepositoryProvider);
+  return repository.watchTotalUnpaidBillsAmount(AppConstants.defaultWorkspaceId);
+});
+

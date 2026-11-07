@@ -59,6 +59,12 @@ class BackupRepositoryImpl implements BackupRepository {
               ..where((e) => e.recordId.isIn(recordIds)))
             .get();
 
+    final billRows = recordIds.isEmpty
+        ? <BillEntity>[]
+        : await (_db.select(_db.bills)
+              ..where((b) => b.recordId.isIn(recordIds)))
+            .get();
+
     // 5. Serialize into normalized Map representations
     final workspacesJson = workspaceRows.map((w) => {
           'id': w.id,
@@ -137,6 +143,23 @@ class BackupRepositoryImpl implements BackupRepository {
           'expenseCategory': e.expenseCategory,
           'linkedAssetRecordId': e.linkedAssetRecordId,
           'linkedTaskRecordId': e.linkedTaskRecordId,
+          'linkedBillRecordId': e.linkedBillRecordId,
+        }).toList();
+
+    final billsJson = billRows.map((b) => {
+          'recordId': b.recordId,
+          'utilityType': b.utilityType,
+          'providerName': b.providerName,
+          'accountNumber': b.accountNumber,
+          'billingPeriodStart': b.billingPeriodStart?.toIso8601String(),
+          'billingPeriodEnd': b.billingPeriodEnd?.toIso8601String(),
+          'dueDate': b.dueDate?.toIso8601String(),
+          'amountDueMinor': b.amountDueMinor,
+          'currencyCode': b.currencyCode,
+          'paymentStatus': b.paymentStatus,
+          'paidAt': b.paidAt?.toIso8601String(),
+          'linkedAssetRecordId': b.linkedAssetRecordId,
+          'linkedExpenseRecordId': b.linkedExpenseRecordId,
         }).toList();
 
     final dataMap = <String, dynamic>{
@@ -147,6 +170,7 @@ class BackupRepositoryImpl implements BackupRepository {
       'tasks': tasksJson,
       'documents': documentsJson,
       'expenses': expensesJson,
+      'bills': billsJson,
     };
 
     final checksum = BackupPayload.computeChecksum(dataMap);
@@ -159,6 +183,7 @@ class BackupRepositoryImpl implements BackupRepository {
       tasks: tasksJson.length,
       documents: documentsJson.length,
       expenses: expensesJson.length,
+      bills: billsJson.length,
     );
 
     final manifest = BackupManifest(
@@ -180,6 +205,7 @@ class BackupRepositoryImpl implements BackupRepository {
       tasks: tasksJson,
       documents: documentsJson,
       expenses: expensesJson,
+      bills: billsJson,
     );
   }
 
@@ -247,6 +273,8 @@ class BackupRepositoryImpl implements BackupRepository {
           .cast<Map<String, dynamic>>();
       final expenses = (dataRaw['expenses'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
+      final bills = (dataRaw['bills'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
 
       final payload = BackupPayload(
         manifest: manifest,
@@ -257,6 +285,7 @@ class BackupRepositoryImpl implements BackupRepository {
         tasks: tasks,
         documents: documents,
         expenses: expenses,
+        bills: bills,
       );
 
       return BackupValidationResult.valid(
@@ -287,6 +316,9 @@ class BackupRepositoryImpl implements BackupRepository {
         final existingRecordIds = existingRecords.map((r) => r.id).toSet();
 
         if (existingRecordIds.isNotEmpty) {
+          await (_db.delete(_db.bills)
+                ..where((b) => b.recordId.isIn(existingRecordIds)))
+              .go();
           await (_db.delete(_db.expenses)
                 ..where((e) => e.recordId.isIn(existingRecordIds)))
               .go();
@@ -435,6 +467,36 @@ class BackupRepositoryImpl implements BackupRepository {
                 expenseCategory: Value(e['expenseCategory'] as String? ?? 'maintenance'),
                 linkedAssetRecordId: Value(e['linkedAssetRecordId'] as String?),
                 linkedTaskRecordId: Value(e['linkedTaskRecordId'] as String?),
+                linkedBillRecordId: Value(e['linkedBillRecordId'] as String?),
+              ),
+            );
+      }
+
+      // 8. Insert Bills
+      for (final b in payload.bills) {
+        await _db.into(_db.bills).insertOnConflictUpdate(
+              BillsCompanion(
+                recordId: Value(b['recordId'] as String),
+                utilityType: Value(b['utilityType'] as String? ?? 'utility'),
+                providerName: Value(b['providerName'] as String?),
+                accountNumber: Value(b['accountNumber'] as String?),
+                billingPeriodStart: Value(b['billingPeriodStart'] != null
+                    ? DateTime.parse(b['billingPeriodStart'] as String)
+                    : null),
+                billingPeriodEnd: Value(b['billingPeriodEnd'] != null
+                    ? DateTime.parse(b['billingPeriodEnd'] as String)
+                    : null),
+                dueDate: Value(b['dueDate'] != null
+                    ? DateTime.parse(b['dueDate'] as String)
+                    : null),
+                amountDueMinor: Value(b['amountDueMinor'] as int),
+                currencyCode: Value(b['currencyCode'] as String? ?? 'PHP'),
+                paymentStatus: Value(b['paymentStatus'] as String? ?? 'unpaid'),
+                paidAt: Value(b['paidAt'] != null
+                    ? DateTime.parse(b['paidAt'] as String)
+                    : null),
+                linkedAssetRecordId: Value(b['linkedAssetRecordId'] as String?),
+                linkedExpenseRecordId: Value(b['linkedExpenseRecordId'] as String?),
               ),
             );
       }

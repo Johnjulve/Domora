@@ -217,6 +217,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       expenseCategory: entity.expenseCategory,
       linkedAssetRecordId: entity.linkedAssetRecordId,
       linkedTaskRecordId: entity.linkedTaskRecordId,
+      linkedBillRecordId: entity.linkedBillRecordId,
     );
   }
 
@@ -246,6 +247,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       expenseCategory: Value(expense.expenseCategory),
       linkedAssetRecordId: Value(expense.linkedAssetRecordId),
       linkedTaskRecordId: Value(expense.linkedTaskRecordId),
+      linkedBillRecordId: Value(expense.linkedBillRecordId),
     );
   }
 }

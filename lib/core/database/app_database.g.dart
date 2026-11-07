@@ -3448,6 +3448,20 @@ class $ExpensesTable extends Expenses
           'REFERENCES records (id) ON DELETE SET NULL',
         ),
       );
+  static const VerificationMeta _linkedBillRecordIdMeta =
+      const VerificationMeta('linkedBillRecordId');
+  @override
+  late final GeneratedColumn<String> linkedBillRecordId =
+      GeneratedColumn<String>(
+        'linked_bill_record_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES records (id) ON DELETE SET NULL',
+        ),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     recordId,
@@ -3458,6 +3472,7 @@ class $ExpensesTable extends Expenses
     expenseCategory,
     linkedAssetRecordId,
     linkedTaskRecordId,
+    linkedBillRecordId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3546,6 +3561,15 @@ class $ExpensesTable extends Expenses
         ),
       );
     }
+    if (data.containsKey('linked_bill_record_id')) {
+      context.handle(
+        _linkedBillRecordIdMeta,
+        linkedBillRecordId.isAcceptableOrUnknown(
+          data['linked_bill_record_id']!,
+          _linkedBillRecordIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3587,6 +3611,10 @@ class $ExpensesTable extends Expenses
         DriftSqlType.string,
         data['${effectivePrefix}linked_task_record_id'],
       ),
+      linkedBillRecordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_bill_record_id'],
+      ),
     );
   }
 
@@ -3605,6 +3633,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
   final String expenseCategory;
   final String? linkedAssetRecordId;
   final String? linkedTaskRecordId;
+  final String? linkedBillRecordId;
   const ExpenseEntity({
     required this.recordId,
     required this.amountMinor,
@@ -3614,6 +3643,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     required this.expenseCategory,
     this.linkedAssetRecordId,
     this.linkedTaskRecordId,
+    this.linkedBillRecordId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3631,6 +3661,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     }
     if (!nullToAbsent || linkedTaskRecordId != null) {
       map['linked_task_record_id'] = Variable<String>(linkedTaskRecordId);
+    }
+    if (!nullToAbsent || linkedBillRecordId != null) {
+      map['linked_bill_record_id'] = Variable<String>(linkedBillRecordId);
     }
     return map;
   }
@@ -3651,6 +3684,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       linkedTaskRecordId: linkedTaskRecordId == null && nullToAbsent
           ? const Value.absent()
           : Value(linkedTaskRecordId),
+      linkedBillRecordId: linkedBillRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedBillRecordId),
     );
   }
 
@@ -3672,6 +3708,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       linkedTaskRecordId: serializer.fromJson<String?>(
         json['linkedTaskRecordId'],
       ),
+      linkedBillRecordId: serializer.fromJson<String?>(
+        json['linkedBillRecordId'],
+      ),
     );
   }
   @override
@@ -3686,6 +3725,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       'expenseCategory': serializer.toJson<String>(expenseCategory),
       'linkedAssetRecordId': serializer.toJson<String?>(linkedAssetRecordId),
       'linkedTaskRecordId': serializer.toJson<String?>(linkedTaskRecordId),
+      'linkedBillRecordId': serializer.toJson<String?>(linkedBillRecordId),
     };
   }
 
@@ -3698,6 +3738,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     String? expenseCategory,
     Value<String?> linkedAssetRecordId = const Value.absent(),
     Value<String?> linkedTaskRecordId = const Value.absent(),
+    Value<String?> linkedBillRecordId = const Value.absent(),
   }) => ExpenseEntity(
     recordId: recordId ?? this.recordId,
     amountMinor: amountMinor ?? this.amountMinor,
@@ -3713,6 +3754,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     linkedTaskRecordId: linkedTaskRecordId.present
         ? linkedTaskRecordId.value
         : this.linkedTaskRecordId,
+    linkedBillRecordId: linkedBillRecordId.present
+        ? linkedBillRecordId.value
+        : this.linkedBillRecordId,
   );
   ExpenseEntity copyWithCompanion(ExpensesCompanion data) {
     return ExpenseEntity(
@@ -3738,6 +3782,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       linkedTaskRecordId: data.linkedTaskRecordId.present
           ? data.linkedTaskRecordId.value
           : this.linkedTaskRecordId,
+      linkedBillRecordId: data.linkedBillRecordId.present
+          ? data.linkedBillRecordId.value
+          : this.linkedBillRecordId,
     );
   }
 
@@ -3751,7 +3798,8 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
           ..write('paymentMethod: $paymentMethod, ')
           ..write('expenseCategory: $expenseCategory, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
-          ..write('linkedTaskRecordId: $linkedTaskRecordId')
+          ..write('linkedTaskRecordId: $linkedTaskRecordId, ')
+          ..write('linkedBillRecordId: $linkedBillRecordId')
           ..write(')'))
         .toString();
   }
@@ -3766,6 +3814,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     expenseCategory,
     linkedAssetRecordId,
     linkedTaskRecordId,
+    linkedBillRecordId,
   );
   @override
   bool operator ==(Object other) =>
@@ -3778,7 +3827,8 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
           other.paymentMethod == this.paymentMethod &&
           other.expenseCategory == this.expenseCategory &&
           other.linkedAssetRecordId == this.linkedAssetRecordId &&
-          other.linkedTaskRecordId == this.linkedTaskRecordId);
+          other.linkedTaskRecordId == this.linkedTaskRecordId &&
+          other.linkedBillRecordId == this.linkedBillRecordId);
 }
 
 class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
@@ -3790,6 +3840,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
   final Value<String> expenseCategory;
   final Value<String?> linkedAssetRecordId;
   final Value<String?> linkedTaskRecordId;
+  final Value<String?> linkedBillRecordId;
   final Value<int> rowid;
   const ExpensesCompanion({
     this.recordId = const Value.absent(),
@@ -3800,6 +3851,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     this.expenseCategory = const Value.absent(),
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedTaskRecordId = const Value.absent(),
+    this.linkedBillRecordId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ExpensesCompanion.insert({
@@ -3811,6 +3863,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     this.expenseCategory = const Value.absent(),
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedTaskRecordId = const Value.absent(),
+    this.linkedBillRecordId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : recordId = Value(recordId),
        amountMinor = Value(amountMinor),
@@ -3824,6 +3877,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     Expression<String>? expenseCategory,
     Expression<String>? linkedAssetRecordId,
     Expression<String>? linkedTaskRecordId,
+    Expression<String>? linkedBillRecordId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3837,6 +3891,8 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
         'linked_asset_record_id': linkedAssetRecordId,
       if (linkedTaskRecordId != null)
         'linked_task_record_id': linkedTaskRecordId,
+      if (linkedBillRecordId != null)
+        'linked_bill_record_id': linkedBillRecordId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3850,6 +3906,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     Value<String>? expenseCategory,
     Value<String?>? linkedAssetRecordId,
     Value<String?>? linkedTaskRecordId,
+    Value<String?>? linkedBillRecordId,
     Value<int>? rowid,
   }) {
     return ExpensesCompanion(
@@ -3861,6 +3918,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
       expenseCategory: expenseCategory ?? this.expenseCategory,
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedTaskRecordId: linkedTaskRecordId ?? this.linkedTaskRecordId,
+      linkedBillRecordId: linkedBillRecordId ?? this.linkedBillRecordId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3894,6 +3952,9 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     if (linkedTaskRecordId.present) {
       map['linked_task_record_id'] = Variable<String>(linkedTaskRecordId.value);
     }
+    if (linkedBillRecordId.present) {
+      map['linked_bill_record_id'] = Variable<String>(linkedBillRecordId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3911,6 +3972,853 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
           ..write('expenseCategory: $expenseCategory, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedTaskRecordId: $linkedTaskRecordId, ')
+          ..write('linkedBillRecordId: $linkedBillRecordId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BillsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _recordIdMeta = const VerificationMeta(
+    'recordId',
+  );
+  @override
+  late final GeneratedColumn<String> recordId = GeneratedColumn<String>(
+    'record_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES records (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _utilityTypeMeta = const VerificationMeta(
+    'utilityType',
+  );
+  @override
+  late final GeneratedColumn<String> utilityType = GeneratedColumn<String>(
+    'utility_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('utility'),
+  );
+  static const VerificationMeta _providerNameMeta = const VerificationMeta(
+    'providerName',
+  );
+  @override
+  late final GeneratedColumn<String> providerName = GeneratedColumn<String>(
+    'provider_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accountNumberMeta = const VerificationMeta(
+    'accountNumber',
+  );
+  @override
+  late final GeneratedColumn<String> accountNumber = GeneratedColumn<String>(
+    'account_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _billingPeriodStartMeta =
+      const VerificationMeta('billingPeriodStart');
+  @override
+  late final GeneratedColumn<DateTime> billingPeriodStart =
+      GeneratedColumn<DateTime>(
+        'billing_period_start',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _billingPeriodEndMeta = const VerificationMeta(
+    'billingPeriodEnd',
+  );
+  @override
+  late final GeneratedColumn<DateTime> billingPeriodEnd =
+      GeneratedColumn<DateTime>(
+        'billing_period_end',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _dueDateMeta = const VerificationMeta(
+    'dueDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
+    'due_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _amountDueMinorMeta = const VerificationMeta(
+    'amountDueMinor',
+  );
+  @override
+  late final GeneratedColumn<int> amountDueMinor = GeneratedColumn<int>(
+    'amount_due_minor',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('PHP'),
+  );
+  static const VerificationMeta _paymentStatusMeta = const VerificationMeta(
+    'paymentStatus',
+  );
+  @override
+  late final GeneratedColumn<String> paymentStatus = GeneratedColumn<String>(
+    'payment_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('unpaid'),
+  );
+  static const VerificationMeta _paidAtMeta = const VerificationMeta('paidAt');
+  @override
+  late final GeneratedColumn<DateTime> paidAt = GeneratedColumn<DateTime>(
+    'paid_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _linkedAssetRecordIdMeta =
+      const VerificationMeta('linkedAssetRecordId');
+  @override
+  late final GeneratedColumn<String> linkedAssetRecordId =
+      GeneratedColumn<String>(
+        'linked_asset_record_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES records (id) ON DELETE SET NULL',
+        ),
+      );
+  static const VerificationMeta _linkedExpenseRecordIdMeta =
+      const VerificationMeta('linkedExpenseRecordId');
+  @override
+  late final GeneratedColumn<String> linkedExpenseRecordId =
+      GeneratedColumn<String>(
+        'linked_expense_record_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES records (id) ON DELETE SET NULL',
+        ),
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    recordId,
+    utilityType,
+    providerName,
+    accountNumber,
+    billingPeriodStart,
+    billingPeriodEnd,
+    dueDate,
+    amountDueMinor,
+    currencyCode,
+    paymentStatus,
+    paidAt,
+    linkedAssetRecordId,
+    linkedExpenseRecordId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bills';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BillEntity> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('record_id')) {
+      context.handle(
+        _recordIdMeta,
+        recordId.isAcceptableOrUnknown(data['record_id']!, _recordIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordIdMeta);
+    }
+    if (data.containsKey('utility_type')) {
+      context.handle(
+        _utilityTypeMeta,
+        utilityType.isAcceptableOrUnknown(
+          data['utility_type']!,
+          _utilityTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('provider_name')) {
+      context.handle(
+        _providerNameMeta,
+        providerName.isAcceptableOrUnknown(
+          data['provider_name']!,
+          _providerNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('account_number')) {
+      context.handle(
+        _accountNumberMeta,
+        accountNumber.isAcceptableOrUnknown(
+          data['account_number']!,
+          _accountNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('billing_period_start')) {
+      context.handle(
+        _billingPeriodStartMeta,
+        billingPeriodStart.isAcceptableOrUnknown(
+          data['billing_period_start']!,
+          _billingPeriodStartMeta,
+        ),
+      );
+    }
+    if (data.containsKey('billing_period_end')) {
+      context.handle(
+        _billingPeriodEndMeta,
+        billingPeriodEnd.isAcceptableOrUnknown(
+          data['billing_period_end']!,
+          _billingPeriodEndMeta,
+        ),
+      );
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(
+        _dueDateMeta,
+        dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    }
+    if (data.containsKey('amount_due_minor')) {
+      context.handle(
+        _amountDueMinorMeta,
+        amountDueMinor.isAcceptableOrUnknown(
+          data['amount_due_minor']!,
+          _amountDueMinorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_amountDueMinorMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payment_status')) {
+      context.handle(
+        _paymentStatusMeta,
+        paymentStatus.isAcceptableOrUnknown(
+          data['payment_status']!,
+          _paymentStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('paid_at')) {
+      context.handle(
+        _paidAtMeta,
+        paidAt.isAcceptableOrUnknown(data['paid_at']!, _paidAtMeta),
+      );
+    }
+    if (data.containsKey('linked_asset_record_id')) {
+      context.handle(
+        _linkedAssetRecordIdMeta,
+        linkedAssetRecordId.isAcceptableOrUnknown(
+          data['linked_asset_record_id']!,
+          _linkedAssetRecordIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('linked_expense_record_id')) {
+      context.handle(
+        _linkedExpenseRecordIdMeta,
+        linkedExpenseRecordId.isAcceptableOrUnknown(
+          data['linked_expense_record_id']!,
+          _linkedExpenseRecordIdMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {recordId};
+  @override
+  BillEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BillEntity(
+      recordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_id'],
+      )!,
+      utilityType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}utility_type'],
+      )!,
+      providerName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_name'],
+      ),
+      accountNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}account_number'],
+      ),
+      billingPeriodStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}billing_period_start'],
+      ),
+      billingPeriodEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}billing_period_end'],
+      ),
+      dueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}due_date'],
+      ),
+      amountDueMinor: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount_due_minor'],
+      )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      paymentStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_status'],
+      )!,
+      paidAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}paid_at'],
+      ),
+      linkedAssetRecordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_asset_record_id'],
+      ),
+      linkedExpenseRecordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}linked_expense_record_id'],
+      ),
+    );
+  }
+
+  @override
+  $BillsTable createAlias(String alias) {
+    return $BillsTable(attachedDatabase, alias);
+  }
+}
+
+class BillEntity extends DataClass implements Insertable<BillEntity> {
+  final String recordId;
+  final String utilityType;
+  final String? providerName;
+  final String? accountNumber;
+  final DateTime? billingPeriodStart;
+  final DateTime? billingPeriodEnd;
+  final DateTime? dueDate;
+  final int amountDueMinor;
+  final String currencyCode;
+  final String paymentStatus;
+  final DateTime? paidAt;
+  final String? linkedAssetRecordId;
+  final String? linkedExpenseRecordId;
+  const BillEntity({
+    required this.recordId,
+    required this.utilityType,
+    this.providerName,
+    this.accountNumber,
+    this.billingPeriodStart,
+    this.billingPeriodEnd,
+    this.dueDate,
+    required this.amountDueMinor,
+    required this.currencyCode,
+    required this.paymentStatus,
+    this.paidAt,
+    this.linkedAssetRecordId,
+    this.linkedExpenseRecordId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['record_id'] = Variable<String>(recordId);
+    map['utility_type'] = Variable<String>(utilityType);
+    if (!nullToAbsent || providerName != null) {
+      map['provider_name'] = Variable<String>(providerName);
+    }
+    if (!nullToAbsent || accountNumber != null) {
+      map['account_number'] = Variable<String>(accountNumber);
+    }
+    if (!nullToAbsent || billingPeriodStart != null) {
+      map['billing_period_start'] = Variable<DateTime>(billingPeriodStart);
+    }
+    if (!nullToAbsent || billingPeriodEnd != null) {
+      map['billing_period_end'] = Variable<DateTime>(billingPeriodEnd);
+    }
+    if (!nullToAbsent || dueDate != null) {
+      map['due_date'] = Variable<DateTime>(dueDate);
+    }
+    map['amount_due_minor'] = Variable<int>(amountDueMinor);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['payment_status'] = Variable<String>(paymentStatus);
+    if (!nullToAbsent || paidAt != null) {
+      map['paid_at'] = Variable<DateTime>(paidAt);
+    }
+    if (!nullToAbsent || linkedAssetRecordId != null) {
+      map['linked_asset_record_id'] = Variable<String>(linkedAssetRecordId);
+    }
+    if (!nullToAbsent || linkedExpenseRecordId != null) {
+      map['linked_expense_record_id'] = Variable<String>(linkedExpenseRecordId);
+    }
+    return map;
+  }
+
+  BillsCompanion toCompanion(bool nullToAbsent) {
+    return BillsCompanion(
+      recordId: Value(recordId),
+      utilityType: Value(utilityType),
+      providerName: providerName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerName),
+      accountNumber: accountNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountNumber),
+      billingPeriodStart: billingPeriodStart == null && nullToAbsent
+          ? const Value.absent()
+          : Value(billingPeriodStart),
+      billingPeriodEnd: billingPeriodEnd == null && nullToAbsent
+          ? const Value.absent()
+          : Value(billingPeriodEnd),
+      dueDate: dueDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dueDate),
+      amountDueMinor: Value(amountDueMinor),
+      currencyCode: Value(currencyCode),
+      paymentStatus: Value(paymentStatus),
+      paidAt: paidAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paidAt),
+      linkedAssetRecordId: linkedAssetRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedAssetRecordId),
+      linkedExpenseRecordId: linkedExpenseRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedExpenseRecordId),
+    );
+  }
+
+  factory BillEntity.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BillEntity(
+      recordId: serializer.fromJson<String>(json['recordId']),
+      utilityType: serializer.fromJson<String>(json['utilityType']),
+      providerName: serializer.fromJson<String?>(json['providerName']),
+      accountNumber: serializer.fromJson<String?>(json['accountNumber']),
+      billingPeriodStart: serializer.fromJson<DateTime?>(
+        json['billingPeriodStart'],
+      ),
+      billingPeriodEnd: serializer.fromJson<DateTime?>(
+        json['billingPeriodEnd'],
+      ),
+      dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
+      amountDueMinor: serializer.fromJson<int>(json['amountDueMinor']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      paymentStatus: serializer.fromJson<String>(json['paymentStatus']),
+      paidAt: serializer.fromJson<DateTime?>(json['paidAt']),
+      linkedAssetRecordId: serializer.fromJson<String?>(
+        json['linkedAssetRecordId'],
+      ),
+      linkedExpenseRecordId: serializer.fromJson<String?>(
+        json['linkedExpenseRecordId'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'recordId': serializer.toJson<String>(recordId),
+      'utilityType': serializer.toJson<String>(utilityType),
+      'providerName': serializer.toJson<String?>(providerName),
+      'accountNumber': serializer.toJson<String?>(accountNumber),
+      'billingPeriodStart': serializer.toJson<DateTime?>(billingPeriodStart),
+      'billingPeriodEnd': serializer.toJson<DateTime?>(billingPeriodEnd),
+      'dueDate': serializer.toJson<DateTime?>(dueDate),
+      'amountDueMinor': serializer.toJson<int>(amountDueMinor),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'paymentStatus': serializer.toJson<String>(paymentStatus),
+      'paidAt': serializer.toJson<DateTime?>(paidAt),
+      'linkedAssetRecordId': serializer.toJson<String?>(linkedAssetRecordId),
+      'linkedExpenseRecordId': serializer.toJson<String?>(
+        linkedExpenseRecordId,
+      ),
+    };
+  }
+
+  BillEntity copyWith({
+    String? recordId,
+    String? utilityType,
+    Value<String?> providerName = const Value.absent(),
+    Value<String?> accountNumber = const Value.absent(),
+    Value<DateTime?> billingPeriodStart = const Value.absent(),
+    Value<DateTime?> billingPeriodEnd = const Value.absent(),
+    Value<DateTime?> dueDate = const Value.absent(),
+    int? amountDueMinor,
+    String? currencyCode,
+    String? paymentStatus,
+    Value<DateTime?> paidAt = const Value.absent(),
+    Value<String?> linkedAssetRecordId = const Value.absent(),
+    Value<String?> linkedExpenseRecordId = const Value.absent(),
+  }) => BillEntity(
+    recordId: recordId ?? this.recordId,
+    utilityType: utilityType ?? this.utilityType,
+    providerName: providerName.present ? providerName.value : this.providerName,
+    accountNumber: accountNumber.present
+        ? accountNumber.value
+        : this.accountNumber,
+    billingPeriodStart: billingPeriodStart.present
+        ? billingPeriodStart.value
+        : this.billingPeriodStart,
+    billingPeriodEnd: billingPeriodEnd.present
+        ? billingPeriodEnd.value
+        : this.billingPeriodEnd,
+    dueDate: dueDate.present ? dueDate.value : this.dueDate,
+    amountDueMinor: amountDueMinor ?? this.amountDueMinor,
+    currencyCode: currencyCode ?? this.currencyCode,
+    paymentStatus: paymentStatus ?? this.paymentStatus,
+    paidAt: paidAt.present ? paidAt.value : this.paidAt,
+    linkedAssetRecordId: linkedAssetRecordId.present
+        ? linkedAssetRecordId.value
+        : this.linkedAssetRecordId,
+    linkedExpenseRecordId: linkedExpenseRecordId.present
+        ? linkedExpenseRecordId.value
+        : this.linkedExpenseRecordId,
+  );
+  BillEntity copyWithCompanion(BillsCompanion data) {
+    return BillEntity(
+      recordId: data.recordId.present ? data.recordId.value : this.recordId,
+      utilityType: data.utilityType.present
+          ? data.utilityType.value
+          : this.utilityType,
+      providerName: data.providerName.present
+          ? data.providerName.value
+          : this.providerName,
+      accountNumber: data.accountNumber.present
+          ? data.accountNumber.value
+          : this.accountNumber,
+      billingPeriodStart: data.billingPeriodStart.present
+          ? data.billingPeriodStart.value
+          : this.billingPeriodStart,
+      billingPeriodEnd: data.billingPeriodEnd.present
+          ? data.billingPeriodEnd.value
+          : this.billingPeriodEnd,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      amountDueMinor: data.amountDueMinor.present
+          ? data.amountDueMinor.value
+          : this.amountDueMinor,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      paymentStatus: data.paymentStatus.present
+          ? data.paymentStatus.value
+          : this.paymentStatus,
+      paidAt: data.paidAt.present ? data.paidAt.value : this.paidAt,
+      linkedAssetRecordId: data.linkedAssetRecordId.present
+          ? data.linkedAssetRecordId.value
+          : this.linkedAssetRecordId,
+      linkedExpenseRecordId: data.linkedExpenseRecordId.present
+          ? data.linkedExpenseRecordId.value
+          : this.linkedExpenseRecordId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BillEntity(')
+          ..write('recordId: $recordId, ')
+          ..write('utilityType: $utilityType, ')
+          ..write('providerName: $providerName, ')
+          ..write('accountNumber: $accountNumber, ')
+          ..write('billingPeriodStart: $billingPeriodStart, ')
+          ..write('billingPeriodEnd: $billingPeriodEnd, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('amountDueMinor: $amountDueMinor, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('paymentStatus: $paymentStatus, ')
+          ..write('paidAt: $paidAt, ')
+          ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
+          ..write('linkedExpenseRecordId: $linkedExpenseRecordId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    recordId,
+    utilityType,
+    providerName,
+    accountNumber,
+    billingPeriodStart,
+    billingPeriodEnd,
+    dueDate,
+    amountDueMinor,
+    currencyCode,
+    paymentStatus,
+    paidAt,
+    linkedAssetRecordId,
+    linkedExpenseRecordId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BillEntity &&
+          other.recordId == this.recordId &&
+          other.utilityType == this.utilityType &&
+          other.providerName == this.providerName &&
+          other.accountNumber == this.accountNumber &&
+          other.billingPeriodStart == this.billingPeriodStart &&
+          other.billingPeriodEnd == this.billingPeriodEnd &&
+          other.dueDate == this.dueDate &&
+          other.amountDueMinor == this.amountDueMinor &&
+          other.currencyCode == this.currencyCode &&
+          other.paymentStatus == this.paymentStatus &&
+          other.paidAt == this.paidAt &&
+          other.linkedAssetRecordId == this.linkedAssetRecordId &&
+          other.linkedExpenseRecordId == this.linkedExpenseRecordId);
+}
+
+class BillsCompanion extends UpdateCompanion<BillEntity> {
+  final Value<String> recordId;
+  final Value<String> utilityType;
+  final Value<String?> providerName;
+  final Value<String?> accountNumber;
+  final Value<DateTime?> billingPeriodStart;
+  final Value<DateTime?> billingPeriodEnd;
+  final Value<DateTime?> dueDate;
+  final Value<int> amountDueMinor;
+  final Value<String> currencyCode;
+  final Value<String> paymentStatus;
+  final Value<DateTime?> paidAt;
+  final Value<String?> linkedAssetRecordId;
+  final Value<String?> linkedExpenseRecordId;
+  final Value<int> rowid;
+  const BillsCompanion({
+    this.recordId = const Value.absent(),
+    this.utilityType = const Value.absent(),
+    this.providerName = const Value.absent(),
+    this.accountNumber = const Value.absent(),
+    this.billingPeriodStart = const Value.absent(),
+    this.billingPeriodEnd = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.amountDueMinor = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.paymentStatus = const Value.absent(),
+    this.paidAt = const Value.absent(),
+    this.linkedAssetRecordId = const Value.absent(),
+    this.linkedExpenseRecordId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BillsCompanion.insert({
+    required String recordId,
+    this.utilityType = const Value.absent(),
+    this.providerName = const Value.absent(),
+    this.accountNumber = const Value.absent(),
+    this.billingPeriodStart = const Value.absent(),
+    this.billingPeriodEnd = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    required int amountDueMinor,
+    this.currencyCode = const Value.absent(),
+    this.paymentStatus = const Value.absent(),
+    this.paidAt = const Value.absent(),
+    this.linkedAssetRecordId = const Value.absent(),
+    this.linkedExpenseRecordId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : recordId = Value(recordId),
+       amountDueMinor = Value(amountDueMinor);
+  static Insertable<BillEntity> custom({
+    Expression<String>? recordId,
+    Expression<String>? utilityType,
+    Expression<String>? providerName,
+    Expression<String>? accountNumber,
+    Expression<DateTime>? billingPeriodStart,
+    Expression<DateTime>? billingPeriodEnd,
+    Expression<DateTime>? dueDate,
+    Expression<int>? amountDueMinor,
+    Expression<String>? currencyCode,
+    Expression<String>? paymentStatus,
+    Expression<DateTime>? paidAt,
+    Expression<String>? linkedAssetRecordId,
+    Expression<String>? linkedExpenseRecordId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (recordId != null) 'record_id': recordId,
+      if (utilityType != null) 'utility_type': utilityType,
+      if (providerName != null) 'provider_name': providerName,
+      if (accountNumber != null) 'account_number': accountNumber,
+      if (billingPeriodStart != null)
+        'billing_period_start': billingPeriodStart,
+      if (billingPeriodEnd != null) 'billing_period_end': billingPeriodEnd,
+      if (dueDate != null) 'due_date': dueDate,
+      if (amountDueMinor != null) 'amount_due_minor': amountDueMinor,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (paymentStatus != null) 'payment_status': paymentStatus,
+      if (paidAt != null) 'paid_at': paidAt,
+      if (linkedAssetRecordId != null)
+        'linked_asset_record_id': linkedAssetRecordId,
+      if (linkedExpenseRecordId != null)
+        'linked_expense_record_id': linkedExpenseRecordId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BillsCompanion copyWith({
+    Value<String>? recordId,
+    Value<String>? utilityType,
+    Value<String?>? providerName,
+    Value<String?>? accountNumber,
+    Value<DateTime?>? billingPeriodStart,
+    Value<DateTime?>? billingPeriodEnd,
+    Value<DateTime?>? dueDate,
+    Value<int>? amountDueMinor,
+    Value<String>? currencyCode,
+    Value<String>? paymentStatus,
+    Value<DateTime?>? paidAt,
+    Value<String?>? linkedAssetRecordId,
+    Value<String?>? linkedExpenseRecordId,
+    Value<int>? rowid,
+  }) {
+    return BillsCompanion(
+      recordId: recordId ?? this.recordId,
+      utilityType: utilityType ?? this.utilityType,
+      providerName: providerName ?? this.providerName,
+      accountNumber: accountNumber ?? this.accountNumber,
+      billingPeriodStart: billingPeriodStart ?? this.billingPeriodStart,
+      billingPeriodEnd: billingPeriodEnd ?? this.billingPeriodEnd,
+      dueDate: dueDate ?? this.dueDate,
+      amountDueMinor: amountDueMinor ?? this.amountDueMinor,
+      currencyCode: currencyCode ?? this.currencyCode,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paidAt: paidAt ?? this.paidAt,
+      linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
+      linkedExpenseRecordId:
+          linkedExpenseRecordId ?? this.linkedExpenseRecordId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (recordId.present) {
+      map['record_id'] = Variable<String>(recordId.value);
+    }
+    if (utilityType.present) {
+      map['utility_type'] = Variable<String>(utilityType.value);
+    }
+    if (providerName.present) {
+      map['provider_name'] = Variable<String>(providerName.value);
+    }
+    if (accountNumber.present) {
+      map['account_number'] = Variable<String>(accountNumber.value);
+    }
+    if (billingPeriodStart.present) {
+      map['billing_period_start'] = Variable<DateTime>(
+        billingPeriodStart.value,
+      );
+    }
+    if (billingPeriodEnd.present) {
+      map['billing_period_end'] = Variable<DateTime>(billingPeriodEnd.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
+    if (amountDueMinor.present) {
+      map['amount_due_minor'] = Variable<int>(amountDueMinor.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (paymentStatus.present) {
+      map['payment_status'] = Variable<String>(paymentStatus.value);
+    }
+    if (paidAt.present) {
+      map['paid_at'] = Variable<DateTime>(paidAt.value);
+    }
+    if (linkedAssetRecordId.present) {
+      map['linked_asset_record_id'] = Variable<String>(
+        linkedAssetRecordId.value,
+      );
+    }
+    if (linkedExpenseRecordId.present) {
+      map['linked_expense_record_id'] = Variable<String>(
+        linkedExpenseRecordId.value,
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BillsCompanion(')
+          ..write('recordId: $recordId, ')
+          ..write('utilityType: $utilityType, ')
+          ..write('providerName: $providerName, ')
+          ..write('accountNumber: $accountNumber, ')
+          ..write('billingPeriodStart: $billingPeriodStart, ')
+          ..write('billingPeriodEnd: $billingPeriodEnd, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('amountDueMinor: $amountDueMinor, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('paymentStatus: $paymentStatus, ')
+          ..write('paidAt: $paidAt, ')
+          ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
+          ..write('linkedExpenseRecordId: $linkedExpenseRecordId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3927,13 +4835,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TasksTable tasks = $TasksTable(this);
   late final $DocumentsTable documents = $DocumentsTable(this);
   late final $ExpensesTable expenses = $ExpensesTable(this);
-  late final Index recordsWorkspaceDeletedIdx = Index(
-    'records_workspace_deleted_idx',
-    'CREATE INDEX records_workspace_deleted_idx ON records (workspace_id, deleted_at)',
+  late final $BillsTable bills = $BillsTable(this);
+  late final Index categoriesWorkspaceNameIdx = Index(
+    'categories_workspace_name_idx',
+    'CREATE INDEX categories_workspace_name_idx ON categories (workspace_id, name)',
   );
-  late final Index recordsCategoryIdx = Index(
-    'records_category_idx',
-    'CREATE INDEX records_category_idx ON records (category_id)',
+  late final Index recordsWorkspaceTypeIdx = Index(
+    'records_workspace_type_idx',
+    'CREATE INDEX records_workspace_type_idx ON records (workspace_id, record_type)',
+  );
+  late final Index recordsDeletedIdx = Index(
+    'records_deleted_idx',
+    'CREATE INDEX records_deleted_idx ON records (deleted_at)',
   );
   late final Index tasksStatusDueIdx = Index(
     'tasks_status_due_idx',
@@ -3955,9 +4868,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'expenses_task_idx',
     'CREATE INDEX expenses_task_idx ON expenses (linked_task_record_id)',
   );
+  late final Index expensesBillIdx = Index(
+    'expenses_bill_idx',
+    'CREATE INDEX expenses_bill_idx ON expenses (linked_bill_record_id)',
+  );
   late final Index expensesDateIdx = Index(
     'expenses_date_idx',
     'CREATE INDEX expenses_date_idx ON expenses (transaction_date)',
+  );
+  late final Index billsStatusDueIdx = Index(
+    'bills_status_due_idx',
+    'CREATE INDEX bills_status_due_idx ON bills (payment_status, due_date)',
+  );
+  late final Index billsAssetIdx = Index(
+    'bills_asset_idx',
+    'CREATE INDEX bills_asset_idx ON bills (linked_asset_record_id)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -3971,14 +4896,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tasks,
     documents,
     expenses,
-    recordsWorkspaceDeletedIdx,
-    recordsCategoryIdx,
+    bills,
+    categoriesWorkspaceNameIdx,
+    recordsWorkspaceTypeIdx,
+    recordsDeletedIdx,
     tasksStatusDueIdx,
     documentsLinkedAssetIdx,
     documentsTypeIdx,
     expensesAssetIdx,
     expensesTaskIdx,
+    expensesBillIdx,
     expensesDateIdx,
+    billsStatusDueIdx,
+    billsAssetIdx,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4059,6 +4989,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('expenses', kind: UpdateKind.update)],
     ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('expenses', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('bills', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('bills', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('bills', kind: UpdateKind.update)],
+    ),
   ]);
 }
 
@@ -4090,36 +5048,39 @@ final class $$WorkspacesTableReferences
   $$WorkspacesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static MultiTypedResultKey<$CategoriesTable, List<CategoryEntity>>
-  _categoriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.categories,
-    aliasName: 'workspaces__id__categories__workspace_id',
-  );
+  _categoriesInWorkspaceTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.categories,
+        aliasName: 'workspaces__id__categories__workspace_id',
+      );
 
-  $$CategoriesTableProcessedTableManager get categoriesRefs {
+  $$CategoriesTableProcessedTableManager get categoriesInWorkspace {
     final manager = $$CategoriesTableTableManager(
       $_db,
       $_db.categories,
     ).filter((f) => f.workspaceId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_categoriesRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _categoriesInWorkspaceTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
 
   static MultiTypedResultKey<$RecordsTable, List<RecordEntity>>
-  _recordsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+  _recordsInWorkspaceTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.records,
     aliasName: 'workspaces__id__records__workspace_id',
   );
 
-  $$RecordsTableProcessedTableManager get recordsRefs {
+  $$RecordsTableProcessedTableManager get recordsInWorkspace {
     final manager = $$RecordsTableTableManager(
       $_db,
       $_db.records,
     ).filter((f) => f.workspaceId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_recordsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_recordsInWorkspaceTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4170,7 +5131,7 @@ class $$WorkspacesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  Expression<bool> categoriesRefs(
+  Expression<bool> categoriesInWorkspace(
     Expression<bool> Function($$CategoriesTableFilterComposer f) f,
   ) {
     final $$CategoriesTableFilterComposer composer = $composerBuilder(
@@ -4195,7 +5156,7 @@ class $$WorkspacesTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> recordsRefs(
+  Expression<bool> recordsInWorkspace(
     Expression<bool> Function($$RecordsTableFilterComposer f) f,
   ) {
     final $$RecordsTableFilterComposer composer = $composerBuilder(
@@ -4300,7 +5261,7 @@ class $$WorkspacesTableAnnotationComposer
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
-  Expression<T> categoriesRefs<T extends Object>(
+  Expression<T> categoriesInWorkspace<T extends Object>(
     Expression<T> Function($$CategoriesTableAnnotationComposer a) f,
   ) {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -4325,7 +5286,7 @@ class $$WorkspacesTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> recordsRefs<T extends Object>(
+  Expression<T> recordsInWorkspace<T extends Object>(
     Expression<T> Function($$RecordsTableAnnotationComposer a) f,
   ) {
     final $$RecordsTableAnnotationComposer composer = $composerBuilder(
@@ -4364,7 +5325,10 @@ class $$WorkspacesTableTableManager
           $$WorkspacesTableUpdateCompanionBuilder,
           (WorkspaceEntity, $$WorkspacesTableReferences),
           WorkspaceEntity,
-          PrefetchHooks Function({bool categoriesRefs, bool recordsRefs})
+          PrefetchHooks Function({
+            bool categoriesInWorkspace,
+            bool recordsInWorkspace,
+          })
         > {
   $$WorkspacesTableTableManager(_$AppDatabase db, $WorkspacesTable table)
     : super(
@@ -4426,17 +5390,17 @@ class $$WorkspacesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({categoriesRefs = false, recordsRefs = false}) {
+              ({categoriesInWorkspace = false, recordsInWorkspace = false}) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
-                    if (categoriesRefs) db.categories,
-                    if (recordsRefs) db.records,
+                    if (categoriesInWorkspace) db.categories,
+                    if (recordsInWorkspace) db.records,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
                     return [
-                      if (categoriesRefs)
+                      if (categoriesInWorkspace)
                         await $_getPrefetchedDataByColumns<
                           WorkspaceEntity,
                           $WorkspacesTable,
@@ -4445,18 +5409,18 @@ class $$WorkspacesTableTableManager
                         >(
                           currentTable: table,
                           referencedTable: $$WorkspacesTableReferences
-                              ._categoriesRefsTable(db),
+                              ._categoriesInWorkspaceTable(db),
                           managerFromTypedResult: (p0) =>
                               $$WorkspacesTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).categoriesRefs,
+                              ).categoriesInWorkspace,
                           currentColumn: 'id',
                           referencedColumn: 'workspace_id',
                           typedResults: items,
                         ),
-                      if (recordsRefs)
+                      if (recordsInWorkspace)
                         await $_getPrefetchedDataByColumns<
                           WorkspaceEntity,
                           $WorkspacesTable,
@@ -4465,13 +5429,13 @@ class $$WorkspacesTableTableManager
                         >(
                           currentTable: table,
                           referencedTable: $$WorkspacesTableReferences
-                              ._recordsRefsTable(db),
+                              ._recordsInWorkspaceTable(db),
                           managerFromTypedResult: (p0) =>
                               $$WorkspacesTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).recordsRefs,
+                              ).recordsInWorkspace,
                           currentColumn: 'id',
                           referencedColumn: 'workspace_id',
                           typedResults: items,
@@ -4496,7 +5460,10 @@ typedef $$WorkspacesTableProcessedTableManager =
       $$WorkspacesTableUpdateCompanionBuilder,
       (WorkspaceEntity, $$WorkspacesTableReferences),
       WorkspaceEntity,
-      PrefetchHooks Function({bool categoriesRefs, bool recordsRefs})
+      PrefetchHooks Function({
+        bool categoriesInWorkspace,
+        bool recordsInWorkspace,
+      })
     >;
 typedef $$CategoriesTableCreateCompanionBuilder =
     CategoriesCompanion Function({
@@ -4543,18 +5510,18 @@ final class $$CategoriesTableReferences
   }
 
   static MultiTypedResultKey<$RecordsTable, List<RecordEntity>>
-  _recordsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+  _recordsInCategoryTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.records,
     aliasName: 'categories__id__records__category_id',
   );
 
-  $$RecordsTableProcessedTableManager get recordsRefs {
+  $$RecordsTableProcessedTableManager get recordsInCategory {
     final manager = $$RecordsTableTableManager(
       $_db,
       $_db.records,
     ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_recordsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_recordsInCategoryTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4623,7 +5590,7 @@ class $$CategoriesTableFilterComposer
     return composer;
   }
 
-  Expression<bool> recordsRefs(
+  Expression<bool> recordsInCategory(
     Expression<bool> Function($$RecordsTableFilterComposer f) f,
   ) {
     final $$RecordsTableFilterComposer composer = $composerBuilder(
@@ -4762,7 +5729,7 @@ class $$CategoriesTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> recordsRefs<T extends Object>(
+  Expression<T> recordsInCategory<T extends Object>(
     Expression<T> Function($$RecordsTableAnnotationComposer a) f,
   ) {
     final $$RecordsTableAnnotationComposer composer = $composerBuilder(
@@ -4801,7 +5768,7 @@ class $$CategoriesTableTableManager
           $$CategoriesTableUpdateCompanionBuilder,
           (CategoryEntity, $$CategoriesTableReferences),
           CategoryEntity,
-          PrefetchHooks Function({bool workspaceId, bool recordsRefs})
+          PrefetchHooks Function({bool workspaceId, bool recordsInCategory})
         > {
   $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
     : super(
@@ -4862,68 +5829,70 @@ class $$CategoriesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({workspaceId = false, recordsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (recordsRefs) db.records],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (workspaceId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.workspaceId,
-                                referencedTable: $$CategoriesTableReferences
-                                    ._workspaceIdTable(db),
-                                referencedColumn: $$CategoriesTableReferences
-                                    ._workspaceIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({workspaceId = false, recordsInCategory = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [if (recordsInCategory) db.records],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (workspaceId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.workspaceId,
+                                    referencedTable: $$CategoriesTableReferences
+                                        ._workspaceIdTable(db),
+                                    referencedColumn:
+                                        $$CategoriesTableReferences
+                                            ._workspaceIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (recordsInCategory)
+                        await $_getPrefetchedDataByColumns<
+                          CategoryEntity,
+                          $CategoriesTable,
+                          RecordEntity,
+                          $RecordsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._recordsInCategoryTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).recordsInCategory,
+                          currentColumn: 'id',
+                          referencedColumn: 'category_id',
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (recordsRefs)
-                    await $_getPrefetchedDataByColumns<
-                      CategoryEntity,
-                      $CategoriesTable,
-                      RecordEntity,
-                      $RecordsTable
-                    >(
-                      currentTable: table,
-                      referencedTable: $$CategoriesTableReferences
-                          ._recordsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$CategoriesTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).recordsRefs,
-                      currentColumn: 'id',
-                      referencedColumn: 'category_id',
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -4940,7 +5909,7 @@ typedef $$CategoriesTableProcessedTableManager =
       $$CategoriesTableUpdateCompanionBuilder,
       (CategoryEntity, $$CategoriesTableReferences),
       CategoryEntity,
-      PrefetchHooks Function({bool workspaceId, bool recordsRefs})
+      PrefetchHooks Function({bool workspaceId, bool recordsInCategory})
     >;
 typedef $$RecordsTableCreateCompanionBuilder =
     RecordsCompanion Function({
@@ -5011,20 +5980,20 @@ final class $$RecordsTableReferences
     );
   }
 
-  static MultiTypedResultKey<$AssetsTable, List<AssetEntity>> _assetsRefsTable(
+  static MultiTypedResultKey<$AssetsTable, List<AssetEntity>> _assetRecordTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.assets,
     aliasName: 'records__id__assets__record_id',
   );
 
-  $$AssetsTableProcessedTableManager get assetsRefs {
+  $$AssetsTableProcessedTableManager get assetRecord {
     final manager = $$AssetsTableTableManager(
       $_db,
       $_db.assets,
     ).filter((f) => f.recordId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_assetsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_assetRecordTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5154,6 +6123,77 @@ final class $$RecordsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ExpensesTable, List<ExpenseEntity>>
+  _expensesForBillTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.expenses,
+    aliasName: 'records__id__expenses__linked_bill_record_id',
+  );
+
+  $$ExpensesTableProcessedTableManager get expensesForBill {
+    final manager = $$ExpensesTableTableManager($_db, $_db.expenses).filter(
+      (f) => f.linkedBillRecordId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_expensesForBillTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$BillsTable, List<BillEntity>> _billRecordTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.bills,
+    aliasName: 'records__id__bills__record_id',
+  );
+
+  $$BillsTableProcessedTableManager get billRecord {
+    final manager = $$BillsTableTableManager(
+      $_db,
+      $_db.bills,
+    ).filter((f) => f.recordId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_billRecordTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$BillsTable, List<BillEntity>> _billsForAssetTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.bills,
+    aliasName: 'records__id__bills__linked_asset_record_id',
+  );
+
+  $$BillsTableProcessedTableManager get billsForAsset {
+    final manager = $$BillsTableTableManager($_db, $_db.bills).filter(
+      (f) => f.linkedAssetRecordId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_billsForAssetTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$BillsTable, List<BillEntity>>
+  _billLinkedExpenseTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.bills,
+    aliasName: 'records__id__bills__linked_expense_record_id',
+  );
+
+  $$BillsTableProcessedTableManager get billLinkedExpense {
+    final manager = $$BillsTableTableManager($_db, $_db.bills).filter(
+      (f) => f.linkedExpenseRecordId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_billLinkedExpenseTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$RecordsTableFilterComposer
@@ -5256,7 +6296,7 @@ class $$RecordsTableFilterComposer
     return composer;
   }
 
-  Expression<bool> assetsRefs(
+  Expression<bool> assetRecord(
     Expression<bool> Function($$AssetsTableFilterComposer f) f,
   ) {
     final $$AssetsTableFilterComposer composer = $composerBuilder(
@@ -5447,6 +6487,106 @@ class $$RecordsTableFilterComposer
           }) => $$ExpensesTableFilterComposer(
             $db: $db,
             $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> expensesForBill(
+    Expression<bool> Function($$ExpensesTableFilterComposer f) f,
+  ) {
+    final $$ExpensesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.linkedBillRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableFilterComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> billRecord(
+    Expression<bool> Function($$BillsTableFilterComposer f) f,
+  ) {
+    final $$BillsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bills,
+      getReferencedColumn: (t) => t.recordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BillsTableFilterComposer(
+            $db: $db,
+            $table: $db.bills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> billsForAsset(
+    Expression<bool> Function($$BillsTableFilterComposer f) f,
+  ) {
+    final $$BillsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bills,
+      getReferencedColumn: (t) => t.linkedAssetRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BillsTableFilterComposer(
+            $db: $db,
+            $table: $db.bills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> billLinkedExpense(
+    Expression<bool> Function($$BillsTableFilterComposer f) f,
+  ) {
+    final $$BillsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bills,
+      getReferencedColumn: (t) => t.linkedExpenseRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BillsTableFilterComposer(
+            $db: $db,
+            $table: $db.bills,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5646,7 +6786,7 @@ class $$RecordsTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> assetsRefs<T extends Object>(
+  Expression<T> assetRecord<T extends Object>(
     Expression<T> Function($$AssetsTableAnnotationComposer a) f,
   ) {
     final $$AssetsTableAnnotationComposer composer = $composerBuilder(
@@ -5845,6 +6985,106 @@ class $$RecordsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> expensesForBill<T extends Object>(
+    Expression<T> Function($$ExpensesTableAnnotationComposer a) f,
+  ) {
+    final $$ExpensesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.expenses,
+      getReferencedColumn: (t) => t.linkedBillRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ExpensesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.expenses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> billRecord<T extends Object>(
+    Expression<T> Function($$BillsTableAnnotationComposer a) f,
+  ) {
+    final $$BillsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bills,
+      getReferencedColumn: (t) => t.recordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BillsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.bills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> billsForAsset<T extends Object>(
+    Expression<T> Function($$BillsTableAnnotationComposer a) f,
+  ) {
+    final $$BillsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bills,
+      getReferencedColumn: (t) => t.linkedAssetRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BillsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.bills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> billLinkedExpense<T extends Object>(
+    Expression<T> Function($$BillsTableAnnotationComposer a) f,
+  ) {
+    final $$BillsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.bills,
+      getReferencedColumn: (t) => t.linkedExpenseRecordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BillsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.bills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RecordsTableTableManager
@@ -5863,7 +7103,7 @@ class $$RecordsTableTableManager
           PrefetchHooks Function({
             bool workspaceId,
             bool categoryId,
-            bool assetsRefs,
+            bool assetRecord,
             bool taskRecord,
             bool tasksForAsset,
             bool documentRecord,
@@ -5871,6 +7111,10 @@ class $$RecordsTableTableManager
             bool expenseRecord,
             bool expensesForAsset,
             bool expensesForTask,
+            bool expensesForBill,
+            bool billRecord,
+            bool billsForAsset,
+            bool billLinkedExpense,
           })
         > {
   $$RecordsTableTableManager(_$AppDatabase db, $RecordsTable table)
@@ -5952,7 +7196,7 @@ class $$RecordsTableTableManager
               ({
                 workspaceId = false,
                 categoryId = false,
-                assetsRefs = false,
+                assetRecord = false,
                 taskRecord = false,
                 tasksForAsset = false,
                 documentRecord = false,
@@ -5960,11 +7204,15 @@ class $$RecordsTableTableManager
                 expenseRecord = false,
                 expensesForAsset = false,
                 expensesForTask = false,
+                expensesForBill = false,
+                billRecord = false,
+                billsForAsset = false,
+                billLinkedExpense = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
-                    if (assetsRefs) db.assets,
+                    if (assetRecord) db.assets,
                     if (taskRecord) db.tasks,
                     if (tasksForAsset) db.tasks,
                     if (documentRecord) db.documents,
@@ -5972,6 +7220,10 @@ class $$RecordsTableTableManager
                     if (expenseRecord) db.expenses,
                     if (expensesForAsset) db.expenses,
                     if (expensesForTask) db.expenses,
+                    if (expensesForBill) db.expenses,
+                    if (billRecord) db.bills,
+                    if (billsForAsset) db.bills,
+                    if (billLinkedExpense) db.bills,
                   ],
                   addJoins:
                       <
@@ -6020,7 +7272,7 @@ class $$RecordsTableTableManager
                       },
                   getPrefetchedDataCallback: (items) async {
                     return [
-                      if (assetsRefs)
+                      if (assetRecord)
                         await $_getPrefetchedDataByColumns<
                           RecordEntity,
                           $RecordsTable,
@@ -6029,13 +7281,13 @@ class $$RecordsTableTableManager
                         >(
                           currentTable: table,
                           referencedTable: $$RecordsTableReferences
-                              ._assetsRefsTable(db),
+                              ._assetRecordTable(db),
                           managerFromTypedResult: (p0) =>
                               $$RecordsTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).assetsRefs,
+                              ).assetRecord,
                           currentColumn: 'id',
                           referencedColumn: 'record_id',
                           typedResults: items,
@@ -6180,6 +7432,86 @@ class $$RecordsTableTableManager
                           referencedColumn: 'linked_task_record_id',
                           typedResults: items,
                         ),
+                      if (expensesForBill)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          ExpenseEntity,
+                          $ExpensesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._expensesForBillTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).expensesForBill,
+                          currentColumn: 'id',
+                          referencedColumn: 'linked_bill_record_id',
+                          typedResults: items,
+                        ),
+                      if (billRecord)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          BillEntity,
+                          $BillsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._billRecordTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).billRecord,
+                          currentColumn: 'id',
+                          referencedColumn: 'record_id',
+                          typedResults: items,
+                        ),
+                      if (billsForAsset)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          BillEntity,
+                          $BillsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._billsForAssetTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).billsForAsset,
+                          currentColumn: 'id',
+                          referencedColumn: 'linked_asset_record_id',
+                          typedResults: items,
+                        ),
+                      if (billLinkedExpense)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          BillEntity,
+                          $BillsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._billLinkedExpenseTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).billLinkedExpense,
+                          currentColumn: 'id',
+                          referencedColumn: 'linked_expense_record_id',
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6203,7 +7535,7 @@ typedef $$RecordsTableProcessedTableManager =
       PrefetchHooks Function({
         bool workspaceId,
         bool categoryId,
-        bool assetsRefs,
+        bool assetRecord,
         bool taskRecord,
         bool tasksForAsset,
         bool documentRecord,
@@ -6211,6 +7543,10 @@ typedef $$RecordsTableProcessedTableManager =
         bool expenseRecord,
         bool expensesForAsset,
         bool expensesForTask,
+        bool expensesForBill,
+        bool billRecord,
+        bool billsForAsset,
+        bool billLinkedExpense,
       })
     >;
 typedef $$AssetsTableCreateCompanionBuilder =
@@ -7558,6 +8894,7 @@ typedef $$ExpensesTableCreateCompanionBuilder =
       Value<String> expenseCategory,
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedTaskRecordId,
+      Value<String?> linkedBillRecordId,
       Value<int> rowid,
     });
 typedef $$ExpensesTableUpdateCompanionBuilder =
@@ -7570,6 +8907,7 @@ typedef $$ExpensesTableUpdateCompanionBuilder =
       Value<String> expenseCategory,
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedTaskRecordId,
+      Value<String?> linkedBillRecordId,
       Value<int> rowid,
     });
 
@@ -7622,6 +8960,23 @@ final class $$ExpensesTableReferences
       $_db.records,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_linkedTaskRecordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RecordsTable _linkedBillRecordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('expenses__linked_bill_record_id__records__id');
+
+  $$RecordsTableProcessedTableManager? get linkedBillRecordId {
+    final $_column = $_itemColumn<String>('linked_bill_record_id');
+    if ($_column == null) return null;
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_linkedBillRecordIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7713,6 +9068,29 @@ class $$ExpensesTableFilterComposer
     final $$RecordsTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.linkedTaskRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableFilterComposer get linkedBillRecordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedBillRecordId,
       referencedTable: $db.records,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -7835,6 +9213,29 @@ class $$ExpensesTableOrderingComposer
     );
     return composer;
   }
+
+  $$RecordsTableOrderingComposer get linkedBillRecordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedBillRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$ExpensesTableAnnotationComposer
@@ -7939,6 +9340,29 @@ class $$ExpensesTableAnnotationComposer
     );
     return composer;
   }
+
+  $$RecordsTableAnnotationComposer get linkedBillRecordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedBillRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$ExpensesTableTableManager
@@ -7958,6 +9382,7 @@ class $$ExpensesTableTableManager
             bool recordId,
             bool linkedAssetRecordId,
             bool linkedTaskRecordId,
+            bool linkedBillRecordId,
           })
         > {
   $$ExpensesTableTableManager(_$AppDatabase db, $ExpensesTable table)
@@ -7981,6 +9406,7 @@ class $$ExpensesTableTableManager
                 Value<String> expenseCategory = const Value.absent(),
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedTaskRecordId = const Value.absent(),
+                Value<String?> linkedBillRecordId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExpensesCompanion(
                 recordId: recordId,
@@ -7991,6 +9417,7 @@ class $$ExpensesTableTableManager
                 expenseCategory: expenseCategory,
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedTaskRecordId: linkedTaskRecordId,
+                linkedBillRecordId: linkedBillRecordId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8003,6 +9430,7 @@ class $$ExpensesTableTableManager
                 Value<String> expenseCategory = const Value.absent(),
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedTaskRecordId = const Value.absent(),
+                Value<String?> linkedBillRecordId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExpensesCompanion.insert(
                 recordId: recordId,
@@ -8013,6 +9441,7 @@ class $$ExpensesTableTableManager
                 expenseCategory: expenseCategory,
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedTaskRecordId: linkedTaskRecordId,
+                linkedBillRecordId: linkedBillRecordId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -8028,6 +9457,7 @@ class $$ExpensesTableTableManager
                 recordId = false,
                 linkedAssetRecordId = false,
                 linkedTaskRecordId = false,
+                linkedBillRecordId = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -8087,6 +9517,19 @@ class $$ExpensesTableTableManager
                                   )
                                   as T;
                         }
+                        if (linkedBillRecordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.linkedBillRecordId,
+                                    referencedTable: $$ExpensesTableReferences
+                                        ._linkedBillRecordIdTable(db),
+                                    referencedColumn: $$ExpensesTableReferences
+                                        ._linkedBillRecordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
 
                         return state;
                       },
@@ -8115,6 +9558,678 @@ typedef $$ExpensesTableProcessedTableManager =
         bool recordId,
         bool linkedAssetRecordId,
         bool linkedTaskRecordId,
+        bool linkedBillRecordId,
+      })
+    >;
+typedef $$BillsTableCreateCompanionBuilder =
+    BillsCompanion Function({
+      required String recordId,
+      Value<String> utilityType,
+      Value<String?> providerName,
+      Value<String?> accountNumber,
+      Value<DateTime?> billingPeriodStart,
+      Value<DateTime?> billingPeriodEnd,
+      Value<DateTime?> dueDate,
+      required int amountDueMinor,
+      Value<String> currencyCode,
+      Value<String> paymentStatus,
+      Value<DateTime?> paidAt,
+      Value<String?> linkedAssetRecordId,
+      Value<String?> linkedExpenseRecordId,
+      Value<int> rowid,
+    });
+typedef $$BillsTableUpdateCompanionBuilder =
+    BillsCompanion Function({
+      Value<String> recordId,
+      Value<String> utilityType,
+      Value<String?> providerName,
+      Value<String?> accountNumber,
+      Value<DateTime?> billingPeriodStart,
+      Value<DateTime?> billingPeriodEnd,
+      Value<DateTime?> dueDate,
+      Value<int> amountDueMinor,
+      Value<String> currencyCode,
+      Value<String> paymentStatus,
+      Value<DateTime?> paidAt,
+      Value<String?> linkedAssetRecordId,
+      Value<String?> linkedExpenseRecordId,
+      Value<int> rowid,
+    });
+
+final class $$BillsTableReferences
+    extends BaseReferences<_$AppDatabase, $BillsTable, BillEntity> {
+  $$BillsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $RecordsTable _recordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('bills__record_id__records__id');
+
+  $$RecordsTableProcessedTableManager get recordId {
+    final $_column = $_itemColumn<String>('record_id')!;
+
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_recordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RecordsTable _linkedAssetRecordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('bills__linked_asset_record_id__records__id');
+
+  $$RecordsTableProcessedTableManager? get linkedAssetRecordId {
+    final $_column = $_itemColumn<String>('linked_asset_record_id');
+    if ($_column == null) return null;
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_linkedAssetRecordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RecordsTable _linkedExpenseRecordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('bills__linked_expense_record_id__records__id');
+
+  $$RecordsTableProcessedTableManager? get linkedExpenseRecordId {
+    final $_column = $_itemColumn<String>('linked_expense_record_id');
+    if ($_column == null) return null;
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _linkedExpenseRecordIdTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$BillsTableFilterComposer extends Composer<_$AppDatabase, $BillsTable> {
+  $$BillsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get utilityType => $composableBuilder(
+    column: $table.utilityType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerName => $composableBuilder(
+    column: $table.providerName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get accountNumber => $composableBuilder(
+    column: $table.accountNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get billingPeriodStart => $composableBuilder(
+    column: $table.billingPeriodStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get billingPeriodEnd => $composableBuilder(
+    column: $table.billingPeriodEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amountDueMinor => $composableBuilder(
+    column: $table.amountDueMinor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentStatus => $composableBuilder(
+    column: $table.paymentStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get paidAt => $composableBuilder(
+    column: $table.paidAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$RecordsTableFilterComposer get recordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableFilterComposer get linkedAssetRecordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedAssetRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableFilterComposer get linkedExpenseRecordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedExpenseRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$BillsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BillsTable> {
+  $$BillsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get utilityType => $composableBuilder(
+    column: $table.utilityType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerName => $composableBuilder(
+    column: $table.providerName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get accountNumber => $composableBuilder(
+    column: $table.accountNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get billingPeriodStart => $composableBuilder(
+    column: $table.billingPeriodStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get billingPeriodEnd => $composableBuilder(
+    column: $table.billingPeriodEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amountDueMinor => $composableBuilder(
+    column: $table.amountDueMinor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paymentStatus => $composableBuilder(
+    column: $table.paymentStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get paidAt => $composableBuilder(
+    column: $table.paidAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$RecordsTableOrderingComposer get recordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableOrderingComposer get linkedAssetRecordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedAssetRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableOrderingComposer get linkedExpenseRecordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedExpenseRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$BillsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BillsTable> {
+  $$BillsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get utilityType => $composableBuilder(
+    column: $table.utilityType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get providerName => $composableBuilder(
+    column: $table.providerName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get accountNumber => $composableBuilder(
+    column: $table.accountNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get billingPeriodStart => $composableBuilder(
+    column: $table.billingPeriodStart,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get billingPeriodEnd => $composableBuilder(
+    column: $table.billingPeriodEnd,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<int> get amountDueMinor => $composableBuilder(
+    column: $table.amountDueMinor,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paymentStatus => $composableBuilder(
+    column: $table.paymentStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get paidAt =>
+      $composableBuilder(column: $table.paidAt, builder: (column) => column);
+
+  $$RecordsTableAnnotationComposer get recordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableAnnotationComposer get linkedAssetRecordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedAssetRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RecordsTableAnnotationComposer get linkedExpenseRecordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.linkedExpenseRecordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$BillsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BillsTable,
+          BillEntity,
+          $$BillsTableFilterComposer,
+          $$BillsTableOrderingComposer,
+          $$BillsTableAnnotationComposer,
+          $$BillsTableCreateCompanionBuilder,
+          $$BillsTableUpdateCompanionBuilder,
+          (BillEntity, $$BillsTableReferences),
+          BillEntity,
+          PrefetchHooks Function({
+            bool recordId,
+            bool linkedAssetRecordId,
+            bool linkedExpenseRecordId,
+          })
+        > {
+  $$BillsTableTableManager(_$AppDatabase db, $BillsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BillsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BillsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BillsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> recordId = const Value.absent(),
+                Value<String> utilityType = const Value.absent(),
+                Value<String?> providerName = const Value.absent(),
+                Value<String?> accountNumber = const Value.absent(),
+                Value<DateTime?> billingPeriodStart = const Value.absent(),
+                Value<DateTime?> billingPeriodEnd = const Value.absent(),
+                Value<DateTime?> dueDate = const Value.absent(),
+                Value<int> amountDueMinor = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<String> paymentStatus = const Value.absent(),
+                Value<DateTime?> paidAt = const Value.absent(),
+                Value<String?> linkedAssetRecordId = const Value.absent(),
+                Value<String?> linkedExpenseRecordId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BillsCompanion(
+                recordId: recordId,
+                utilityType: utilityType,
+                providerName: providerName,
+                accountNumber: accountNumber,
+                billingPeriodStart: billingPeriodStart,
+                billingPeriodEnd: billingPeriodEnd,
+                dueDate: dueDate,
+                amountDueMinor: amountDueMinor,
+                currencyCode: currencyCode,
+                paymentStatus: paymentStatus,
+                paidAt: paidAt,
+                linkedAssetRecordId: linkedAssetRecordId,
+                linkedExpenseRecordId: linkedExpenseRecordId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String recordId,
+                Value<String> utilityType = const Value.absent(),
+                Value<String?> providerName = const Value.absent(),
+                Value<String?> accountNumber = const Value.absent(),
+                Value<DateTime?> billingPeriodStart = const Value.absent(),
+                Value<DateTime?> billingPeriodEnd = const Value.absent(),
+                Value<DateTime?> dueDate = const Value.absent(),
+                required int amountDueMinor,
+                Value<String> currencyCode = const Value.absent(),
+                Value<String> paymentStatus = const Value.absent(),
+                Value<DateTime?> paidAt = const Value.absent(),
+                Value<String?> linkedAssetRecordId = const Value.absent(),
+                Value<String?> linkedExpenseRecordId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BillsCompanion.insert(
+                recordId: recordId,
+                utilityType: utilityType,
+                providerName: providerName,
+                accountNumber: accountNumber,
+                billingPeriodStart: billingPeriodStart,
+                billingPeriodEnd: billingPeriodEnd,
+                dueDate: dueDate,
+                amountDueMinor: amountDueMinor,
+                currencyCode: currencyCode,
+                paymentStatus: paymentStatus,
+                paidAt: paidAt,
+                linkedAssetRecordId: linkedAssetRecordId,
+                linkedExpenseRecordId: linkedExpenseRecordId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$BillsTable, BillEntity>(table),
+                  $$BillsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                recordId = false,
+                linkedAssetRecordId = false,
+                linkedExpenseRecordId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (recordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.recordId,
+                                    referencedTable: $$BillsTableReferences
+                                        ._recordIdTable(db),
+                                    referencedColumn: $$BillsTableReferences
+                                        ._recordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (linkedAssetRecordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.linkedAssetRecordId,
+                                    referencedTable: $$BillsTableReferences
+                                        ._linkedAssetRecordIdTable(db),
+                                    referencedColumn: $$BillsTableReferences
+                                        ._linkedAssetRecordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (linkedExpenseRecordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.linkedExpenseRecordId,
+                                    referencedTable: $$BillsTableReferences
+                                        ._linkedExpenseRecordIdTable(db),
+                                    referencedColumn: $$BillsTableReferences
+                                        ._linkedExpenseRecordIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$BillsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BillsTable,
+      BillEntity,
+      $$BillsTableFilterComposer,
+      $$BillsTableOrderingComposer,
+      $$BillsTableAnnotationComposer,
+      $$BillsTableCreateCompanionBuilder,
+      $$BillsTableUpdateCompanionBuilder,
+      (BillEntity, $$BillsTableReferences),
+      BillEntity,
+      PrefetchHooks Function({
+        bool recordId,
+        bool linkedAssetRecordId,
+        bool linkedExpenseRecordId,
       })
     >;
 
@@ -8135,4 +10250,6 @@ class $AppDatabaseManager {
       $$DocumentsTableTableManager(_db, _db.documents);
   $$ExpensesTableTableManager get expenses =>
       $$ExpensesTableTableManager(_db, _db.expenses);
+  $$BillsTableTableManager get bills =>
+      $$BillsTableTableManager(_db, _db.bills);
 }
