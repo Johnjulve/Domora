@@ -1,5 +1,7 @@
 # Domora — Personal Life OS
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 > **Know what you have, what needs attention, what it costs, and what you need to do next.**
 
 Domora is an offline-first, local-ownership personal and household management platform built with **Flutter**. It unifies everyday possessions, schedules, expenses, documents, utilities, and responsibilities into one structured, relational workspace.
@@ -68,3 +70,11 @@ flutter run
 
 ## 📖 Documentation
 - [Domora Product & Technical Blueprint](docs/product/Domora_Product_Blueprint.md)
+
+---
+
+## 📄 License
+
+This project is licensed under the **GNU General Public License v3.0** (GPL-3.0). See the [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2026 John Andrei Julve.
