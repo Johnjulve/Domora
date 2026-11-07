@@ -5,6 +5,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../backup/presentation/backup_sheet.dart';
 import '../../records/presentation/records_screen.dart';
 import '../../tasks/domain/task_item.dart';
 import '../../tasks/presentation/tasks_screen.dart';
@@ -81,27 +82,41 @@ class _SanctuaryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.brandAccentSage,
+    return Tooltip(
+      message: 'Sanctuary Archival & Backup',
+      child: InkWell(
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const BackupSheet(),
+          );
+        },
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.brandAccentBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.shield_outlined, size: 14, color: AppColors.brandPrimary),
-          const SizedBox(width: 4),
-          Text(
-            'Sanctuary',
-            style: AppTypography.caption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.brandPrimary,
-            ),
+        child: Container(
+          margin: const EdgeInsets.only(right: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.brandAccentSage,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.brandAccentBorder),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.shield_outlined, size: 14, color: AppColors.brandPrimary),
+              const SizedBox(width: 4),
+              Text(
+                'Sanctuary',
+                style: AppTypography.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.brandPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

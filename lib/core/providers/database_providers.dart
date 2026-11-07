@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_constants.dart';
 import '../database/app_database.dart';
+import '../../features/backup/data/backup_repository_impl.dart';
+import '../../features/backup/domain/backup_repository.dart';
 import '../../features/categories/data/category_repository_impl.dart';
 import '../../features/categories/domain/category.dart';
 import '../../features/expenses/data/expense_repository_impl.dart';
@@ -59,6 +61,12 @@ final documentRepositoryProvider = Provider<DocumentRepository>((ref) {
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return ExpenseRepositoryImpl(db);
+});
+
+/// Provider for [BackupRepository].
+final backupRepositoryProvider = Provider<BackupRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return BackupRepositoryImpl(db);
 });
 
 /// FutureProvider that guarantees the default personal workspace & categories are initialized.

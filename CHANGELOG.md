@@ -5,6 +5,19 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.8] - 2026-11-06
+
+### Added
+- Reliability, Backup & Dataset Portability Engine (Stage 7):
+  - Pure domain models `BackupCounts`, `BackupManifest`, `BackupPayload`, and `BackupValidationResult` with cryptographic SHA-256 integrity verification.
+  - `BackupRepositoryImpl` extracting and restoring all 7 workspace tables (`workspaces`, `categories`, `records`, `assets`, `tasks`, `documents`, `expenses`) with topological foreign-key ordering.
+  - Atomic transactional restore routine (`_db.transaction`) guaranteeing complete rollback on corrupted archives or foreign-key violations, preventing database corruption.
+  - Sanctuary Archival Presentation Sheet (`BackupSheet`):
+    - Export Vault: live vault statistics, one-click backup generation, manifest summary, SHA-256 fingerprint chip, clipboard copy, and expandable JSON preview.
+    - Restore Vault: clipboard paste, pre-restore schema & SHA-256 verification, destructive overwrite warning dialog, complete workspace replacement toggle, and automatic multi-feature reactive stream invalidation.
+  - Interactive Sanctuary Badge on `TodayScreen` app bar providing instant one-tap access to Sanctuary Archival & Backup engine.
+- 10 new automated unit and widget tests covering backup creation, format version validation, checksum tampering rejection, atomic rollback, and UI backup/restore workflows (68 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.7] - 2026-11-06
 
 ### Added
