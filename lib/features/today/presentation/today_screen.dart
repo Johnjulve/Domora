@@ -78,6 +78,31 @@ class TodayScreen extends ConsumerWidget {
               _TodayBillsSection(now: now),
               const SizedBox(height: 28),
               const _RecentActivitySection(),
+              const SizedBox(height: 36),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${AppConstants.appName} v${AppConstants.appVersion}',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textTertiary,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Offline-First Household Sanctuary',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textTertiary.withValues(alpha: 0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

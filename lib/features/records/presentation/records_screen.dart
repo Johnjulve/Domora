@@ -318,6 +318,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddBillSheet(),
     );
@@ -327,6 +328,8 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      backgroundColor: Colors.transparent,
       builder: (_) => const AddAssetSheet(),
     );
   }
@@ -372,6 +375,9 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
   final _serialController = TextEditingController();
   final _amountController = TextEditingController();
   final _locationController = TextEditingController();
+  final _odometerController = TextEditingController();
+  final _pmsDistanceController = TextEditingController(text: '5000');
+  int _pmsMonths = 6;
   String? _selectedCategoryId;
   String _condition = 'Good';
   bool _isSubmitting = false;
@@ -384,7 +390,17 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     _serialController.dispose();
     _amountController.dispose();
     _locationController.dispose();
+    _odometerController.dispose();
+    _pmsDistanceController.dispose();
     super.dispose();
+  }
+
+  DateTime _addCalendarMonths(DateTime from, int months) {
+    final targetYear = from.year + (from.month + months - 1) ~/ 12;
+    final targetMonth = (from.month + months - 1) % 12 + 1;
+    final maxDays = DateTime(targetYear, targetMonth + 1, 0).day;
+    final targetDay = from.day > maxDays ? maxDays : from.day;
+    return DateTime(targetYear, targetMonth, targetDay, from.hour, from.minute, from.second);
   }
 
   Future<void> _submit() async {
@@ -401,6 +417,15 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
       final int? amountMinor = parsedAmount != null && parsedAmount >= 0
           ? (parsedAmount * 100).round()
           : null;
+
+      final parsedOdometer = int.tryParse(_odometerController.text.trim());
+      final parsedPmsDistance = int.tryParse(_pmsDistanceController.text.trim());
+      final isVehicle = _selectedCategoryId == 'cat-vehicles' || parsedOdometer != null || parsedPmsDistance != null;
+
+      final initialTargetOdo = (parsedOdometer != null && parsedPmsDistance != null)
+          ? parsedOdometer + parsedPmsDistance
+          : null;
+      final initialDueDate = isVehicle ? _addCalendarMonths(now, _pmsMonths) : null;
 
       await repo.createAssetRecord(
         record: Record(
@@ -422,6 +447,11 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
           purchaseCurrency: AppConstants.defaultCurrency,
           locationDescription:
               _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+          odometerReading: parsedOdometer,
+          pmsDistanceIntervalKm: parsedPmsDistance,
+          pmsTimeIntervalMonths: isVehicle ? _pmsMonths : null,
+          nextPmsOdometerTarget: initialTargetOdo,
+          nextPmsDueDate: initialDueDate,
         ),
       );
 
@@ -445,13 +475,18 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(defaultCategoriesStreamProvider);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -572,8 +607,74 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Location', hintText: 'e.g. Living Room'),
+                decoration: const InputDecoration(labelText: 'Location', hintText: 'e.g. Living Room / Garage'),
               ),
+              if (_selectedCategoryId == 'cat-vehicles') ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.brandAccentBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.directions_car_outlined, size: 18, color: AppColors.brandPrimary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Vehicle PMS Limits & Odometer',
+                            style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _odometerController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Starting / Current Odometer (km)',
+                          hintText: 'e.g. 15000',
+                          prefixIcon: Icon(Icons.speed, size: 20),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _pmsDistanceController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'PMS Distance (km)',
+                                hintText: 'e.g. 5000',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              initialValue: _pmsMonths,
+                              decoration: const InputDecoration(labelText: 'PMS Time Limit'),
+                              items: const [
+                                DropdownMenuItem(value: 3, child: Text('Every 3 mos')),
+                                DropdownMenuItem(value: 6, child: Text('Every 6 mos')),
+                                DropdownMenuItem(value: 12, child: Text('Every 12 mos')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) setState(() => _pmsMonths = val);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
@@ -589,6 +690,7 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -597,6 +699,17 @@ class AssetDetailSheet extends ConsumerWidget {
   final RecordWithAsset item;
 
   const AssetDetailSheet({super.key, required this.item});
+
+  String _formatPmsTargetSummary(int? odoTarget, DateTime? dueDate) {
+    final parts = <String>[];
+    if (odoTarget != null) parts.add('$odoTarget km');
+    if (dueDate != null) {
+      final monthStr = dueDate.month.toString().padLeft(2, '0');
+      final dayStr = dueDate.day.toString().padLeft(2, '0');
+      parts.add('Due ${dueDate.year}-$monthStr-$dayStr');
+    }
+    return parts.join(' • ');
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -663,6 +776,24 @@ class AssetDetailSheet extends ConsumerWidget {
                     if (asset?.locationDescription != null) ...[
                       const Divider(),
                       _buildDetailRow('Location', asset!.locationDescription!),
+                    ],
+                    if (asset?.odometerReading != null) ...[
+                      const Divider(),
+                      _buildDetailRow('Latest Odometer', '${asset!.odometerReading} km'),
+                    ],
+                    if (asset?.pmsDistanceIntervalKm != null || asset?.pmsTimeIntervalMonths != null) ...[
+                      const Divider(),
+                      _buildDetailRow(
+                        'PMS Interval Limits',
+                        'Every ${asset?.pmsDistanceIntervalKm ?? 5000} km or ${asset?.pmsTimeIntervalMonths ?? 6} mos',
+                      ),
+                    ],
+                    if (asset?.nextPmsOdometerTarget != null || asset?.nextPmsDueDate != null) ...[
+                      const Divider(),
+                      _buildDetailRow(
+                        'Next Target PMS',
+                        _formatPmsTargetSummary(asset?.nextPmsOdometerTarget, asset?.nextPmsDueDate),
+                      ),
                     ],
                     if (asset?.purchaseAmountMinor != null) ...[
                       const Divider(),
