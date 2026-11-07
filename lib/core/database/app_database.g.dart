@@ -1758,6 +1758,59 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _odometerReadingMeta = const VerificationMeta(
+    'odometerReading',
+  );
+  @override
+  late final GeneratedColumn<int> odometerReading = GeneratedColumn<int>(
+    'odometer_reading',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pmsDistanceIntervalKmMeta =
+      const VerificationMeta('pmsDistanceIntervalKm');
+  @override
+  late final GeneratedColumn<int> pmsDistanceIntervalKm = GeneratedColumn<int>(
+    'pms_distance_interval_km',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pmsTimeIntervalMonthsMeta =
+      const VerificationMeta('pmsTimeIntervalMonths');
+  @override
+  late final GeneratedColumn<int> pmsTimeIntervalMonths = GeneratedColumn<int>(
+    'pms_time_interval_months',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextPmsDueDateMeta = const VerificationMeta(
+    'nextPmsDueDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> nextPmsDueDate =
+      GeneratedColumn<DateTime>(
+        'next_pms_due_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _nextPmsOdometerTargetMeta =
+      const VerificationMeta('nextPmsOdometerTarget');
+  @override
+  late final GeneratedColumn<int> nextPmsOdometerTarget = GeneratedColumn<int>(
+    'next_pms_odometer_target',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     recordId,
@@ -1771,6 +1824,11 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
     locationDescription,
     acquiredFrom,
     disposedAt,
+    odometerReading,
+    pmsDistanceIntervalKm,
+    pmsTimeIntervalMonths,
+    nextPmsDueDate,
+    nextPmsOdometerTarget,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1870,6 +1928,51 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
         disposedAt.isAcceptableOrUnknown(data['disposed_at']!, _disposedAtMeta),
       );
     }
+    if (data.containsKey('odometer_reading')) {
+      context.handle(
+        _odometerReadingMeta,
+        odometerReading.isAcceptableOrUnknown(
+          data['odometer_reading']!,
+          _odometerReadingMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pms_distance_interval_km')) {
+      context.handle(
+        _pmsDistanceIntervalKmMeta,
+        pmsDistanceIntervalKm.isAcceptableOrUnknown(
+          data['pms_distance_interval_km']!,
+          _pmsDistanceIntervalKmMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pms_time_interval_months')) {
+      context.handle(
+        _pmsTimeIntervalMonthsMeta,
+        pmsTimeIntervalMonths.isAcceptableOrUnknown(
+          data['pms_time_interval_months']!,
+          _pmsTimeIntervalMonthsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_pms_due_date')) {
+      context.handle(
+        _nextPmsDueDateMeta,
+        nextPmsDueDate.isAcceptableOrUnknown(
+          data['next_pms_due_date']!,
+          _nextPmsDueDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_pms_odometer_target')) {
+      context.handle(
+        _nextPmsOdometerTargetMeta,
+        nextPmsOdometerTarget.isAcceptableOrUnknown(
+          data['next_pms_odometer_target']!,
+          _nextPmsOdometerTargetMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1923,6 +2026,26 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}disposed_at'],
       ),
+      odometerReading: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}odometer_reading'],
+      ),
+      pmsDistanceIntervalKm: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pms_distance_interval_km'],
+      ),
+      pmsTimeIntervalMonths: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pms_time_interval_months'],
+      ),
+      nextPmsDueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}next_pms_due_date'],
+      ),
+      nextPmsOdometerTarget: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_pms_odometer_target'],
+      ),
     );
   }
 
@@ -1944,6 +2067,11 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
   final String? locationDescription;
   final String? acquiredFrom;
   final DateTime? disposedAt;
+  final int? odometerReading;
+  final int? pmsDistanceIntervalKm;
+  final int? pmsTimeIntervalMonths;
+  final DateTime? nextPmsDueDate;
+  final int? nextPmsOdometerTarget;
   const AssetEntity({
     required this.recordId,
     this.purchaseDate,
@@ -1956,6 +2084,11 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     this.locationDescription,
     this.acquiredFrom,
     this.disposedAt,
+    this.odometerReading,
+    this.pmsDistanceIntervalKm,
+    this.pmsTimeIntervalMonths,
+    this.nextPmsDueDate,
+    this.nextPmsOdometerTarget,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1990,6 +2123,21 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     }
     if (!nullToAbsent || disposedAt != null) {
       map['disposed_at'] = Variable<DateTime>(disposedAt);
+    }
+    if (!nullToAbsent || odometerReading != null) {
+      map['odometer_reading'] = Variable<int>(odometerReading);
+    }
+    if (!nullToAbsent || pmsDistanceIntervalKm != null) {
+      map['pms_distance_interval_km'] = Variable<int>(pmsDistanceIntervalKm);
+    }
+    if (!nullToAbsent || pmsTimeIntervalMonths != null) {
+      map['pms_time_interval_months'] = Variable<int>(pmsTimeIntervalMonths);
+    }
+    if (!nullToAbsent || nextPmsDueDate != null) {
+      map['next_pms_due_date'] = Variable<DateTime>(nextPmsDueDate);
+    }
+    if (!nullToAbsent || nextPmsOdometerTarget != null) {
+      map['next_pms_odometer_target'] = Variable<int>(nextPmsOdometerTarget);
     }
     return map;
   }
@@ -2027,6 +2175,21 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       disposedAt: disposedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(disposedAt),
+      odometerReading: odometerReading == null && nullToAbsent
+          ? const Value.absent()
+          : Value(odometerReading),
+      pmsDistanceIntervalKm: pmsDistanceIntervalKm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pmsDistanceIntervalKm),
+      pmsTimeIntervalMonths: pmsTimeIntervalMonths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pmsTimeIntervalMonths),
+      nextPmsDueDate: nextPmsDueDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextPmsDueDate),
+      nextPmsOdometerTarget: nextPmsOdometerTarget == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextPmsOdometerTarget),
     );
   }
 
@@ -2051,6 +2214,17 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       ),
       acquiredFrom: serializer.fromJson<String?>(json['acquiredFrom']),
       disposedAt: serializer.fromJson<DateTime?>(json['disposedAt']),
+      odometerReading: serializer.fromJson<int?>(json['odometerReading']),
+      pmsDistanceIntervalKm: serializer.fromJson<int?>(
+        json['pmsDistanceIntervalKm'],
+      ),
+      pmsTimeIntervalMonths: serializer.fromJson<int?>(
+        json['pmsTimeIntervalMonths'],
+      ),
+      nextPmsDueDate: serializer.fromJson<DateTime?>(json['nextPmsDueDate']),
+      nextPmsOdometerTarget: serializer.fromJson<int?>(
+        json['nextPmsOdometerTarget'],
+      ),
     );
   }
   @override
@@ -2068,6 +2242,11 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       'locationDescription': serializer.toJson<String?>(locationDescription),
       'acquiredFrom': serializer.toJson<String?>(acquiredFrom),
       'disposedAt': serializer.toJson<DateTime?>(disposedAt),
+      'odometerReading': serializer.toJson<int?>(odometerReading),
+      'pmsDistanceIntervalKm': serializer.toJson<int?>(pmsDistanceIntervalKm),
+      'pmsTimeIntervalMonths': serializer.toJson<int?>(pmsTimeIntervalMonths),
+      'nextPmsDueDate': serializer.toJson<DateTime?>(nextPmsDueDate),
+      'nextPmsOdometerTarget': serializer.toJson<int?>(nextPmsOdometerTarget),
     };
   }
 
@@ -2083,6 +2262,11 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     Value<String?> locationDescription = const Value.absent(),
     Value<String?> acquiredFrom = const Value.absent(),
     Value<DateTime?> disposedAt = const Value.absent(),
+    Value<int?> odometerReading = const Value.absent(),
+    Value<int?> pmsDistanceIntervalKm = const Value.absent(),
+    Value<int?> pmsTimeIntervalMonths = const Value.absent(),
+    Value<DateTime?> nextPmsDueDate = const Value.absent(),
+    Value<int?> nextPmsOdometerTarget = const Value.absent(),
   }) => AssetEntity(
     recordId: recordId ?? this.recordId,
     purchaseDate: purchaseDate.present ? purchaseDate.value : this.purchaseDate,
@@ -2101,6 +2285,21 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
         : this.locationDescription,
     acquiredFrom: acquiredFrom.present ? acquiredFrom.value : this.acquiredFrom,
     disposedAt: disposedAt.present ? disposedAt.value : this.disposedAt,
+    odometerReading: odometerReading.present
+        ? odometerReading.value
+        : this.odometerReading,
+    pmsDistanceIntervalKm: pmsDistanceIntervalKm.present
+        ? pmsDistanceIntervalKm.value
+        : this.pmsDistanceIntervalKm,
+    pmsTimeIntervalMonths: pmsTimeIntervalMonths.present
+        ? pmsTimeIntervalMonths.value
+        : this.pmsTimeIntervalMonths,
+    nextPmsDueDate: nextPmsDueDate.present
+        ? nextPmsDueDate.value
+        : this.nextPmsDueDate,
+    nextPmsOdometerTarget: nextPmsOdometerTarget.present
+        ? nextPmsOdometerTarget.value
+        : this.nextPmsOdometerTarget,
   );
   AssetEntity copyWithCompanion(AssetsCompanion data) {
     return AssetEntity(
@@ -2129,6 +2328,21 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       disposedAt: data.disposedAt.present
           ? data.disposedAt.value
           : this.disposedAt,
+      odometerReading: data.odometerReading.present
+          ? data.odometerReading.value
+          : this.odometerReading,
+      pmsDistanceIntervalKm: data.pmsDistanceIntervalKm.present
+          ? data.pmsDistanceIntervalKm.value
+          : this.pmsDistanceIntervalKm,
+      pmsTimeIntervalMonths: data.pmsTimeIntervalMonths.present
+          ? data.pmsTimeIntervalMonths.value
+          : this.pmsTimeIntervalMonths,
+      nextPmsDueDate: data.nextPmsDueDate.present
+          ? data.nextPmsDueDate.value
+          : this.nextPmsDueDate,
+      nextPmsOdometerTarget: data.nextPmsOdometerTarget.present
+          ? data.nextPmsOdometerTarget.value
+          : this.nextPmsOdometerTarget,
     );
   }
 
@@ -2145,7 +2359,12 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
           ..write('condition: $condition, ')
           ..write('locationDescription: $locationDescription, ')
           ..write('acquiredFrom: $acquiredFrom, ')
-          ..write('disposedAt: $disposedAt')
+          ..write('disposedAt: $disposedAt, ')
+          ..write('odometerReading: $odometerReading, ')
+          ..write('pmsDistanceIntervalKm: $pmsDistanceIntervalKm, ')
+          ..write('pmsTimeIntervalMonths: $pmsTimeIntervalMonths, ')
+          ..write('nextPmsDueDate: $nextPmsDueDate, ')
+          ..write('nextPmsOdometerTarget: $nextPmsOdometerTarget')
           ..write(')'))
         .toString();
   }
@@ -2163,6 +2382,11 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     locationDescription,
     acquiredFrom,
     disposedAt,
+    odometerReading,
+    pmsDistanceIntervalKm,
+    pmsTimeIntervalMonths,
+    nextPmsDueDate,
+    nextPmsOdometerTarget,
   );
   @override
   bool operator ==(Object other) =>
@@ -2178,7 +2402,12 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
           other.condition == this.condition &&
           other.locationDescription == this.locationDescription &&
           other.acquiredFrom == this.acquiredFrom &&
-          other.disposedAt == this.disposedAt);
+          other.disposedAt == this.disposedAt &&
+          other.odometerReading == this.odometerReading &&
+          other.pmsDistanceIntervalKm == this.pmsDistanceIntervalKm &&
+          other.pmsTimeIntervalMonths == this.pmsTimeIntervalMonths &&
+          other.nextPmsDueDate == this.nextPmsDueDate &&
+          other.nextPmsOdometerTarget == this.nextPmsOdometerTarget);
 }
 
 class AssetsCompanion extends UpdateCompanion<AssetEntity> {
@@ -2193,6 +2422,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
   final Value<String?> locationDescription;
   final Value<String?> acquiredFrom;
   final Value<DateTime?> disposedAt;
+  final Value<int?> odometerReading;
+  final Value<int?> pmsDistanceIntervalKm;
+  final Value<int?> pmsTimeIntervalMonths;
+  final Value<DateTime?> nextPmsDueDate;
+  final Value<int?> nextPmsOdometerTarget;
   final Value<int> rowid;
   const AssetsCompanion({
     this.recordId = const Value.absent(),
@@ -2206,6 +2440,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     this.locationDescription = const Value.absent(),
     this.acquiredFrom = const Value.absent(),
     this.disposedAt = const Value.absent(),
+    this.odometerReading = const Value.absent(),
+    this.pmsDistanceIntervalKm = const Value.absent(),
+    this.pmsTimeIntervalMonths = const Value.absent(),
+    this.nextPmsDueDate = const Value.absent(),
+    this.nextPmsOdometerTarget = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AssetsCompanion.insert({
@@ -2220,6 +2459,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     this.locationDescription = const Value.absent(),
     this.acquiredFrom = const Value.absent(),
     this.disposedAt = const Value.absent(),
+    this.odometerReading = const Value.absent(),
+    this.pmsDistanceIntervalKm = const Value.absent(),
+    this.pmsTimeIntervalMonths = const Value.absent(),
+    this.nextPmsDueDate = const Value.absent(),
+    this.nextPmsOdometerTarget = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : recordId = Value(recordId);
   static Insertable<AssetEntity> custom({
@@ -2234,6 +2478,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     Expression<String>? locationDescription,
     Expression<String>? acquiredFrom,
     Expression<DateTime>? disposedAt,
+    Expression<int>? odometerReading,
+    Expression<int>? pmsDistanceIntervalKm,
+    Expression<int>? pmsTimeIntervalMonths,
+    Expression<DateTime>? nextPmsDueDate,
+    Expression<int>? nextPmsOdometerTarget,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2250,6 +2499,14 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
         'location_description': locationDescription,
       if (acquiredFrom != null) 'acquired_from': acquiredFrom,
       if (disposedAt != null) 'disposed_at': disposedAt,
+      if (odometerReading != null) 'odometer_reading': odometerReading,
+      if (pmsDistanceIntervalKm != null)
+        'pms_distance_interval_km': pmsDistanceIntervalKm,
+      if (pmsTimeIntervalMonths != null)
+        'pms_time_interval_months': pmsTimeIntervalMonths,
+      if (nextPmsDueDate != null) 'next_pms_due_date': nextPmsDueDate,
+      if (nextPmsOdometerTarget != null)
+        'next_pms_odometer_target': nextPmsOdometerTarget,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2266,6 +2523,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     Value<String?>? locationDescription,
     Value<String?>? acquiredFrom,
     Value<DateTime?>? disposedAt,
+    Value<int?>? odometerReading,
+    Value<int?>? pmsDistanceIntervalKm,
+    Value<int?>? pmsTimeIntervalMonths,
+    Value<DateTime?>? nextPmsDueDate,
+    Value<int?>? nextPmsOdometerTarget,
     Value<int>? rowid,
   }) {
     return AssetsCompanion(
@@ -2280,6 +2542,14 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
       locationDescription: locationDescription ?? this.locationDescription,
       acquiredFrom: acquiredFrom ?? this.acquiredFrom,
       disposedAt: disposedAt ?? this.disposedAt,
+      odometerReading: odometerReading ?? this.odometerReading,
+      pmsDistanceIntervalKm:
+          pmsDistanceIntervalKm ?? this.pmsDistanceIntervalKm,
+      pmsTimeIntervalMonths:
+          pmsTimeIntervalMonths ?? this.pmsTimeIntervalMonths,
+      nextPmsDueDate: nextPmsDueDate ?? this.nextPmsDueDate,
+      nextPmsOdometerTarget:
+          nextPmsOdometerTarget ?? this.nextPmsOdometerTarget,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2320,6 +2590,27 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     if (disposedAt.present) {
       map['disposed_at'] = Variable<DateTime>(disposedAt.value);
     }
+    if (odometerReading.present) {
+      map['odometer_reading'] = Variable<int>(odometerReading.value);
+    }
+    if (pmsDistanceIntervalKm.present) {
+      map['pms_distance_interval_km'] = Variable<int>(
+        pmsDistanceIntervalKm.value,
+      );
+    }
+    if (pmsTimeIntervalMonths.present) {
+      map['pms_time_interval_months'] = Variable<int>(
+        pmsTimeIntervalMonths.value,
+      );
+    }
+    if (nextPmsDueDate.present) {
+      map['next_pms_due_date'] = Variable<DateTime>(nextPmsDueDate.value);
+    }
+    if (nextPmsOdometerTarget.present) {
+      map['next_pms_odometer_target'] = Variable<int>(
+        nextPmsOdometerTarget.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2340,6 +2631,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
           ..write('locationDescription: $locationDescription, ')
           ..write('acquiredFrom: $acquiredFrom, ')
           ..write('disposedAt: $disposedAt, ')
+          ..write('odometerReading: $odometerReading, ')
+          ..write('pmsDistanceIntervalKm: $pmsDistanceIntervalKm, ')
+          ..write('pmsTimeIntervalMonths: $pmsTimeIntervalMonths, ')
+          ..write('nextPmsDueDate: $nextPmsDueDate, ')
+          ..write('nextPmsOdometerTarget: $nextPmsOdometerTarget, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3462,6 +3758,17 @@ class $ExpensesTable extends Expenses
           'REFERENCES records (id) ON DELETE SET NULL',
         ),
       );
+  static const VerificationMeta _odometerReadingMeta = const VerificationMeta(
+    'odometerReading',
+  );
+  @override
+  late final GeneratedColumn<int> odometerReading = GeneratedColumn<int>(
+    'odometer_reading',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     recordId,
@@ -3473,6 +3780,7 @@ class $ExpensesTable extends Expenses
     linkedAssetRecordId,
     linkedTaskRecordId,
     linkedBillRecordId,
+    odometerReading,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3570,6 +3878,15 @@ class $ExpensesTable extends Expenses
         ),
       );
     }
+    if (data.containsKey('odometer_reading')) {
+      context.handle(
+        _odometerReadingMeta,
+        odometerReading.isAcceptableOrUnknown(
+          data['odometer_reading']!,
+          _odometerReadingMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3615,6 +3932,10 @@ class $ExpensesTable extends Expenses
         DriftSqlType.string,
         data['${effectivePrefix}linked_bill_record_id'],
       ),
+      odometerReading: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}odometer_reading'],
+      ),
     );
   }
 
@@ -3634,6 +3955,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
   final String? linkedAssetRecordId;
   final String? linkedTaskRecordId;
   final String? linkedBillRecordId;
+  final int? odometerReading;
   const ExpenseEntity({
     required this.recordId,
     required this.amountMinor,
@@ -3644,6 +3966,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     this.linkedAssetRecordId,
     this.linkedTaskRecordId,
     this.linkedBillRecordId,
+    this.odometerReading,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3664,6 +3987,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     }
     if (!nullToAbsent || linkedBillRecordId != null) {
       map['linked_bill_record_id'] = Variable<String>(linkedBillRecordId);
+    }
+    if (!nullToAbsent || odometerReading != null) {
+      map['odometer_reading'] = Variable<int>(odometerReading);
     }
     return map;
   }
@@ -3687,6 +4013,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       linkedBillRecordId: linkedBillRecordId == null && nullToAbsent
           ? const Value.absent()
           : Value(linkedBillRecordId),
+      odometerReading: odometerReading == null && nullToAbsent
+          ? const Value.absent()
+          : Value(odometerReading),
     );
   }
 
@@ -3711,6 +4040,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       linkedBillRecordId: serializer.fromJson<String?>(
         json['linkedBillRecordId'],
       ),
+      odometerReading: serializer.fromJson<int?>(json['odometerReading']),
     );
   }
   @override
@@ -3726,6 +4056,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       'linkedAssetRecordId': serializer.toJson<String?>(linkedAssetRecordId),
       'linkedTaskRecordId': serializer.toJson<String?>(linkedTaskRecordId),
       'linkedBillRecordId': serializer.toJson<String?>(linkedBillRecordId),
+      'odometerReading': serializer.toJson<int?>(odometerReading),
     };
   }
 
@@ -3739,6 +4070,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     Value<String?> linkedAssetRecordId = const Value.absent(),
     Value<String?> linkedTaskRecordId = const Value.absent(),
     Value<String?> linkedBillRecordId = const Value.absent(),
+    Value<int?> odometerReading = const Value.absent(),
   }) => ExpenseEntity(
     recordId: recordId ?? this.recordId,
     amountMinor: amountMinor ?? this.amountMinor,
@@ -3757,6 +4089,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     linkedBillRecordId: linkedBillRecordId.present
         ? linkedBillRecordId.value
         : this.linkedBillRecordId,
+    odometerReading: odometerReading.present
+        ? odometerReading.value
+        : this.odometerReading,
   );
   ExpenseEntity copyWithCompanion(ExpensesCompanion data) {
     return ExpenseEntity(
@@ -3785,6 +4120,9 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
       linkedBillRecordId: data.linkedBillRecordId.present
           ? data.linkedBillRecordId.value
           : this.linkedBillRecordId,
+      odometerReading: data.odometerReading.present
+          ? data.odometerReading.value
+          : this.odometerReading,
     );
   }
 
@@ -3799,7 +4137,8 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
           ..write('expenseCategory: $expenseCategory, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedTaskRecordId: $linkedTaskRecordId, ')
-          ..write('linkedBillRecordId: $linkedBillRecordId')
+          ..write('linkedBillRecordId: $linkedBillRecordId, ')
+          ..write('odometerReading: $odometerReading')
           ..write(')'))
         .toString();
   }
@@ -3815,6 +4154,7 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
     linkedAssetRecordId,
     linkedTaskRecordId,
     linkedBillRecordId,
+    odometerReading,
   );
   @override
   bool operator ==(Object other) =>
@@ -3828,7 +4168,8 @@ class ExpenseEntity extends DataClass implements Insertable<ExpenseEntity> {
           other.expenseCategory == this.expenseCategory &&
           other.linkedAssetRecordId == this.linkedAssetRecordId &&
           other.linkedTaskRecordId == this.linkedTaskRecordId &&
-          other.linkedBillRecordId == this.linkedBillRecordId);
+          other.linkedBillRecordId == this.linkedBillRecordId &&
+          other.odometerReading == this.odometerReading);
 }
 
 class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
@@ -3841,6 +4182,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
   final Value<String?> linkedAssetRecordId;
   final Value<String?> linkedTaskRecordId;
   final Value<String?> linkedBillRecordId;
+  final Value<int?> odometerReading;
   final Value<int> rowid;
   const ExpensesCompanion({
     this.recordId = const Value.absent(),
@@ -3852,6 +4194,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedTaskRecordId = const Value.absent(),
     this.linkedBillRecordId = const Value.absent(),
+    this.odometerReading = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ExpensesCompanion.insert({
@@ -3864,6 +4207,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedTaskRecordId = const Value.absent(),
     this.linkedBillRecordId = const Value.absent(),
+    this.odometerReading = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : recordId = Value(recordId),
        amountMinor = Value(amountMinor),
@@ -3878,6 +4222,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     Expression<String>? linkedAssetRecordId,
     Expression<String>? linkedTaskRecordId,
     Expression<String>? linkedBillRecordId,
+    Expression<int>? odometerReading,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3893,6 +4238,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
         'linked_task_record_id': linkedTaskRecordId,
       if (linkedBillRecordId != null)
         'linked_bill_record_id': linkedBillRecordId,
+      if (odometerReading != null) 'odometer_reading': odometerReading,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3907,6 +4253,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     Value<String?>? linkedAssetRecordId,
     Value<String?>? linkedTaskRecordId,
     Value<String?>? linkedBillRecordId,
+    Value<int?>? odometerReading,
     Value<int>? rowid,
   }) {
     return ExpensesCompanion(
@@ -3919,6 +4266,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedTaskRecordId: linkedTaskRecordId ?? this.linkedTaskRecordId,
       linkedBillRecordId: linkedBillRecordId ?? this.linkedBillRecordId,
+      odometerReading: odometerReading ?? this.odometerReading,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3955,6 +4303,9 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
     if (linkedBillRecordId.present) {
       map['linked_bill_record_id'] = Variable<String>(linkedBillRecordId.value);
     }
+    if (odometerReading.present) {
+      map['odometer_reading'] = Variable<int>(odometerReading.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3973,6 +4324,7 @@ class ExpensesCompanion extends UpdateCompanion<ExpenseEntity> {
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedTaskRecordId: $linkedTaskRecordId, ')
           ..write('linkedBillRecordId: $linkedBillRecordId, ')
+          ..write('odometerReading: $odometerReading, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7562,6 +7914,11 @@ typedef $$AssetsTableCreateCompanionBuilder =
       Value<String?> locationDescription,
       Value<String?> acquiredFrom,
       Value<DateTime?> disposedAt,
+      Value<int?> odometerReading,
+      Value<int?> pmsDistanceIntervalKm,
+      Value<int?> pmsTimeIntervalMonths,
+      Value<DateTime?> nextPmsDueDate,
+      Value<int?> nextPmsOdometerTarget,
       Value<int> rowid,
     });
 typedef $$AssetsTableUpdateCompanionBuilder =
@@ -7577,6 +7934,11 @@ typedef $$AssetsTableUpdateCompanionBuilder =
       Value<String?> locationDescription,
       Value<String?> acquiredFrom,
       Value<DateTime?> disposedAt,
+      Value<int?> odometerReading,
+      Value<int?> pmsDistanceIntervalKm,
+      Value<int?> pmsTimeIntervalMonths,
+      Value<DateTime?> nextPmsDueDate,
+      Value<int?> nextPmsOdometerTarget,
       Value<int> rowid,
     });
 
@@ -7658,6 +8020,31 @@ class $$AssetsTableFilterComposer
 
   ColumnFilters<DateTime> get disposedAt => $composableBuilder(
     column: $table.disposedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get odometerReading => $composableBuilder(
+    column: $table.odometerReading,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pmsDistanceIntervalKm => $composableBuilder(
+    column: $table.pmsDistanceIntervalKm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pmsTimeIntervalMonths => $composableBuilder(
+    column: $table.pmsTimeIntervalMonths,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get nextPmsDueDate => $composableBuilder(
+    column: $table.nextPmsDueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextPmsOdometerTarget => $composableBuilder(
+    column: $table.nextPmsOdometerTarget,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7744,6 +8131,31 @@ class $$AssetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get odometerReading => $composableBuilder(
+    column: $table.odometerReading,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pmsDistanceIntervalKm => $composableBuilder(
+    column: $table.pmsDistanceIntervalKm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pmsTimeIntervalMonths => $composableBuilder(
+    column: $table.pmsTimeIntervalMonths,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get nextPmsDueDate => $composableBuilder(
+    column: $table.nextPmsDueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextPmsOdometerTarget => $composableBuilder(
+    column: $table.nextPmsOdometerTarget,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RecordsTableOrderingComposer get recordId {
     final $$RecordsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7821,6 +8233,31 @@ class $$AssetsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get odometerReading => $composableBuilder(
+    column: $table.odometerReading,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pmsDistanceIntervalKm => $composableBuilder(
+    column: $table.pmsDistanceIntervalKm,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pmsTimeIntervalMonths => $composableBuilder(
+    column: $table.pmsTimeIntervalMonths,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get nextPmsDueDate => $composableBuilder(
+    column: $table.nextPmsDueDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get nextPmsOdometerTarget => $composableBuilder(
+    column: $table.nextPmsOdometerTarget,
+    builder: (column) => column,
+  );
+
   $$RecordsTableAnnotationComposer get recordId {
     final $$RecordsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -7884,6 +8321,11 @@ class $$AssetsTableTableManager
                 Value<String?> locationDescription = const Value.absent(),
                 Value<String?> acquiredFrom = const Value.absent(),
                 Value<DateTime?> disposedAt = const Value.absent(),
+                Value<int?> odometerReading = const Value.absent(),
+                Value<int?> pmsDistanceIntervalKm = const Value.absent(),
+                Value<int?> pmsTimeIntervalMonths = const Value.absent(),
+                Value<DateTime?> nextPmsDueDate = const Value.absent(),
+                Value<int?> nextPmsOdometerTarget = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AssetsCompanion(
                 recordId: recordId,
@@ -7897,6 +8339,11 @@ class $$AssetsTableTableManager
                 locationDescription: locationDescription,
                 acquiredFrom: acquiredFrom,
                 disposedAt: disposedAt,
+                odometerReading: odometerReading,
+                pmsDistanceIntervalKm: pmsDistanceIntervalKm,
+                pmsTimeIntervalMonths: pmsTimeIntervalMonths,
+                nextPmsDueDate: nextPmsDueDate,
+                nextPmsOdometerTarget: nextPmsOdometerTarget,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7912,6 +8359,11 @@ class $$AssetsTableTableManager
                 Value<String?> locationDescription = const Value.absent(),
                 Value<String?> acquiredFrom = const Value.absent(),
                 Value<DateTime?> disposedAt = const Value.absent(),
+                Value<int?> odometerReading = const Value.absent(),
+                Value<int?> pmsDistanceIntervalKm = const Value.absent(),
+                Value<int?> pmsTimeIntervalMonths = const Value.absent(),
+                Value<DateTime?> nextPmsDueDate = const Value.absent(),
+                Value<int?> nextPmsOdometerTarget = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AssetsCompanion.insert(
                 recordId: recordId,
@@ -7925,6 +8377,11 @@ class $$AssetsTableTableManager
                 locationDescription: locationDescription,
                 acquiredFrom: acquiredFrom,
                 disposedAt: disposedAt,
+                odometerReading: odometerReading,
+                pmsDistanceIntervalKm: pmsDistanceIntervalKm,
+                pmsTimeIntervalMonths: pmsTimeIntervalMonths,
+                nextPmsDueDate: nextPmsDueDate,
+                nextPmsOdometerTarget: nextPmsOdometerTarget,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -8895,6 +9352,7 @@ typedef $$ExpensesTableCreateCompanionBuilder =
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedTaskRecordId,
       Value<String?> linkedBillRecordId,
+      Value<int?> odometerReading,
       Value<int> rowid,
     });
 typedef $$ExpensesTableUpdateCompanionBuilder =
@@ -8908,6 +9366,7 @@ typedef $$ExpensesTableUpdateCompanionBuilder =
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedTaskRecordId,
       Value<String?> linkedBillRecordId,
+      Value<int?> odometerReading,
       Value<int> rowid,
     });
 
@@ -9015,6 +9474,11 @@ class $$ExpensesTableFilterComposer
 
   ColumnFilters<String> get expenseCategory => $composableBuilder(
     column: $table.expenseCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get odometerReading => $composableBuilder(
+    column: $table.odometerReading,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9145,6 +9609,11 @@ class $$ExpensesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get odometerReading => $composableBuilder(
+    column: $table.odometerReading,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RecordsTableOrderingComposer get recordId {
     final $$RecordsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9269,6 +9738,11 @@ class $$ExpensesTableAnnotationComposer
 
   GeneratedColumn<String> get expenseCategory => $composableBuilder(
     column: $table.expenseCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get odometerReading => $composableBuilder(
+    column: $table.odometerReading,
     builder: (column) => column,
   );
 
@@ -9407,6 +9881,7 @@ class $$ExpensesTableTableManager
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedTaskRecordId = const Value.absent(),
                 Value<String?> linkedBillRecordId = const Value.absent(),
+                Value<int?> odometerReading = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExpensesCompanion(
                 recordId: recordId,
@@ -9418,6 +9893,7 @@ class $$ExpensesTableTableManager
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedTaskRecordId: linkedTaskRecordId,
                 linkedBillRecordId: linkedBillRecordId,
+                odometerReading: odometerReading,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9431,6 +9907,7 @@ class $$ExpensesTableTableManager
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedTaskRecordId = const Value.absent(),
                 Value<String?> linkedBillRecordId = const Value.absent(),
+                Value<int?> odometerReading = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExpensesCompanion.insert(
                 recordId: recordId,
@@ -9442,6 +9919,7 @@ class $$ExpensesTableTableManager
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedTaskRecordId: linkedTaskRecordId,
                 linkedBillRecordId: linkedBillRecordId,
+                odometerReading: odometerReading,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

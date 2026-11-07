@@ -26,6 +26,22 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
 
       await _db.into(_db.records).insert(_toRecordCompanion(stampedRecord));
       await _db.into(_db.expenses).insert(_toExpenseCompanion(syncedExpense));
+
+      // Auto-update linked asset's latest odometer reading if mileage was recorded in this service log
+      // Guard against historical backfilling overwriting a higher current odometer reading
+      if (syncedExpense.linkedAssetRecordId != null && syncedExpense.odometerReading != null) {
+        final currentAsset = await (_db.select(_db.assets)
+              ..where((a) => a.recordId.equals(syncedExpense.linkedAssetRecordId!)))
+            .getSingleOrNull();
+
+        if (currentAsset != null &&
+            (currentAsset.odometerReading == null || syncedExpense.odometerReading! > currentAsset.odometerReading!)) {
+          await (_db.update(_db.assets)..where((a) => a.recordId.equals(syncedExpense.linkedAssetRecordId!)))
+              .write(AssetsCompanion(
+                odometerReading: Value(syncedExpense.odometerReading),
+              ));
+        }
+      }
     });
   }
 
@@ -218,6 +234,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       linkedAssetRecordId: entity.linkedAssetRecordId,
       linkedTaskRecordId: entity.linkedTaskRecordId,
       linkedBillRecordId: entity.linkedBillRecordId,
+      odometerReading: entity.odometerReading,
     );
   }
 
@@ -248,6 +265,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       linkedAssetRecordId: Value(expense.linkedAssetRecordId),
       linkedTaskRecordId: Value(expense.linkedTaskRecordId),
       linkedBillRecordId: Value(expense.linkedBillRecordId),
+      odometerReading: Value(expense.odometerReading),
     );
   }
 }

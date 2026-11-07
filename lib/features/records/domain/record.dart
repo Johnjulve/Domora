@@ -103,6 +103,11 @@ class Asset {
   final String? locationDescription;
   final String? acquiredFrom;
   final DateTime? disposedAt;
+  final int? odometerReading;
+  final int? pmsDistanceIntervalKm;
+  final int? pmsTimeIntervalMonths;
+  final DateTime? nextPmsDueDate;
+  final int? nextPmsOdometerTarget;
 
   const Asset({
     required this.recordId,
@@ -116,6 +121,11 @@ class Asset {
     this.locationDescription,
     this.acquiredFrom,
     this.disposedAt,
+    this.odometerReading,
+    this.pmsDistanceIntervalKm,
+    this.pmsTimeIntervalMonths,
+    this.nextPmsDueDate,
+    this.nextPmsOdometerTarget,
   });
 
   Asset copyWith({
@@ -130,6 +140,11 @@ class Asset {
     String? locationDescription,
     String? acquiredFrom,
     DateTime? disposedAt,
+    int? odometerReading,
+    int? pmsDistanceIntervalKm,
+    int? pmsTimeIntervalMonths,
+    DateTime? nextPmsDueDate,
+    int? nextPmsOdometerTarget,
   }) {
     return Asset(
       recordId: recordId ?? this.recordId,
@@ -143,6 +158,11 @@ class Asset {
       locationDescription: locationDescription ?? this.locationDescription,
       acquiredFrom: acquiredFrom ?? this.acquiredFrom,
       disposedAt: disposedAt ?? this.disposedAt,
+      odometerReading: odometerReading ?? this.odometerReading,
+      pmsDistanceIntervalKm: pmsDistanceIntervalKm ?? this.pmsDistanceIntervalKm,
+      pmsTimeIntervalMonths: pmsTimeIntervalMonths ?? this.pmsTimeIntervalMonths,
+      nextPmsDueDate: nextPmsDueDate ?? this.nextPmsDueDate,
+      nextPmsOdometerTarget: nextPmsOdometerTarget ?? this.nextPmsOdometerTarget,
     );
   }
 
@@ -161,7 +181,12 @@ class Asset {
           condition == other.condition &&
           locationDescription == other.locationDescription &&
           acquiredFrom == other.acquiredFrom &&
-          disposedAt == other.disposedAt;
+          disposedAt == other.disposedAt &&
+          odometerReading == other.odometerReading &&
+          pmsDistanceIntervalKm == other.pmsDistanceIntervalKm &&
+          pmsTimeIntervalMonths == other.pmsTimeIntervalMonths &&
+          nextPmsDueDate == other.nextPmsDueDate &&
+          nextPmsOdometerTarget == other.nextPmsOdometerTarget;
 
   @override
   int get hashCode => Object.hash(
@@ -176,6 +201,11 @@ class Asset {
         locationDescription,
         acquiredFrom,
         disposedAt,
+        odometerReading,
+        pmsDistanceIntervalKm,
+        pmsTimeIntervalMonths,
+        nextPmsDueDate,
+        nextPmsOdometerTarget,
       );
 }
 

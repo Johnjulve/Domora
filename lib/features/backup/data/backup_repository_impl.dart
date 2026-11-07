@@ -112,6 +112,11 @@ class BackupRepositoryImpl implements BackupRepository {
           'locationDescription': a.locationDescription,
           'acquiredFrom': a.acquiredFrom,
           'disposedAt': a.disposedAt?.toIso8601String(),
+          'odometerReading': a.odometerReading,
+          'pmsDistanceIntervalKm': a.pmsDistanceIntervalKm,
+          'pmsTimeIntervalMonths': a.pmsTimeIntervalMonths,
+          'nextPmsDueDate': a.nextPmsDueDate?.toIso8601String(),
+          'nextPmsOdometerTarget': a.nextPmsOdometerTarget,
         }).toList();
 
     final tasksJson = taskRows.map((t) => {
@@ -144,6 +149,7 @@ class BackupRepositoryImpl implements BackupRepository {
           'linkedAssetRecordId': e.linkedAssetRecordId,
           'linkedTaskRecordId': e.linkedTaskRecordId,
           'linkedBillRecordId': e.linkedBillRecordId,
+          'odometerReading': e.odometerReading,
         }).toList();
 
     final billsJson = billRows.map((b) => {
@@ -417,6 +423,13 @@ class BackupRepositoryImpl implements BackupRepository {
                 disposedAt: Value(a['disposedAt'] != null
                     ? DateTime.parse(a['disposedAt'] as String)
                     : null),
+                odometerReading: Value(a['odometerReading'] as int?),
+                pmsDistanceIntervalKm: Value(a['pmsDistanceIntervalKm'] as int?),
+                pmsTimeIntervalMonths: Value(a['pmsTimeIntervalMonths'] as int?),
+                nextPmsDueDate: Value(a['nextPmsDueDate'] != null
+                    ? DateTime.parse(a['nextPmsDueDate'] as String)
+                    : null),
+                nextPmsOdometerTarget: Value(a['nextPmsOdometerTarget'] as int?),
               ),
             );
       }
@@ -468,6 +481,7 @@ class BackupRepositoryImpl implements BackupRepository {
                 linkedAssetRecordId: Value(e['linkedAssetRecordId'] as String?),
                 linkedTaskRecordId: Value(e['linkedTaskRecordId'] as String?),
                 linkedBillRecordId: Value(e['linkedBillRecordId'] as String?),
+                odometerReading: Value(e['odometerReading'] as int?),
               ),
             );
       }

@@ -205,6 +205,11 @@ class RecordRepositoryImpl implements RecordRepository {
       locationDescription: entity.locationDescription,
       acquiredFrom: entity.acquiredFrom,
       disposedAt: entity.disposedAt,
+      odometerReading: entity.odometerReading,
+      pmsDistanceIntervalKm: entity.pmsDistanceIntervalKm,
+      pmsTimeIntervalMonths: entity.pmsTimeIntervalMonths,
+      nextPmsDueDate: entity.nextPmsDueDate,
+      nextPmsOdometerTarget: entity.nextPmsOdometerTarget,
     );
   }
 
@@ -237,6 +242,11 @@ class RecordRepositoryImpl implements RecordRepository {
       locationDescription: Value(asset.locationDescription),
       acquiredFrom: Value(asset.acquiredFrom),
       disposedAt: Value(asset.disposedAt),
+      odometerReading: Value(asset.odometerReading),
+      pmsDistanceIntervalKm: Value(asset.pmsDistanceIntervalKm),
+      pmsTimeIntervalMonths: Value(asset.pmsTimeIntervalMonths),
+      nextPmsDueDate: Value(asset.nextPmsDueDate),
+      nextPmsOdometerTarget: Value(asset.nextPmsOdometerTarget),
     );
   }
 }
