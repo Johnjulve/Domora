@@ -240,6 +240,24 @@ final assetTotalExpensesProvider = StreamProvider.family<int, String>((ref, asse
   return repository.watchTotalExpensesByAsset(assetId);
 });
 
+/// Reactive stream provider for all expenses and maintenance records linked to a specific asset.
+final assetExpensesStreamProvider = StreamProvider.family<List<RecordWithExpense>, String>((ref, assetId) {
+  final repository = ref.watch(expenseRepositoryProvider);
+  return repository.watchExpensesByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    linkedAssetRecordId: assetId,
+  );
+});
+
+/// Reactive stream provider for all vault documents linked to a specific asset.
+final assetDocumentsStreamProvider = StreamProvider.family<List<RecordWithDocument>, String>((ref, assetId) {
+  final repository = ref.watch(documentRepositoryProvider);
+  return repository.watchDocumentsByWorkspace(
+    AppConstants.defaultWorkspaceId,
+    linkedAssetRecordId: assetId,
+  );
+});
+
 /// Reactive stream provider for total workspace expenses in minor units.
 final workspaceTotalExpensesProvider = StreamProvider<int>((ref) {
   final repository = ref.watch(expenseRepositoryProvider);
