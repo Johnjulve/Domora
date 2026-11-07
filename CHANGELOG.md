@@ -5,6 +5,20 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.10] - 2026-11-08
+
+### Added
+- Vehicle PMS Limits & Maintenance Auto-Scheduling Engine (Stage 9):
+  - Drift SQLite Schema Migration (v6 -> v7): Added `odometerReading`, `pmsDistanceIntervalKm`, `pmsTimeIntervalMonths`, `nextPmsDueDate`, and `nextPmsOdometerTarget` to `Assets` table. Added `odometerReading` to `Expenses` table.
+  - Chronological Odometer Integrity: `ExpenseRepositoryImpl` synchronizes vehicle mileage on maintenance logging, with monotonic guards preventing older backfilled receipts from overwriting a higher current odometer reading. Zero-drift calendar month math replaces 30-day interval approximations.
+  - Automated Next-PMS Reminder Workflow: Logging maintenance with an odometer reading prompts the user to auto-schedule the upcoming PMS reminder task (`Next PMS ($nextTargetMileage km) - $vehicleTitle`) and persists target milestones to the vehicle asset.
+  - Reusable UI & Usability Polish:
+    - Extracted `AssetPickerTile` and `showAssetPickerModal` with full Riverpod `AsyncValue` loading and error states, eliminating floating popup dropdown menu misalignments in bottom sheets.
+    - Added Vehicle PMS Limits & Odometer configuration section to `AddAssetSheet` and inspection rows to `AssetDetailSheet`.
+    - Protected bottom sheets against accidental dismissal and draft reset during app switching.
+    - Added subtle version indicator (`Domora v0.1.0 • Offline Sanctuary`) at the footer of `TodayScreen`.
+  - Added automated unit test suite in `test/features/records/vehicle_pms_test.dart` (79 total passing tests, 0 failures).
+
 ## [0.1.0-alpha.9] - 2026-11-07
 
 ### Added
