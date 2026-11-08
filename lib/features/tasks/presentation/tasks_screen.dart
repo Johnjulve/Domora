@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
@@ -365,7 +366,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1003,15 +1004,20 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: Form(
-        key: _formKey,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: _formKey,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1137,6 +1143,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -1152,14 +1159,19 @@ class TaskDetailSheet extends ConsumerWidget {
     final task = item.task;
     final isCompleted = task.isCompleted;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1249,6 +1261,7 @@ class TaskDetailSheet extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -1279,7 +1292,7 @@ class TaskDetailSheet extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
           side: const BorderSide(color: AppColors.borderSubtle),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),

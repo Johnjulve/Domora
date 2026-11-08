@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
@@ -146,7 +147,7 @@ class _VaultFilterChips extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: InkWell(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
               onTap: () => onFilterSelected(opt.value),
               child: Container(
                 constraints: const BoxConstraints(minHeight: 44),
@@ -154,7 +155,7 @@ class _VaultFilterChips extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.brandPrimary : AppColors.surfaceCard,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
                   border: Border.all(
                     color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
                   ),
@@ -543,15 +544,20 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: Form(
-        key: _formKey,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: _formKey,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -716,6 +722,7 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
           ),
         ),
       ),
+      ),
     );
   }
 }
@@ -731,14 +738,19 @@ class DocumentDetailSheet extends ConsumerWidget {
     final doc = item.document;
     final docType = DocumentType.fromString(doc.documentType);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -816,6 +828,7 @@ class DocumentDetailSheet extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -845,7 +858,7 @@ class DocumentDetailSheet extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
           side: const BorderSide(color: AppColors.borderSubtle),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../domain/bill_item.dart';
 
@@ -183,8 +184,13 @@ class _BillDetailSheetState extends ConsumerState<BillDetailSheet> {
       statusLabel = 'UNPAID';
     }
 
-    return Padding(
-      padding: EdgeInsets.only(
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
         left: 20,
         right: 20,
         top: 24,
@@ -370,6 +376,7 @@ class _BillDetailSheetState extends ConsumerState<BillDetailSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
