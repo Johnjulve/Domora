@@ -1,8 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// ignore: depend_on_referenced_packages
 import 'package:timezone/data/latest_all.dart' as tz;
-// ignore: depend_on_referenced_packages
 import 'package:timezone/timezone.dart' as tz;
 
 /// In-memory representation of a notification dispatched or scheduled.
@@ -84,21 +82,15 @@ class LocalNotificationService implements NotificationService {
         requestSoundPermission: true,
       );
       const linuxSettings = LinuxInitializationSettings(defaultActionName: 'Open notification');
-      const windowsSettings = WindowsInitializationSettings(
-        appName: 'Domora',
-        appUserModelId: 'Johnjulve.Domora.App.0',
-        guid: 'a1234567-89ab-cdef-0123-456789abcdef',
-      );
 
       const settings = InitializationSettings(
         android: androidSettings,
         iOS: darwinSettings,
         macOS: darwinSettings,
         linux: linuxSettings,
-        windows: windowsSettings,
       );
 
-      await _plugin.initialize(settings: settings);
+      await _plugin.initialize(settings);
       _isInitialized = true;
     } catch (_) {
       // In-memory fallback for test harnesses and platforms without native channel bindings
@@ -121,14 +113,12 @@ class LocalNotificationService implements NotificationService {
       presentSound: true,
     );
     const linuxDetails = LinuxNotificationDetails();
-    const windowsDetails = WindowsNotificationDetails();
 
     return const NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
       macOS: darwinDetails,
       linux: linuxDetails,
-      windows: windowsDetails,
     );
   }
 
@@ -156,12 +146,14 @@ class LocalNotificationService implements NotificationService {
       }
 
       await _plugin.zonedSchedule(
-        id: digestId,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        notificationDetails: _buildNotificationDetails(),
+        digestId,
+        title,
+        body,
+        scheduledDate,
+        _buildNotificationDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
     } catch (_) {}
@@ -184,12 +176,14 @@ class LocalNotificationService implements NotificationService {
     try {
       final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
       await _plugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: tzDate,
-        notificationDetails: _buildNotificationDetails(),
+        id,
+        title,
+        body,
+        tzDate,
+        _buildNotificationDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (_) {}
   }
@@ -201,7 +195,7 @@ class LocalNotificationService implements NotificationService {
     _immediateNotices.remove(id);
 
     try {
-      await _plugin.cancel(id: id);
+      await _plugin.cancel(id);
     } catch (_) {}
   }
 
@@ -230,10 +224,10 @@ class LocalNotificationService implements NotificationService {
 
     try {
       await _plugin.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: _buildNotificationDetails(),
+        id,
+        title,
+        body,
+        _buildNotificationDetails(),
       );
     } catch (_) {}
   }
