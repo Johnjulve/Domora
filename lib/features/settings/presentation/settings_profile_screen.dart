@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/services/app_preferences.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/under_construction_dialog.dart';
@@ -468,7 +469,17 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
       if (!mounted) return;
       final formatted = picked.format(context);
       await prefs.setReminderTime(formatted);
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        try {
+          await ref.read(notificationServiceProvider).scheduleDailyHouseholdDigest(
+                hour: picked.hour,
+                minute: picked.minute,
+                title: 'Good morning from Domora',
+                body: 'Your household digest and daily sanctuary focus are ready.',
+              );
+        } catch (_) {}
+      }
     }
   }
 

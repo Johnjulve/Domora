@@ -5,6 +5,30 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.11] - 2026-11-09
+
+### Added
+- Tasks & Routines Screen Overhaul (Stage 10):
+  - Visual Agenda Hierarchy: Overdue bucket, Today counter badge, and Upcoming cadence routines with visual recurrence tags (`Every 3 months`, `Weekly`, `Yearly`).
+  - Mindful Home Pace Banner: Encouraging progress summary and daily cadence pacing.
+  - Interactive Snooze & Reschedule Action: Modal sheet allowing 1-tap rescheduling (`Tomorrow`, `Next Week`, or custom calendar date) updating Drift database in an atomic transaction.
+  - Task Creation Flow: Reusable `AssetPickerTile` integration, recurrence selector, and status chips.
+- First-Run Sanctuary Onboarding Flow:
+  - 5-Step Carousel: Welcome hero screen with encryption assurance, How It Works zero-knowledge cards, Local Storage choice, Biometric App Lock configuration, and 12-Word BIP-39 Passphrase Recovery screen.
+  - App Preferences Persistence: Local JSON-backed persistence (`app_preferences.json`) tracking onboarding completion, storage mode, and biometric lock state across app launches.
+  - Modal Surface Opacity & Radius Standardization: Standardized all 9 bottom sheets to use solid `surfaceCard` backgrounds with `AppTheme.sheetRadius` (24px), eliminating transparency bleed-through.
+- Full Settings & Profile Screen:
+  - Sanctuary Profile Card: Editable household name and address with persistent storage in `AppPreferences`.
+  - Privacy & Security Management: Biometric App Lock toggle, configurable Auto-lock duration ('Immediately', 'After 1 minute', 'After 5 minutes', 'After 15 minutes'), and *"How your data is protected"* explainer sheet.
+  - Storage Usage Breakdown: Calculated on-device SQLite database and document vault sizes with a one-tap cache-clearing action.
+  - Danger Zone Data Wipe: Red warning card opening confirmation modal requiring typing exact token "ERASE" to confirm, purging all Drift database tables in foreign-key order, wiping preferences, and resetting to the onboarding flow.
+  - GitHub Releases Update Checker: Embedded update checking with release tier detection and external download launcher.
+- Background Local Notifications Engine:
+  - Added `flutter_local_notifications` and `timezone` for cross-platform local notification scheduling.
+  - `NotificationService`: Channel registration (`domora_household_channel`, High importance), timezone-aware daily household digest scheduling, task due date alerts, and defensive non-crashing fallbacks for unit test harnesses and desktop platforms.
+  - Seamlessly bound daily reminder time picker in `SettingsProfileScreen` to schedule daily recurring household notifications.
+- 23 new automated unit and widget tests covering tasks overhaul, onboarding flow, settings screen interactions, and notification scheduling (106 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.10] - 2026-11-08
 
 ### Added
