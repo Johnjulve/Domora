@@ -50,6 +50,24 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<void> rescheduleTask({
+    required String recordId,
+    required DateTime newDueDate,
+  }) async {
+    final now = DateTime.now().toUtc();
+    return _db.transaction(() async {
+      await (_db.update(_db.tasks)..where((t) => t.recordId.equals(recordId))).write(
+        TasksCompanion(
+          dueDate: Value(newDueDate),
+        ),
+      );
+      await (_db.update(_db.records)..where((r) => r.id.equals(recordId))).write(
+        RecordsCompanion(updatedAt: Value(now)),
+      );
+    });
+  }
+
+  @override
   Future<void> softDeleteTask(String recordId) async {
     final now = DateTime.now().toUtc();
     await (_db.update(_db.records)..where((r) => r.id.equals(recordId))).write(
