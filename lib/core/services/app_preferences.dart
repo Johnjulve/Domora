@@ -11,6 +11,10 @@ class AppPreferences {
 
   AppPreferences._(this._file, this._data);
 
+  AppPreferences.forTesting([Map<String, dynamic>? initialData])
+      : _file = File(''),
+        _data = initialData ?? {};
+
   static Future<AppPreferences> load() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -45,6 +49,46 @@ class AppPreferences {
 
   Future<void> setBiometricsEnabled(bool enabled) async {
     _data['biometrics_enabled'] = enabled;
+    await _save();
+  }
+
+  String get householdName => _data['household_name'] as String? ?? 'Elena Miller';
+
+  Future<void> setHouseholdName(String value) async {
+    _data['household_name'] = value;
+    await _save();
+  }
+
+  String get householdAddress => _data['household_address'] as String? ?? '428 Elmwood';
+
+  Future<void> setHouseholdAddress(String value) async {
+    _data['household_address'] = value;
+    await _save();
+  }
+
+  String get autoLockDuration => _data['auto_lock_duration'] as String? ?? 'Immediately';
+
+  Future<void> setAutoLockDuration(String value) async {
+    _data['auto_lock_duration'] = value;
+    await _save();
+  }
+
+  String get reminderTime => _data['reminder_time'] as String? ?? '8:30 AM';
+
+  Future<void> setReminderTime(String value) async {
+    _data['reminder_time'] = value;
+    await _save();
+  }
+
+  String get themeMode => _data['theme_mode'] as String? ?? 'system';
+
+  Future<void> setThemeMode(String value) async {
+    _data['theme_mode'] = value;
+    await _save();
+  }
+
+  Future<void> resetAll() async {
+    _data.clear();
     await _save();
   }
 
