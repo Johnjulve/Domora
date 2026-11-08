@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../domain/expense_item.dart';
 
@@ -17,8 +18,13 @@ class ExpenseDetailSheet extends ConsumerWidget {
     final expense = item.expense;
     final category = ExpenseCategory.fromString(expense.expenseCategory);
 
-    return Padding(
-      padding: EdgeInsets.only(
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
         left: 20,
         right: 20,
         top: 24,
@@ -91,6 +97,7 @@ class ExpenseDetailSheet extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -120,7 +127,7 @@ class ExpenseDetailSheet extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
           side: const BorderSide(color: AppColors.borderSubtle),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../expenses/presentation/add_expense_sheet.dart';
 import '../../bills/presentation/add_bill_sheet.dart';
@@ -480,7 +481,7 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -725,27 +726,32 @@ class AssetDetailSheet extends ConsumerWidget {
     final purchasePriceMinor = asset?.purchaseAmountMinor ?? 0;
     final totalOwnershipCostMinor = purchasePriceMinor + maintenanceCostsMinor;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    record.title,
-                    style: AppTypography.pageHeader.copyWith(fontSize: 22),
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      record.title,
+                      style: AppTypography.pageHeader.copyWith(fontSize: 22),
+                    ),
                   ),
-                ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.of(context).pop(),
@@ -881,6 +887,7 @@ class AssetDetailSheet extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
   Widget _buildDetailRow(String label, String value) {
@@ -909,7 +916,7 @@ class AssetDetailSheet extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
           side: const BorderSide(color: AppColors.borderSubtle),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),

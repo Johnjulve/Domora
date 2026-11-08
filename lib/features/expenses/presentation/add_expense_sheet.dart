@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
@@ -240,7 +241,7 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(

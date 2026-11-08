@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/database_providers.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/record.dart';
 
@@ -23,7 +24,7 @@ Future<String?> showAssetPickerModal({
       ),
       decoration: const BoxDecoration(
         color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

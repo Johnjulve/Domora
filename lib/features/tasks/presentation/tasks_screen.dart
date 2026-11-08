@@ -5,8 +5,10 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/domain/record.dart';
+import '../../records/presentation/widgets/asset_picker_sheet.dart';
 import '../domain/task_item.dart';
 
 const List<String> _monthsShort = [
@@ -22,6 +24,25 @@ const List<String> _monthsFull = [
 String _formatShortDate(DateTime dt) => '${_monthsShort[dt.month - 1]} ${dt.day}, ${dt.year}';
 String _formatFullDate(DateTime dt) => '${_monthsFull[dt.month - 1]} ${dt.day}, ${dt.year}';
 
+String _formatRecurrenceLabel(String rule) {
+  switch (rule.toLowerCase()) {
+    case 'daily':
+      return 'Daily';
+    case 'weekly':
+      return 'Weekly';
+    case 'monthly':
+      return 'Monthly';
+    case 'quarterly':
+      return 'Every 3 mos';
+    case 'semi_annual':
+      return 'Every 6 mos';
+    case 'yearly':
+      return 'Annual';
+    default:
+      return rule;
+  }
+}
+
 class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
 
@@ -34,10 +55,37 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(activeTasksStreamProvider);
     final selectedFilter = ref.watch(selectedTaskFilterProvider);
+    final now = DateTime.now();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tasks & Cadence'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Tasks & Cadence'),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: AppColors.brandPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Domestic cadence active • Local vault',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_task, color: AppColors.brandPrimary),
@@ -48,7 +96,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       ),
       body: Column(
         children: [
-          // Filter Chips (Pending, Completed, All) with horizontal scrolling to prevent RenderFlex overflow
+          // Filter Chips (Pending, Completed, All)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -75,7 +123,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             ),
           ),
 
-          // Tasks List
+          // Tasks Content
           Expanded(
             child: tasksAsync.when(
               loading: () => const Center(
@@ -137,7 +185,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                                   icon: const Icon(Icons.add),
                                   label: const Text('Add First Task'),
                                 )
-                              else
+                               else
                                 OutlinedButton(
                                   onPressed: () => ref.read(selectedTaskFilterProvider.notifier).setFilter('pending'),
                                   child: const Text('View Pending Tasks'),
@@ -148,6 +196,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                       ),
                     ),
                   );
+                }
+
+                if (selectedFilter == 'pending') {
+                  return _buildAgendaView(context, tasks, now);
                 }
 
                 return ListView.separated(
@@ -168,6 +220,81 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAgendaView(BuildContext context, List<RecordWithTask> tasks, DateTime now) {
+    final overdueTasks = tasks.where((t) => t.task.isPending && t.task.isOverdue(now)).toList();
+    final todayTasks = tasks.where((t) => t.task.isPending && t.task.isDueToday(now)).toList();
+    final upcomingRoutines = tasks.where((t) => t.task.isPending && !t.task.isOverdue(now) && !t.task.isDueToday(now)).toList();
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      children: [
+                if (overdueTasks.isNotEmpty) ...[
+          _SectionHeader(
+            icon: Icons.priority_high,
+            iconColor: AppColors.statusDangerText,
+            iconBgColor: AppColors.statusDangerFill,
+            title: 'Overdue (${overdueTasks.length})',
+            badgeText: 'ATTENTION',
+            badgeColor: AppColors.statusDangerText,
+          ),
+          const SizedBox(height: 8),
+          ...overdueTasks.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _OverdueTaskCard(
+              item: item,
+              now: now,
+              onToggleCompletion: () => _toggleTask(context, item),
+              onTap: () => _openTaskDetailModal(context, item),
+              onSnooze: () => _showSnoozeModal(context, item),
+            ),
+          )),
+          const SizedBox(height: 16),
+        ],
+
+                if (todayTasks.isNotEmpty) ...[
+          _SectionHeader(
+            icon: Icons.today,
+            iconColor: AppColors.brandPrimary,
+            iconBgColor: AppColors.brandAccentSage,
+            title: 'Today (${todayTasks.length} remaining)',
+          ),
+          const SizedBox(height: 8),
+          ...todayTasks.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _TaskCard(
+              item: item,
+              onToggleCompletion: () => _toggleTask(context, item),
+              onTap: () => _openTaskDetailModal(context, item),
+            ),
+          )),
+          const SizedBox(height: 16),
+        ],
+
+                if (upcomingRoutines.isNotEmpty) ...[
+          const _SectionHeader(
+            icon: Icons.autorenew,
+            iconColor: AppColors.brandPrimary,
+            iconBgColor: AppColors.brandAccentSage,
+            title: 'Upcoming & Routines',
+          ),
+          const SizedBox(height: 8),
+          ...upcomingRoutines.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _TaskCard(
+              item: item,
+              onToggleCompletion: () => _toggleTask(context, item),
+              onTap: () => _openTaskDetailModal(context, item),
+            ),
+          )),
+          const SizedBox(height: 16),
+        ],
+
+                const _MindfulHomePaceBanner(),
+        const SizedBox(height: 24),
+      ],
     );
   }
 
@@ -198,8 +325,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             ),
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
+              style: AppTypography.caption.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color: isSelected ? AppColors.brandOnPrimary : AppColors.textPrimary,
               ),
@@ -231,10 +357,124 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     }
   }
 
+  void _showSnoozeModal(BuildContext context, RecordWithTask item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.snooze, color: AppColors.brandPrimary),
+                    SizedBox(width: 8),
+                    Text('Snooze Overdue Task', style: AppTypography.cardTitle),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              item.record.title,
+              style: AppTypography.bodySecondary.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.today, color: AppColors.brandPrimary),
+              title: const Text('Tomorrow (+1 Day)'),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.of(ctx).pop();
+                try {
+                  final now = DateTime.now();
+                  final tomorrow = DateTime(now.year, now.month, now.day + 1);
+                  await ref.read(taskRepositoryProvider).rescheduleTask(
+                    recordId: item.record.id,
+                    newDueDate: tomorrow,
+                  );
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to reschedule task: $e'),
+                      backgroundColor: AppColors.statusDangerStroke,
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.date_range, color: AppColors.brandPrimary),
+              title: const Text('In 3 Days (+3 Days)'),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.of(ctx).pop();
+                try {
+                  final now = DateTime.now();
+                  final in3Days = DateTime(now.year, now.month, now.day + 3);
+                  await ref.read(taskRepositoryProvider).rescheduleTask(
+                    recordId: item.record.id,
+                    newDueDate: in3Days,
+                  );
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to reschedule task: $e'),
+                      backgroundColor: AppColors.statusDangerStroke,
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.next_week, color: AppColors.brandPrimary),
+              title: const Text('Next Week (+7 Days)'),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.of(ctx).pop();
+                try {
+                  final now = DateTime.now();
+                  final nextWeek = DateTime(now.year, now.month, now.day + 7);
+                  await ref.read(taskRepositoryProvider).rescheduleTask(
+                    recordId: item.record.id,
+                    newDueDate: nextWeek,
+                  );
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to reschedule task: $e'),
+                      backgroundColor: AppColors.statusDangerStroke,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openAddTaskModal(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (_) => const AddTaskSheet(),
     );
   }
@@ -244,6 +484,204 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       context: context,
       isScrollControlled: true,
       builder: (_) => TaskDetailSheet(item: item),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final String title;
+  final String? badgeText;
+  final Color? badgeColor;
+
+  const _SectionHeader({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.title,
+    this.badgeText,
+    this.badgeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 14, color: iconColor),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: AppTypography.cardTitle.copyWith(fontSize: 16),
+            ),
+          ],
+        ),
+        if (badgeText != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.statusDangerFill,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.statusDangerStroke),
+            ),
+            child: Text(
+              badgeText!,
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w700,
+                color: badgeColor ?? AppColors.statusDangerText,
+                fontSize: 10,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _OverdueTaskCard extends StatelessWidget {
+  final RecordWithTask item;
+  final DateTime now;
+  final VoidCallback onToggleCompletion;
+  final VoidCallback onTap;
+  final VoidCallback onSnooze;
+
+  const _OverdueTaskCard({
+    required this.item,
+    required this.now,
+    required this.onToggleCompletion,
+    required this.onTap,
+    required this.onSnooze,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final record = item.record;
+    final task = item.task;
+    final isCompleted = task.isCompleted;
+
+    int daysOverdue = 1;
+    if (task.dueDate != null) {
+      final nowDate = DateTime(now.year, now.month, now.day);
+      final dueDate = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+      final diff = nowDate.difference(dueDate).inDays;
+      daysOverdue = diff > 0 ? diff : 1;
+    }
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    tooltip: isCompleted ? 'Mark as pending' : 'Mark as completed',
+                    icon: Icon(
+                      isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: isCompleted ? AppColors.brandPrimary : AppColors.statusDangerStroke,
+                      size: 26,
+                    ),
+                    onPressed: onToggleCompletion,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          record.title,
+                          style: AppTypography.cardTitle.copyWith(
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                            color: isCompleted ? AppColors.textTertiary : AppColors.textPrimary,
+                          ),
+                        ),
+                        if (record.description != null && record.description!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            record.description!,
+                            style: AppTypography.bodySecondary,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusDangerFill,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$daysOverdue ${daysOverdue == 1 ? 'day' : 'days'} overdue',
+                      style: AppTypography.badge.copyWith(
+                        color: AppColors.statusDangerText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (item.linkedAssetTitle != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.link, size: 13, color: AppColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.linkedAssetTitle!,
+                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                        onPressed: onSnooze,
+                        icon: const Icon(Icons.snooze, size: 15, color: AppColors.textSecondary),
+                        label: Text('Snooze', style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 4),
+                      FilledButton.tonal(
+                        style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                        onPressed: onToggleCompletion,
+                        child: Text('Complete', style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -276,7 +714,6 @@ class _TaskCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Checkbox Toggle with accessible touch target and tooltip
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -290,7 +727,6 @@ class _TaskCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Title and Meta
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,10 +753,29 @@ class _TaskCard extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        // Priority Badge
                         _buildPriorityBadge(task.priority),
 
-                        // Linked Asset Badge with overflow protection
+                        if (task.recurrenceRule != null && task.recurrenceRule != 'none')
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.borderSubtle),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.autorenew, size: 12, color: AppColors.brandPrimary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _formatRecurrenceLabel(task.recurrenceRule!),
+                                  style: AppTypography.badge.copyWith(color: AppColors.brandPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+
                         if (item.linkedAssetTitle != null)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -347,7 +802,6 @@ class _TaskCard extends StatelessWidget {
                             ),
                           ),
 
-                        // Due Date with synchronized precedence (Today checked before Overdue)
                         if (task.dueDate != null)
                           Text(
                             _formatDueDate(task.dueDate!, isOverdue, isDueToday),
@@ -419,6 +873,52 @@ class _TaskCard extends StatelessWidget {
   }
 }
 
+class _MindfulHomePaceBanner extends StatelessWidget {
+  const _MindfulHomePaceBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: AppColors.brandAccentSage,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.spa_outlined, size: 18, color: AppColors.brandPrimary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mindful Home Pace',
+                  style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Focus on today’s domestic rhythms. Recurring seasonal routines stay queued until their active cycle.',
+                  style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class AddTaskSheet extends ConsumerStatefulWidget {
   const AddTaskSheet({super.key});
 
@@ -431,6 +931,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _priority = 'medium';
+  String _recurrenceRule = 'none';
   DateTime? _selectedDueDate;
   String? _selectedAssetRecordId;
   bool _isSubmitting = false;
@@ -450,7 +951,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       firstDate: now.subtract(const Duration(days: 365)),
       lastDate: now.add(const Duration(days: 365 * 5)),
     );
-    if (picked != null) {
+    if (mounted && picked != null) {
       setState(() => _selectedDueDate = picked);
     }
   }
@@ -480,6 +981,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
           dueDate: _selectedDueDate,
           priority: _priority,
           status: 'pending',
+          recurrenceRule: _recurrenceRule == 'none' ? null : _recurrenceRule,
           assetRecordId: _selectedAssetRecordId,
         ),
       );
@@ -502,17 +1004,20 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final recordsAsync = ref.watch(activeRecordsStreamProvider);
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: Form(
-        key: _formKey,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: _formKey,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -594,43 +1099,35 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               ),
               const SizedBox(height: 12),
 
-              // Optional Asset Link with explicit error feedback & isExpanded overflow protection
-              recordsAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (err, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Text(
-                    'Failed to load assets: $err',
-                    style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
-                  ),
+              // Cadence / Recurrence selector
+              DropdownButtonFormField<String>(
+                initialValue: _recurrenceRule,
+                decoration: const InputDecoration(
+                  labelText: 'Cadence / Routine',
+                  prefixIcon: Icon(Icons.autorenew, size: 20),
                 ),
-                data: (records) {
-                  final assetRecords = records.where((r) => r.record.recordType == 'asset').toList();
-                  if (assetRecords.isEmpty) return const SizedBox.shrink();
-
-                  return DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _selectedAssetRecordId,
-                    decoration: const InputDecoration(
-                      labelText: 'Link to Asset (Optional)',
-                      hintText: 'Select linked possession or property',
-                    ),
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('None (General Domestic Task)', overflow: TextOverflow.ellipsis),
-                      ),
-                      ...assetRecords.map(
-                        (item) => DropdownMenuItem<String>(
-                          value: item.record.id,
-                          child: Text(item.record.title, overflow: TextOverflow.ellipsis),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) => setState(() => _selectedAssetRecordId = val),
-                  );
+                items: const [
+                  DropdownMenuItem(value: 'none', child: Text('None (One-time Task)')),
+                  DropdownMenuItem(value: 'daily', child: Text('Daily Cadence')),
+                  DropdownMenuItem(value: 'weekly', child: Text('Weekly Cadence')),
+                  DropdownMenuItem(value: 'monthly', child: Text('Monthly Cadence')),
+                  DropdownMenuItem(value: 'quarterly', child: Text('Every 3 Months (Quarterly)')),
+                  DropdownMenuItem(value: 'semi_annual', child: Text('Every 6 Months (Biannual)')),
+                  DropdownMenuItem(value: 'yearly', child: Text('Every 1 Year (Annual)')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _recurrenceRule = val);
                 },
               ),
+              const SizedBox(height: 14),
+
+              // Reusable AssetPickerTile eliminating popup dropdown misalignment
+              AssetPickerTile(
+                selectedAssetRecordId: _selectedAssetRecordId,
+                onAssetChanged: (assetId) => setState(() => _selectedAssetRecordId = assetId),
+                noneLabel: 'None (General Domestic Task)',
+              ),
+
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
@@ -638,13 +1135,14 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandOnPrimary),
                       )
                     : const Text('Save Task'),
               ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -661,14 +1159,19 @@ class TaskDetailSheet extends ConsumerWidget {
     final task = item.task;
     final isCompleted = task.isCompleted;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
-      child: SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -701,9 +1204,13 @@ class TaskDetailSheet extends ConsumerWidget {
                       const Divider(),
                       _buildDetailRow('Due Date', _formatFullDate(task.dueDate!)),
                     ],
+                    if (task.recurrenceRule != null && task.recurrenceRule != 'none') ...[
+                      const Divider(),
+                      _buildDetailRow('Cadence', _formatRecurrenceLabel(task.recurrenceRule!)),
+                    ],
                     if (task.completedAt != null) ...[
                       const Divider(),
-                      _buildDetailRow('Completed On', _formatFullDate(task.completedAt!)),
+                      _buildDetailRow('Completed At', _formatFullDate(task.completedAt!)),
                     ],
                     if (item.linkedAssetTitle != null) ...[
                       const Divider(),
@@ -718,23 +1225,21 @@ class TaskDetailSheet extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
+            FilledButton.tonalIcon(
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
-                Navigator.of(context).pop();
-                final repo = ref.read(taskRepositoryProvider);
                 final newStatus = isCompleted ? 'pending' : 'completed';
-
                 try {
-                  await repo.updateTaskStatus(
+                  await ref.read(taskRepositoryProvider).updateTaskStatus(
                     recordId: record.id,
                     status: newStatus,
                     completedAt: newStatus == 'completed' ? DateTime.now().toUtc() : null,
                   );
+                  if (context.mounted) Navigator.of(context).pop();
                 } catch (e) {
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text('Failed to update task status: $e'),
+                      content: Text('Failed to update task: $e'),
                       backgroundColor: AppColors.statusDangerStroke,
                     ),
                   );
@@ -743,7 +1248,7 @@ class TaskDetailSheet extends ConsumerWidget {
               icon: Icon(isCompleted ? Icons.undo : Icons.check_circle_outline),
               label: Text(isCompleted ? 'Mark as Pending' : 'Mark as Completed'),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.statusDangerText,
@@ -755,6 +1260,7 @@ class TaskDetailSheet extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -770,8 +1276,9 @@ class TaskDetailSheet extends ConsumerWidget {
           Expanded(
             child: Text(
               value,
+              style: AppTypography.cardTitle,
               textAlign: TextAlign.end,
-              style: AppTypography.bodyPrimary.copyWith(fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -779,18 +1286,18 @@ class TaskDetailSheet extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteTask(BuildContext context, WidgetRef ref, String recordId, String title) {
+  void _confirmDeleteTask(BuildContext context, WidgetRef ref, String recordId, String taskTitle) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
           side: const BorderSide(color: AppColors.borderSubtle),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),
         content: Text(
-          'Are you sure you want to remove "$title"?',
+          'Are you sure you want to move "$taskTitle" to trash?',
           style: AppTypography.bodyPrimary,
         ),
         actions: [
@@ -800,23 +1307,17 @@ class TaskDetailSheet extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.statusDangerStroke,
-              minimumSize: const Size(120, 44),
+              backgroundColor: AppColors.statusDangerText,
+              foregroundColor: AppColors.brandOnPrimary,
             ),
             onPressed: () async {
+              Navigator.of(ctx).pop(); // Close dialog
               final messenger = ScaffoldMessenger.of(context);
-              Navigator.of(ctx).pop();
-              Navigator.of(context).pop();
-
               try {
-                final repo = ref.read(taskRepositoryProvider);
-                await repo.softDeleteTask(recordId);
-
+                await ref.read(taskRepositoryProvider).softDeleteTask(recordId);
+                if (context.mounted) Navigator.of(context).pop(); // Close detail sheet
                 messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Moved "$title" to trash'),
-                    backgroundColor: AppColors.brandPrimary,
-                  ),
+                  SnackBar(content: Text('Moved "$taskTitle" to trash')),
                 );
               } catch (e) {
                 messenger.showSnackBar(

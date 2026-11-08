@@ -16,6 +16,12 @@ abstract class TaskRepository {
     DateTime? completedAt,
   });
 
+  /// Reschedules or snoozes a task by updating its due date.
+  Future<void> rescheduleTask({
+    required String recordId,
+    required DateTime newDueDate,
+  });
+
   /// Soft deletes a task record.
   Future<void> softDeleteTask(String recordId);
 

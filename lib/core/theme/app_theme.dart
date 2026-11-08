@@ -7,11 +7,12 @@ import 'app_typography.dart';
 class AppTheme {
   AppTheme._();
 
+  static const double cardRadius = 18.0;
+  static const double buttonHeight = 54.0;
+  static const double inputRadius = 14.0;
+  static const double sheetRadius = 24.0;
+
   static ThemeData get lightTheme {
-    const cardRadius = 18.0;
-    const buttonHeight = 54.0;
-    const inputRadius = 14.0;
-    const sheetRadius = 24.0;
 
     return ThemeData(
       useMaterial3: true,
@@ -49,12 +50,23 @@ class AppTheme {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surfaceCard,
+        surfaceTintColor: Colors.transparent,
         modalBackgroundColor: AppColors.surfaceCard,
         modalBarrierColor: AppColors.scrimOverlay,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(sheetRadius)),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surfaceCard,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+          side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+        ),
+        titleTextStyle: AppTypography.cardTitle,
+        contentTextStyle: AppTypography.bodyPrimary,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surfaceCanvas,

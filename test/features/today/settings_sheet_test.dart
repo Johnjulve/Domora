@@ -21,7 +21,7 @@ void main() {
 
     // App identity
     expect(find.text('Settings & Preferences'), findsOneWidget);
-    expect(find.textContaining('Domora v0.1.0-alpha.10'), findsOneWidget);
+    expect(find.textContaining('Domora v0.1.0-alpha.11'), findsOneWidget);
     expect(find.text('Personal & Household Sanctuary OS'), findsOneWidget);
 
     // Architecture rows

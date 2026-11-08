@@ -242,5 +242,34 @@ void main() {
       final taskCompleted = TaskItem(recordId: 't4', dueDate: yesterday, status: 'completed');
       expect(taskCompleted.isOverdue(now), isFalse);
     });
+
+    test('rescheduleTask updates dueDate and updatedAt in transaction', () async {
+      final now = DateTime(2026, 11, 1, 10, 0);
+      await taskRepo.createTaskRecord(
+        record: Record(
+          id: 'reschedule-task-1',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'task',
+          title: 'Reschedule Me',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        task: TaskItem(
+          recordId: 'reschedule-task-1',
+          dueDate: now,
+        ),
+      );
+
+      final newDueDate = DateTime(2026, 11, 10, 12, 0);
+      await taskRepo.rescheduleTask(
+        recordId: 'reschedule-task-1',
+        newDueDate: newDueDate,
+      );
+
+      final tasks = await taskRepo.getTasksByWorkspace(AppConstants.defaultWorkspaceId);
+      final updated = tasks.firstWhere((t) => t.record.id == 'reschedule-task-1');
+      expect(updated.task.dueDate, newDueDate);
+      expect(updated.record.updatedAt.isAfter(now), isTrue);
+    });
   });
 }

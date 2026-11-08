@@ -6,7 +6,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../backup/presentation/backup_sheet.dart';
-import 'settings_sheet.dart';
+import '../../settings/presentation/settings_profile_screen.dart';
 import '../../records/presentation/records_screen.dart';
 import '../../tasks/domain/task_item.dart';
 import '../../tasks/presentation/tasks_screen.dart';
@@ -53,13 +53,9 @@ class TodayScreen extends ConsumerWidget {
             icon: const Icon(Icons.settings_outlined, color: AppColors.brandPrimary),
             tooltip: 'Settings & Updates',
             onPressed: () {
-              showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                isDismissible: false,
-                enableDrag: false,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const SettingsSheet(),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsProfileScreen()),
               );
             },
           ),

@@ -6,8 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../backup/presentation/backup_sheet.dart';
+import '../../settings/presentation/settings_profile_screen.dart';
 
 /// Modal bottom sheet presenting App Info, Preferences, and Network Update Checking.
 class SettingsSheet extends ConsumerStatefulWidget {
@@ -117,7 +119,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
       ),
       decoration: const BoxDecoration(
         color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       padding: EdgeInsets.only(
         left: 20,
@@ -319,6 +321,28 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Full Settings & Profile Screen Shortcut
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.manage_accounts_outlined, color: AppColors.brandPrimary),
+                title: const Text('Settings & Profile', style: AppTypography.cardTitle),
+                subtitle: Text(
+                  'Manage household profile, biometrics, preferences, storage, and danger zone.',
+                  style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                ),
+                trailing: const Icon(Icons.chevron_right, size: 20),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsProfileScreen()),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),
