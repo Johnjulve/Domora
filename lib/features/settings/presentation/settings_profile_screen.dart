@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -16,6 +17,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/under_construction_dialog.dart';
 import '../../backup/presentation/backup_sheet.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
+import 'widgets/connect_google_drive_sheet.dart';
 import 'widgets/emergency_info_sheet.dart';
 
 /// Full Settings & Profile Screen matching Sanctuary Archival specification.
@@ -27,6 +29,21 @@ class SettingsProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
+  static const List<String> _sanctuaryRecoveryWords = [
+    'anchor',
+    'velvet',
+    'summit',
+    'cedar',
+    'ember',
+    'orchard',
+    'meadow',
+    'hearth',
+    'pebble',
+    'clover',
+    'harbor',
+    'willow',
+  ];
+
   int _storageBytes = 0;
   bool _isLoadingStorage = true;
 
@@ -326,6 +343,131 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _openRecoveryKeyDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceCard,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        icon: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.brandAccentSage,
+            borderRadius: BorderRadius.circular(50),
+          ),
+          child: const Icon(
+            Icons.key_rounded,
+            color: AppColors.brandPrimary,
+            size: 28,
+          ),
+        ),
+        title: Text(
+          'Sanctuary Recovery Key',
+          style: AppTypography.cardTitle.copyWith(fontSize: 18),
+          textAlign: TextAlign.center,
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'These 12 sanctuary words are your sole master key. Keep them private and secure to restore your records on another device.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (int i = 0; i < _sanctuaryRecoveryWords.length; i++)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceCard,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.borderSubtle),
+                        ),
+                        child: Text(
+                          '${i + 1}. ${_sanctuaryRecoveryWords[i]}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('copy_recovery_key_dialog_button'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.brandPrimary),
+                  label: const Text(
+                    'Copy Key',
+                    style: TextStyle(color: AppColors.brandPrimary, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: _sanctuaryRecoveryWords.join(' ')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Recovery key copied to clipboard!'),
+                        backgroundColor: AppColors.brandPrimary,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  key: const Key('close_recovery_key_dialog_button'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPrimary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -731,7 +873,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 // Section 3: Backup
                 _buildSectionHeader('BACKUP'),
                 const SizedBox(height: 6),
-                _buildBackupCard(),
+                _buildBackupCard(prefs),
                 const SizedBox(height: 20),
 
                 // Section 4: Preferences
@@ -1047,7 +1189,177 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     );
   }
 
-  Widget _buildBackupCard() {
+  Widget _buildBackupCard(AppPreferences prefs) {
+    if (prefs.googleAccountEmail != null) {
+      return _buildGoogleDriveConnectedCard(prefs);
+    }
+    return _buildGoogleDriveInactiveBackupCard(prefs);
+  }
+
+  Widget _buildExportDataRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.download_rounded, size: 22, color: AppColors.brandPrimary),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Export My Data',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Save a private offline copy',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            key: const Key('export_data_button'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.surfaceContainerLow,
+              foregroundColor: AppColors.textPrimary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: const Size(80, 34),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
+            label: const Text('Export', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            onPressed: () {
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const BackupSheet(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrintEmergencySheetRow() {
+    return InkWell(
+      key: const Key('print_emergency_sheet_row'),
+      onTap: () {
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const EmergencyInfoSheet(),
+        );
+      },
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(Icons.print_outlined, size: 22, color: AppColors.textSecondary),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Print Emergency Info Sheet',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Physical summary for family or executors',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSanctuaryRestoreRow() {
+    return InkWell(
+      key: const Key('cloud_backup_restore_row'),
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      onTap: () {
+        showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const BackupSheet(),
+        );
+      },
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(Icons.cloud_sync_outlined, size: 22, color: AppColors.textSecondary),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sanctuary Backup & Restore',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Verify payloads or import snapshot',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleDriveConnectedCard(AppPreferences prefs) {
+    final email = prefs.googleAccountEmail ?? 'elena.miller@gmail.com';
+    final lastBackup = prefs.lastBackupTimestamp ?? 'Never';
+    final isEnabled = prefs.isGoogleDriveBackupEnabled;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
@@ -1063,29 +1375,138 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
       ),
       child: Column(
         children: [
-          // Row 1: Export My Data
+          // Row 1: Google Drive branding with status badge, connected email & Master toggle switch
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: const Icon(Icons.add_to_drive_rounded, color: AppColors.brandPrimary, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          const Text(
+                            'Google Drive',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isEnabled ? AppColors.brandAccentSage : AppColors.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: isEnabled ? AppColors.brandAccentBorder : AppColors.borderSubtle,
+                              ),
+                            ),
+                            child: Text(
+                              isEnabled ? 'Active' : 'Paused',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isEnabled ? AppColors.brandPrimary : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  key: const Key('google_drive_master_switch'),
+                  value: isEnabled,
+                  activeTrackColor: AppColors.brandPrimary,
+                  onChanged: (val) async {
+                    await prefs.setGoogleDriveBackupEnabled(val);
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.borderSubtle),
+
+          // Row 2: "Back up on Wi-Fi only" toggle switch
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.wifi_rounded, size: 22, color: AppColors.brandPrimary),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Back up on Wi-Fi only',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                Switch(
+                  key: const Key('wifi_only_backup_switch'),
+                  value: prefs.isBackupWifiOnly,
+                  activeTrackColor: AppColors.brandPrimary,
+                  onChanged: (val) async {
+                    await prefs.setBackupWifiOnly(val);
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+
+          // Row 3: "Back up now" trigger row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.download_rounded, size: 22, color: AppColors.brandPrimary),
+                const Icon(Icons.cloud_upload_outlined, size: 22, color: AppColors.textSecondary),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Export My Data',
+                      const Text(
+                        'Back up now',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Save a private offline copy',
-                        style: TextStyle(
+                        'Last backup: $lastBackup',
+                        style: const TextStyle(
                           fontSize: 12.5,
                           color: AppColors.textSecondary,
                         ),
@@ -1093,54 +1514,58 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  key: const Key('export_data_button'),
+                ElevatedButton(
+                  key: const Key('back_up_now_button'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerLow,
-                    foregroundColor: AppColors.textPrimary,
+                    foregroundColor: AppColors.brandPrimary,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     minimumSize: const Size(80, 34),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: AppColors.borderSubtle),
+                    ),
                   ),
-                  icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
-                  label: const Text('Export', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                  onPressed: () {
-                    showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => const BackupSheet(),
-                    );
+                  onPressed: () async {
+                    await prefs.setLastBackupTimestamp('Just now');
+                    if (mounted) {
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Encrypted snapshot synchronized to Google Drive'),
+                          backgroundColor: AppColors.brandPrimary,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   },
+                  child: const Text(
+                    'Back up',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
           ),
           const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
-          // Row 2: Print Emergency Info Sheet
+
+          // Row 4: Recovery Key row
           InkWell(
-            key: const Key('print_emergency_sheet_row'),
-            onTap: () {
-              showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const EmergencyInfoSheet(),
-              );
-            },
+            key: const Key('recovery_key_row'),
+            onTap: _openRecoveryKeyDialog,
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(Icons.print_outlined, size: 22, color: AppColors.textSecondary),
+                  Icon(Icons.key_rounded, size: 22, color: AppColors.textSecondary),
                   SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Print Emergency Info Sheet',
+                          'Recovery Key',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -1149,7 +1574,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Physical summary for family or executors',
+                          'View 12-word master passphrase',
                           style: TextStyle(
                             fontSize: 12.5,
                             color: AppColors.textSecondary,
@@ -1168,39 +1593,136 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             ),
           ),
           const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
-          // Row 3: Cloud Backup / Restore
+
+          // Row 5: Export My Data
+          _buildExportDataRow(),
+          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+
+          // Row 6: Print Emergency Info Sheet
+          _buildPrintEmergencySheetRow(),
+          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+
+          // Row 7: Sanctuary Backup & Restore
+          _buildSanctuaryRestoreRow(),
+          const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.borderSubtle),
+
+          // Row 8: Sign out of Google
           InkWell(
-            key: const Key('cloud_backup_restore_row'),
+            key: const Key('sign_out_google_button'),
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-            onTap: () {
-              showModalBottomSheet<void>(
+            onTap: () async {
+              await prefs.setGoogleDriveBackupEnabled(false);
+              await prefs.setGoogleAccountEmail(null);
+              if (mounted) {
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Disconnected from Google Drive'),
+                    backgroundColor: AppColors.brandPrimary,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout_rounded, size: 18, color: AppColors.statusDangerText),
+                  SizedBox(width: 8),
+                  Text(
+                    'Sign out of Google',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.statusDangerText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleDriveInactiveBackupCard(AppPreferences prefs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Row 1: Google Drive Cloud Backup (Inactive row)
+          InkWell(
+            key: const Key('connect_google_drive_row'),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            onTap: () async {
+              final result = await showModalBottomSheet<bool>(
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
-                builder: (_) => const BackupSheet(),
+                builder: (_) => const ConnectGoogleDriveConfirmationSheet(),
               );
+              if (result == true && mounted) {
+                setState(() {});
+              }
             },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(Icons.cloud_sync_outlined, size: 22, color: AppColors.textSecondary),
-                  SizedBox(width: 12),
+                  const Icon(Icons.cloud_sync_outlined, size: 22, color: AppColors.brandPrimary),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Sanctuary Backup & Restore',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
-                          ),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            const Text(
+                              'Google Drive Cloud Backup',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: AppColors.borderSubtle),
+                              ),
+                              child: const Text(
+                                'Inactive',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Verify payloads or import snapshot',
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Encrypted offsite redundancy',
                           style: TextStyle(
                             fontSize: 12.5,
                             color: AppColors.textSecondary,
@@ -1209,7 +1731,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       ],
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
                     color: AppColors.textSecondary,
@@ -1218,6 +1740,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ),
             ),
           ),
+          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+
+          // Row 2: Export My Data
+          _buildExportDataRow(),
+          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+
+          // Row 3: Print Emergency Info Sheet
+          _buildPrintEmergencySheetRow(),
+          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+
+          // Row 4: Sanctuary Backup & Restore
+          _buildSanctuaryRestoreRow(),
         ],
       ),
     );

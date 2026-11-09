@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/under_construction_dialog.dart';
+import '../../../settings/presentation/widgets/connect_google_drive_sheet.dart';
 import 'onboarding_shared_widgets.dart';
 
 final onboardingStorageChoiceProvider = NotifierProvider<OnboardingStorageChoiceNotifier, String>(
@@ -22,6 +22,19 @@ class StorageChoiceStep extends ConsumerWidget {
   final VoidCallback onContinue;
 
   const StorageChoiceStep({super.key, required this.onContinue});
+
+  Future<void> _handleGoogleConnection(BuildContext context, WidgetRef ref) async {
+    ref.read(onboardingStorageChoiceProvider.notifier).setChoice('google');
+    final connected = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ConnectGoogleDriveConfirmationSheet(),
+    );
+    if (connected == true) {
+      onContinue();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,22 +69,15 @@ class StorageChoiceStep extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
 
-          // Option 2: Continue with Google (Scheduled for Phase 2)
+          // Option 2: Continue with Google (Zero-Knowledge Cloud Redundancy)
           _StorageOptionCard(
             isSelected: selectedMode == 'google',
-            onTap: () {
-              ref.read(onboardingStorageChoiceProvider.notifier).setChoice('google');
-              showUnderConstructionNotice(
-                context,
-                featureName: 'Google Drive Cloud Backup',
-                scheduledPhase: 'Phase 2',
-              );
-            },
+            onTap: () => _handleGoogleConnection(context, ref),
             icon: Icons.cloud_sync_outlined,
             title: 'Continue with Google',
-            badge: 'Scheduled for Phase 2',
-            badgeBgColor: AppColors.statusWarningFill,
-            badgeTextColor: AppColors.statusWarningText,
+            badge: 'Zero-Knowledge',
+            badgeBgColor: AppColors.brandAccentSage,
+            badgeTextColor: AppColors.brandPrimary,
             description: 'Automated encrypted vault synchronization with your personal Google Drive storage.',
             perks: const ['Automatic sync', 'End-to-end encrypted backup'],
           ),
@@ -94,11 +100,7 @@ class StorageChoiceStep extends ConsumerWidget {
           ElevatedButton(
             onPressed: () {
               if (selectedMode == 'google') {
-                showUnderConstructionNotice(
-                  context,
-                  featureName: 'Google Drive Cloud Backup',
-                  scheduledPhase: 'Phase 2',
-                );
+                _handleGoogleConnection(context, ref);
               } else {
                 onContinue();
               }
@@ -106,7 +108,7 @@ class StorageChoiceStep extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(selectedMode == 'google' ? 'Continue with Google (Phase 2)' : 'Continue Offline'),
+                Text(selectedMode == 'google' ? 'Continue with Google' : 'Continue Offline'),
                 const SizedBox(width: 8),
                 const Icon(Icons.arrow_forward, size: 18),
               ],
