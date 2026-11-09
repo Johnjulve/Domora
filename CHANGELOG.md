@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha.12] - 2026-11-09
 
 ### Added
+- Google Drive Cloud Redundancy UI & Zero-Knowledge Confirmation Sheet (Design Screens 11 & 12):
+  - `ConnectGoogleDriveConfirmationSheet` (Screen 12): Sanctuary modal bottom sheet with Google Drive branding, Zero-Knowledge badge (`verified_user`), and 3 explicit privacy promises (*Encrypted before upload*, *Only you can read it*, *Stored in a private app folder*).
+  - Settings Backup & Restore Active State (Screen 11): Interactive Google Drive Backup card displaying active/paused status, connected email badge, master synchronization switch, "Back up on Wi-Fi only" toggle, and "Back up now" manual trigger with honest timestamp tracking.
+  - 12-Word Recovery Passphrase Sheet: Added "Recovery Key" access row under the active Google Drive card allowing users to review and copy their BIP-39 recovery passphrase anytime.
+  - Sign Out & Disconnect Flow: Added "Sign out of Google" action safely clearing account metadata and reverting storage mode to pure local offline.
+  - Onboarding Integration: Replaced under-construction placeholder on Option 2 ("Continue with Google") in `StorageChoiceStep` with direct launch of `ConnectGoogleDriveConfirmationSheet`.
+  - Refactored `_buildBackupCard` with extracted row components (`_buildExportDataRow`, `_buildPrintEmergencySheetRow`, `_buildSanctuaryRestoreRow`), ensuring consistent access to JSON vault snapshots and emergency info in both connected and disconnected states.
 - Emergency Household Dossier & Export Engine (Stage 11):
   - `EmergencyInfoSheet` Sanctuary-styled modal bottom sheet compiling critical household information for family or executors.
   - Reactive extraction of household identity (name & address from `AppPreferences`), essential property & vehicles with VIN/plate and serials, utility obligations & account numbers, and vital documents/policies with registration metadata.
@@ -18,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI Versioning Standardization:
   - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
   - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
-- 7 new automated unit and widget tests covering emergency dossier rendering, address overflow resilience, empty states, and clipboard export (113 total passing tests, 0 analysis issues).
+- 15 new automated unit and widget tests covering emergency dossier rendering and Google Drive redundancy flows (121 total passing tests, 0 analysis issues).
 
 ## [0.1.0-alpha.11] - 2026-11-09
 
