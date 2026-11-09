@@ -26,6 +26,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      cardColor: AppColors.surfaceCard,
       fontFamily: 'Plus Jakarta Sans',
       fontFamilyFallback: const [
         '-apple-system',
@@ -48,14 +49,14 @@ class AppTheme {
         outline: AppColors.borderSubtle,
         surfaceContainerHighest: AppColors.surfaceContainerLow,
       ),
-      textTheme: const TextTheme(
-        displayLarge: AppTypography.displayHero,
-        headlineMedium: AppTypography.pageHeader,
-        titleLarge: AppTypography.sectionTitle,
-        titleMedium: AppTypography.cardTitle,
-        bodyLarge: AppTypography.bodyPrimary,
-        bodyMedium: AppTypography.bodySecondary,
-        bodySmall: AppTypography.caption,
+      textTheme: TextTheme(
+        displayLarge: AppTypography.displayHero.copyWith(color: AppColors.textPrimary),
+        headlineMedium: AppTypography.pageHeader.copyWith(color: AppColors.textPrimary),
+        titleLarge: AppTypography.sectionTitle.copyWith(color: AppColors.textPrimary),
+        titleMedium: AppTypography.cardTitle.copyWith(color: AppColors.textPrimary),
+        bodyLarge: AppTypography.bodyPrimary.copyWith(color: AppColors.textPrimary),
+        bodyMedium: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
+        bodySmall: AppTypography.caption.copyWith(color: AppColors.textTertiary),
         labelSmall: AppTypography.badge,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
@@ -75,16 +76,16 @@ class AppTheme {
           borderRadius: BorderRadius.circular(cardRadius),
           side: const BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
-        titleTextStyle: AppTypography.cardTitle,
-        contentTextStyle: AppTypography.bodyPrimary,
+        titleTextStyle: AppTypography.cardTitle.copyWith(color: AppColors.textPrimary),
+        contentTextStyle: AppTypography.bodyPrimary.copyWith(color: AppColors.textPrimary),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surfaceCanvas,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: AppTypography.pageHeader,
+        titleTextStyle: AppTypography.pageHeader.copyWith(color: AppColors.textPrimary),
       ),
       cardTheme: CardThemeData(
         color: AppColors.surfaceCard,
@@ -138,7 +139,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(inputRadius),
           borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
         ),
-        hintStyle: AppTypography.bodySecondary,
+        hintStyle: AppTypography.bodySecondary.copyWith(color: AppColors.textSecondary),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.surfaceCard,
@@ -161,6 +162,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      cardColor: darkSurfaceCard,
       fontFamily: 'Plus Jakarta Sans',
       fontFamilyFallback: const [
         '-apple-system',
@@ -291,4 +293,17 @@ class AppTheme {
       ),
     );
   }
+}
+
+/// Convenient BuildContext extension for contextual Sanctuary Archival theme colors.
+extension SanctuaryThemeContext on BuildContext {
+  bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
+  Color get surfaceCanvas => Theme.of(this).scaffoldBackgroundColor;
+  Color get surfaceCard => Theme.of(this).cardColor;
+  Color get textPrimary => isDarkMode ? AppTheme.darkTextPrimary : AppColors.textPrimary;
+  Color get textSecondary => isDarkMode ? AppTheme.darkTextSecondary : AppColors.textSecondary;
+  Color get textTertiary => isDarkMode ? AppTheme.darkTextTertiary : AppColors.textTertiary;
+  Color get borderSubtle => isDarkMode ? AppTheme.darkBorderSubtle : AppColors.borderSubtle;
+  Color get surfaceContainerLow => isDarkMode ? AppTheme.darkSurfaceContainerLow : AppColors.surfaceContainerLow;
+  Color get brandAccent => isDarkMode ? AppTheme.darkBrandSecondary : AppColors.brandPrimary;
 }
