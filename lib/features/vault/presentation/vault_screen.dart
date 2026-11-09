@@ -35,7 +35,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
         title: const Text('Document Vault'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.note_add_outlined, color: AppColors.brandPrimary),
+            icon: Icon(Icons.note_add_outlined, color: context.brandAccent),
             tooltip: 'Add Document',
             onPressed: () => _openAddDocumentModal(context),
           ),
@@ -52,8 +52,8 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
           // Documents List
           Expanded(
             child: docsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.brandPrimary),
+              loading: () => Center(
+                child: CircularProgressIndicator(color: context.brandAccent),
               ),
               error: (err, _) => Center(
                 child: Padding(
@@ -103,6 +103,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       isDismissible: false,
       enableDrag: false,
       builder: (_) => const AddDocumentSheet(),
@@ -113,6 +114,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => DocumentDetailSheet(item: item),
     );
   }
@@ -147,27 +149,30 @@ class _VaultFilterChips extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: InkWell(
-              borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
+              borderRadius: BorderRadius.circular(999),
               onTap: () => onFilterSelected(opt.value),
               child: Container(
                 constraints: const BoxConstraints(minHeight: 44),
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.brandPrimary : AppColors.surfaceCard,
-                  borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
+                  color: isSelected ? AppColors.brandPrimary : context.surfaceCard,
+                  borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+                    color: isSelected ? AppColors.brandPrimary : context.borderSubtle,
                   ),
                 ),
                 child: Text(
                   opt.label,
                   style: isSelected
                       ? AppTypography.bodyPrimary.copyWith(
-                          color: Colors.white,
+                          color: AppColors.brandOnPrimary,
                           fontWeight: FontWeight.w600,
                         )
-                      : AppTypography.bodySecondary,
+                      : AppTypography.bodySecondary.copyWith(
+                          color: context.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
                 ),
               ),
             ),
@@ -202,11 +207,11 @@ class _VaultEmptyState extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    color: AppColors.brandAccentSage,
+                  decoration: BoxDecoration(
+                    color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_outline, color: AppColors.brandPrimary, size: 36),
+                  child: Icon(Icons.lock_outline, color: context.brandAccent, size: 36),
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -269,13 +274,13 @@ class _DocumentCard extends StatelessWidget {
               // Document Type Icon
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: AppColors.brandAccentSage,
+                decoration: BoxDecoration(
+                  color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   _getDocumentIcon(docType),
-                  color: AppColors.brandPrimary,
+                  color: context.brandAccent,
                   size: 24,
                 ),
               ),
@@ -309,13 +314,13 @@ class _DocumentCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceContainerLow,
+                            color: context.surfaceContainerLow,
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: AppColors.borderSubtle),
+                            border: Border.all(color: context.borderSubtle),
                           ),
                           child: Text(
                             docType.label.toUpperCase(),
-                            style: AppTypography.badge,
+                            style: AppTypography.badge.copyWith(color: context.textSecondary),
                           ),
                         ),
 
@@ -324,19 +329,19 @@ class _DocumentCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.brandAccentSage,
+                              color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.link, size: 12, color: AppColors.brandPrimary),
+                                Icon(Icons.link, size: 12, color: context.brandAccent),
                                 const SizedBox(width: 4),
                                 ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 140),
                                   child: Text(
                                     item.linkedAssetTitle!,
-                                    style: AppTypography.badge.copyWith(color: AppColors.brandPrimary),
+                                    style: AppTypography.badge.copyWith(color: context.brandAccent),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -544,10 +549,12 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -558,170 +565,174 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
         ),
         child: Form(
           key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('New Vault Document', style: AppTypography.sectionTitle),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Choose File Interactive Card
-              InkWell(
-                onTap: _pickFile,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: _pickedFilePath != null ? AppColors.brandAccentSage : AppColors.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _pickedFilePath != null ? AppColors.brandAccentBorder : AppColors.borderSubtle,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('New Vault Document', style: AppTypography.sectionTitle),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _pickedFilePath != null ? Icons.check_circle_outline : Icons.upload_file_outlined,
-                        color: AppColors.brandPrimary,
-                        size: 24,
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Choose File Interactive Card
+                InkWell(
+                  onTap: _pickFile,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: _pickedFilePath != null
+                          ? (context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage)
+                          : context.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _pickedFilePath != null
+                            ? (context.isDarkMode ? context.brandAccent : AppColors.brandAccentBorder)
+                            : context.borderSubtle,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _pickedFilePath != null ? 'File Attached from Device' : 'Choose File from Device',
-                              style: AppTypography.cardTitle.copyWith(fontSize: 14),
-                            ),
-                            Text(
-                              _pickedFilePath != null ? _fileNameController.text : 'Tap to auto-fill name, size & save copy',
-                              style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _pickedFilePath != null ? Icons.check_circle_outline : Icons.upload_file_outlined,
+                          color: context.brandAccent,
+                          size: 24,
                         ),
-                      ),
-                      TextButton(
-                        onPressed: _pickFile,
-                        child: Text(_pickedFilePath != null ? 'Change' : 'Browse'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Document Title *',
-                  hintText: 'e.g. Samsung Refrigerator Warranty',
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Document title is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _fileNameController,
-                decoration: const InputDecoration(
-                  labelText: 'File Name *',
-                  hintText: 'e.g. warranty_card.pdf',
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'File name is required';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _documentType,
-                      decoration: const InputDecoration(labelText: 'Document Type'),
-                      items: DocumentType.values.map((t) {
-                        return DropdownMenuItem(value: t.value, child: Text(t.label));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _documentType = val);
-                      },
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _pickedFilePath != null ? 'File Attached from Device' : 'Choose File from Device',
+                                style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                              ),
+                              Text(
+                                _pickedFilePath != null ? _fileNameController.text : 'Tap to auto-fill name, size & save copy',
+                                style: AppTypography.caption.copyWith(color: context.textTertiary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _pickFile,
+                          child: Text(_pickedFilePath != null ? 'Change' : 'Browse'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _fileSizeController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'File Size (KB)',
-                        hintText: 'e.g. 1024',
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Document Title *',
+                    hintText: 'e.g. Samsung Refrigerator Warranty',
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Document title is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _fileNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'File Name *',
+                    hintText: 'e.g. warranty_card.pdf',
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'File name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _documentType,
+                        decoration: const InputDecoration(labelText: 'Document Type'),
+                        items: DocumentType.values.map((t) {
+                          return DropdownMenuItem(value: t.value, child: Text(t.label));
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _documentType = val);
+                        },
                       ),
-                      validator: (val) {
-                        if (val != null && val.trim().isNotEmpty) {
-                          final parsed = int.tryParse(val.trim());
-                          if (parsed == null || parsed <= 0) {
-                            return 'Enter positive number';
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _fileSizeController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'File Size (KB)',
+                          hintText: 'e.g. 1024',
+                        ),
+                        validator: (val) {
+                          if (val != null && val.trim().isNotEmpty) {
+                            final parsed = int.tryParse(val.trim());
+                            if (parsed == null || parsed <= 0) {
+                              return 'Enter positive number';
+                            }
                           }
-                        }
-                        return null;
-                      },
+                          return null;
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  hintText: 'Coverage duration, claim procedures, policy numbers...',
+                  ],
                 ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-              // Reusable AssetPickerTile eliminating popup dropdown misalignment
-              AssetPickerTile(
-                selectedAssetRecordId: _selectedAssetRecordId,
-                onAssetChanged: (assetId) => setState(() => _selectedAssetRecordId = assetId),
-              ),
+                TextFormField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (Optional)',
+                    hintText: 'Coverage duration, claim procedures, policy numbers...',
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Save Document'),
-              ),
-            ],
+                // Reusable AssetPickerTile eliminating popup dropdown misalignment
+                AssetPickerTile(
+                  selectedAssetRecordId: _selectedAssetRecordId,
+                  onAssetChanged: (assetId) => setState(() => _selectedAssetRecordId = assetId),
+                ),
+
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Save Document'),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -737,11 +748,12 @@ class DocumentDetailSheet extends ConsumerWidget {
     final record = item.record;
     final doc = item.document;
     final docType = DocumentType.fromString(doc.documentType);
+    final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -751,83 +763,83 @@ class DocumentDetailSheet extends ConsumerWidget {
           bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    record.title,
-                    style: AppTypography.pageHeader.copyWith(fontSize: 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      record.title,
+                      style: AppTypography.pageHeader.copyWith(fontSize: 22),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      _buildDetailRow('Document Type', docType.label.toUpperCase()),
+                      const Divider(),
+                      _buildDetailRow('File Name', doc.fileName),
+                      const Divider(),
+                      _buildDetailRow('File Size', doc.formattedFileSize),
+                      if (doc.mimeType != null) ...[
+                        const Divider(),
+                        _buildDetailRow('MIME Type', doc.mimeType!),
+                      ],
+                      if (item.linkedAssetTitle != null) ...[
+                        const Divider(),
+                        _buildDetailRow('Linked Asset', item.linkedAssetTitle!),
+                      ],
+                      if (record.description != null && record.description!.isNotEmpty) ...[
+                        const Divider(),
+                        _buildDetailRow('Notes', record.description!),
+                      ],
+                    ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(height: 16),
+              if (doc.filePath != null && doc.filePath!.isNotEmpty) ...[
+                FilledButton.icon(
+                  onPressed: () async {
+                    final result = await OpenFilex.open(doc.filePath!);
+                    if (result.type != ResultType.done && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Could not open file: ${result.message}'),
+                          backgroundColor: AppColors.statusDangerStroke,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.file_open_outlined),
+                  label: const Text('Open / View Document'),
                 ),
+                const SizedBox(height: 12),
               ],
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildDetailRow('Document Type', docType.label.toUpperCase()),
-                    const Divider(),
-                    _buildDetailRow('File Name', doc.fileName),
-                    const Divider(),
-                    _buildDetailRow('File Size', doc.formattedFileSize),
-                    if (doc.mimeType != null) ...[
-                      const Divider(),
-                      _buildDetailRow('MIME Type', doc.mimeType!),
-                    ],
-                    if (item.linkedAssetTitle != null) ...[
-                      const Divider(),
-                      _buildDetailRow('Linked Asset', item.linkedAssetTitle!),
-                    ],
-                    if (record.description != null && record.description!.isNotEmpty) ...[
-                      const Divider(),
-                      _buildDetailRow('Notes', record.description!),
-                    ],
-                  ],
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.statusDangerText,
+                  side: const BorderSide(color: AppColors.statusDangerStroke),
                 ),
+                onPressed: () => _confirmDeleteDocument(context, ref, record.id, record.title),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Move to Trash'),
               ),
-            ),
-            const SizedBox(height: 16),
-            if (doc.filePath != null && doc.filePath!.isNotEmpty) ...[
-              FilledButton.icon(
-                onPressed: () async {
-                  final result = await OpenFilex.open(doc.filePath!);
-                  if (result.type != ResultType.done && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Could not open file: ${result.message}'),
-                        backgroundColor: AppColors.statusDangerStroke,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.file_open_outlined),
-                label: const Text('Open / View Document'),
-              ),
-              const SizedBox(height: 12),
             ],
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.statusDangerText,
-                side: const BorderSide(color: AppColors.statusDangerStroke),
-              ),
-              onPressed: () => _confirmDeleteDocument(context, ref, record.id, record.title),
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Move to Trash'),
-            ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -856,10 +868,10 @@ class DocumentDetailSheet extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
+        backgroundColor: ctx.surfaceCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
-          side: const BorderSide(color: AppColors.borderSubtle),
+          side: BorderSide(color: ctx.borderSubtle),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),
         content: Text(

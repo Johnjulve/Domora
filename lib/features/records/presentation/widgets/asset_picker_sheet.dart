@@ -18,74 +18,78 @@ Future<String?> showAssetPickerModal({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(ctx).size.height * 0.6,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Select Associated Asset', style: AppTypography.cardTitle),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                ),
-              ],
-            ),
+    builder: (ctx) {
+      final sheetBg = Theme.of(ctx).bottomSheetTheme.backgroundColor ?? ctx.surfaceCard;
+      return Material(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.6,
           ),
-          const Divider(height: 1),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.do_not_disturb_alt_outlined, color: AppColors.textSecondary),
-                  title: Text(noneLabel),
-                  trailing: selectedAssetRecordId == null
-                      ? const Icon(Icons.check, color: AppColors.brandPrimary)
-                      : null,
-                  onTap: () => Navigator.of(ctx).pop(null),
-                ),
-                ...assets.map((item) {
-                  final isSelected = item.record.id == selectedAssetRecordId;
-                  final subtitleParts = [
-                    if (item.asset?.brand != null && item.asset!.brand!.isNotEmpty) item.asset!.brand!,
-                    if (item.asset?.model != null && item.asset!.model!.isNotEmpty) item.asset!.model!,
-                    if (item.asset?.odometerReading != null) '${item.asset!.odometerReading} km',
-                  ];
-                  return ListTile(
-                    leading: Icon(
-                      item.record.categoryId == 'cat-vehicles'
-                          ? Icons.directions_car_outlined
-                          : Icons.inventory_2_outlined,
-                      color: AppColors.brandPrimary,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Select Associated Asset', style: AppTypography.cardTitle),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(ctx).pop(),
                     ),
-                    title: Text(item.record.title, style: AppTypography.bodyPrimary),
-                    subtitle: subtitleParts.isNotEmpty
-                        ? Text(subtitleParts.join(' • '), style: AppTypography.caption)
-                        : null,
-                    trailing: isSelected
-                        ? const Icon(Icons.check, color: AppColors.brandPrimary)
-                        : null,
-                    onTap: () => Navigator.of(ctx).pop(item.record.id),
-                  );
-                }),
-              ],
-            ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: [
+                    ListTile(
+                      leading: Icon(Icons.do_not_disturb_alt_outlined, color: ctx.textSecondary),
+                      title: Text(noneLabel),
+                      trailing: selectedAssetRecordId == null
+                          ? Icon(Icons.check, color: ctx.brandAccent)
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(null),
+                    ),
+                    ...assets.map((item) {
+                      final isSelected = item.record.id == selectedAssetRecordId;
+                      final subtitleParts = [
+                        if (item.asset?.brand != null && item.asset!.brand!.isNotEmpty) item.asset!.brand!,
+                        if (item.asset?.model != null && item.asset!.model!.isNotEmpty) item.asset!.model!,
+                        if (item.asset?.odometerReading != null) '${item.asset!.odometerReading} km',
+                      ];
+                      return ListTile(
+                        leading: Icon(
+                          item.record.categoryId == 'cat-vehicles'
+                              ? Icons.directions_car_outlined
+                              : Icons.inventory_2_outlined,
+                          color: ctx.brandAccent,
+                        ),
+                        title: Text(item.record.title, style: AppTypography.bodyPrimary),
+                        subtitle: subtitleParts.isNotEmpty
+                            ? Text(subtitleParts.join(' • '), style: AppTypography.caption)
+                            : null,
+                        trailing: isSelected
+                            ? Icon(Icons.check, color: ctx.brandAccent)
+                            : null,
+                        onTap: () => Navigator.of(ctx).pop(item.record.id),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
 }
 
@@ -110,19 +114,19 @@ class AssetPickerTile extends ConsumerWidget {
       loading: () => Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLow,
+          color: context.surfaceContainerLow,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderSubtle),
+          border: Border.all(color: context.borderSubtle),
         ),
-        child: const Row(
+        child: Row(
           children: [
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+              child: CircularProgressIndicator(strokeWidth: 2, color: context.brandAccent),
             ),
-            SizedBox(width: 12),
-            Text('Loading registered assets...', style: AppTypography.caption),
+            const SizedBox(width: 12),
+            const Text('Loading registered assets...', style: AppTypography.caption),
           ],
         ),
       ),
@@ -169,13 +173,13 @@ class AssetPickerTile extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
+                color: context.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: context.borderSubtle),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.link, size: 20, color: AppColors.brandPrimary),
+                  Icon(Icons.link, size: 20, color: context.brandAccent),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -183,15 +187,15 @@ class AssetPickerTile extends ConsumerWidget {
                       children: [
                         Text(
                           'Associated Property / Asset',
-                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                          style: AppTypography.caption.copyWith(color: context.textSecondary),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           selectedAsset != null ? selectedAsset.record.title : noneLabel,
                           style: AppTypography.bodyPrimary.copyWith(
                             color: selectedAsset != null
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
+                                ? context.textPrimary
+                                : context.textSecondary,
                             fontWeight: selectedAsset != null ? FontWeight.w600 : FontWeight.normal,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -201,14 +205,14 @@ class AssetPickerTile extends ConsumerWidget {
                   ),
                   if (selectedAsset != null)
                     IconButton(
-                      icon: const Icon(Icons.clear, size: 18, color: AppColors.textSecondary),
+                      icon: Icon(Icons.clear, size: 18, color: context.textSecondary),
                       onPressed: () => onAssetChanged(null),
                       tooltip: 'Unlink asset',
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     )
                   else
-                    const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textSecondary),
+                    Icon(Icons.keyboard_arrow_down, size: 20, color: context.textSecondary),
                 ],
               ),
             ),
