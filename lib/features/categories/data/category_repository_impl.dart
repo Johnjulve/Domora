@@ -14,6 +14,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
     {'id': 'cat-vehicles', 'name': 'Vehicles', 'icon': 'directions_car', 'color': '#2E7D5B'},
     {'id': 'cat-appliances', 'name': 'Appliances', 'icon': 'kitchen', 'color': '#92400E'},
     {'id': 'cat-electronics', 'name': 'Electronics', 'icon': 'devices', 'color': '#1E4B38'},
+    {'id': 'cat-furniture', 'name': 'Furniture', 'icon': 'chair', 'color': '#78593A'},
+    {'id': 'cat-tools', 'name': 'Tools', 'icon': 'home_repair_service', 'color': '#4A5568'},
     {'id': 'cat-family', 'name': 'Family', 'icon': 'people', 'color': '#5D6860'},
   ];
 
@@ -42,7 +44,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
   @override
   Future<List<Category>> getCategoriesByWorkspace(String workspaceId) async {
     final entities = await (_db.select(_db.categories)
-          ..where((c) => c.workspaceId.equals(workspaceId))
+          ..where((c) => c.workspaceId.equals(workspaceId) & c.archivedAt.isNull())
           ..orderBy([(c) => OrderingTerm.asc(c.name)]))
         .get();
 
@@ -52,7 +54,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
   @override
   Stream<List<Category>> watchCategoriesByWorkspace(String workspaceId) {
     return (_db.select(_db.categories)
-          ..where((c) => c.workspaceId.equals(workspaceId))
+          ..where((c) => c.workspaceId.equals(workspaceId) & c.archivedAt.isNull())
           ..orderBy([(c) => OrderingTerm.asc(c.name)]))
         .watch()
         .map((entities) => entities.map(_toDomain).toList());
@@ -64,6 +66,19 @@ class CategoryRepositoryImpl implements CategoryRepository {
     return category;
   }
 
+  @override
+  Future<void> archiveCategory(String id) async {
+    final now = DateTime.now().toUtc();
+    await (_db.update(_db.categories)..where((c) => c.id.equals(id)))
+        .write(CategoriesCompanion(archivedAt: Value(now)));
+  }
+
+  @override
+  Future<void> renameCategory(String id, String newName) async {
+    await (_db.update(_db.categories)..where((c) => c.id.equals(id)))
+        .write(CategoriesCompanion(name: Value(newName)));
+  }
+
   Category _toDomain(CategoryEntity entity) {
     return Category(
       id: entity.id,
@@ -72,7 +87,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
       iconKey: entity.iconKey,
       colorHex: entity.colorHex,
       isSystem: entity.isSystem,
-      createdAt: entity.createdAt,
+      createdAt: entity.createdAt.toUtc(),
+      archivedAt: entity.archivedAt?.toUtc(),
     );
   }
 
@@ -84,7 +100,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
       iconKey: Value(category.iconKey),
       colorHex: Value(category.colorHex),
       isSystem: Value(category.isSystem),
-      createdAt: Value(category.createdAt),
+      createdAt: Value(category.createdAt.toUtc()),
+      archivedAt: Value(category.archivedAt?.toUtc()),
     );
   }
 }

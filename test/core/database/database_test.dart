@@ -2,8 +2,14 @@ import 'package:domora/core/database/app_database.dart';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/sqlite3.dart';
 
 void main() {
+  setUpAll(() {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  });
+
   late AppDatabase db;
 
   setUp(() {
@@ -200,7 +206,7 @@ void main() {
       final allRecords = await (db.select(db.records)..where((r) => r.workspaceId.equals(workspaceId))).get();
       expect(allRecords.length, 2);
     });
- 
+
     test('Can create universal Record and linked specialized Bill entity', () async {
       final now = DateTime.utc(2026, 11, 7, 12, 0, 0);
       const workspaceId = 'ws-test-bills';
@@ -243,6 +249,228 @@ void main() {
       expect(bills.first.providerName, 'Meralco');
       expect(bills.first.utilityType, 'electricity');
       expect(bills.first.paymentStatus, 'unpaid');
+    });
+
+    test('Can create universal Record, Asset with warrantyExpiryDate, and Custom Field Definitions/Values', () async {
+      final now = DateTime.utc(2026, 11, 9, 12, 0, 0);
+      const workspaceId = 'ws-test-fields';
+      const recordId = 'rec-asset-fields-1';
+      const fieldDefId = 'fdef-color-1';
+      const fieldValueId = 'fval-color-1';
+
+      await db.into(db.workspaces).insert(
+            WorkspacesCompanion.insert(
+              id: workspaceId,
+              name: 'Personal',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      await db.into(db.records).insert(
+            RecordsCompanion.insert(
+              id: recordId,
+              workspaceId: workspaceId,
+              recordType: 'asset',
+              title: 'Herman Miller Embody Chair',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      final warranty = DateTime.utc(2038, 11, 9, 12, 0, 0);
+      await db.into(db.assets).insert(
+            AssetsCompanion.insert(
+              recordId: recordId,
+              brand: const Value('Herman Miller'),
+              model: const Value('Embody'),
+              condition: const Value('Mint'),
+              warrantyExpiryDate: Value(warranty),
+            ),
+          );
+
+      await db.into(db.fieldDefinitions).insert(
+            FieldDefinitionsCompanion.insert(
+              id: fieldDefId,
+              workspaceId: workspaceId,
+              fieldKey: 'Fabric Color',
+              label: 'Fabric Color',
+              createdAt: now,
+            ),
+          );
+
+      await db.into(db.fieldValues).insert(
+            FieldValuesCompanion.insert(
+              id: fieldValueId,
+              recordId: recordId,
+              fieldDefinitionId: fieldDefId,
+              valueText: 'Sync Dark Carbon',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      final asset = await (db.select(db.assets)..where((a) => a.recordId.equals(recordId))).getSingle();
+      expect(asset.brand, 'Herman Miller');
+      expect(asset.warrantyExpiryDate?.toUtc(), warranty);
+
+      final fieldVal = await (db.select(db.fieldValues)..where((v) => v.id.equals(fieldValueId))).getSingle();
+      expect(fieldVal.valueText, 'Sync Dark Carbon');
+      expect(fieldVal.fieldDefinitionId, fieldDefId);
+
+      // Verify cascading delete: deleting record deletes its asset and field values
+      await (db.delete(db.records)..where((r) => r.id.equals(recordId))).go();
+      expect(await (db.select(db.assets)..where((a) => a.recordId.equals(recordId))).get(), isEmpty);
+      expect(await (db.select(db.fieldValues)..where((v) => v.id.equals(fieldValueId))).get(), isEmpty);
+    });
+
+    test('Drift migration onUpgrade from v7 to v8 executes without error, preserves data and adds new schema elements', () async {
+      // 1. Initialize an in-memory SQLite database at schema v7
+      final rawDb = sqlite3.openInMemory();
+      rawDb.execute('''
+        CREATE TABLE workspaces (
+          id TEXT NOT NULL PRIMARY KEY,
+          name TEXT NOT NULL,
+          workspace_type TEXT NOT NULL DEFAULT 'personal',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          deleted_at INTEGER
+        );
+        CREATE TABLE categories (
+          id TEXT NOT NULL PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          icon_key TEXT,
+          color_hex TEXT,
+          is_system INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL
+        );
+        CREATE TABLE records (
+          id TEXT NOT NULL PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          category_id TEXT,
+          record_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          archived_at INTEGER,
+          deleted_at INTEGER
+        );
+        CREATE TABLE assets (
+          record_id TEXT NOT NULL PRIMARY KEY,
+          purchase_date INTEGER,
+          purchase_amount_minor INTEGER,
+          purchase_currency TEXT DEFAULT 'PHP',
+          brand TEXT,
+          model TEXT,
+          serial_number TEXT,
+          condition TEXT,
+          location_description TEXT,
+          acquired_from TEXT,
+          disposed_at INTEGER,
+          odometer_reading INTEGER,
+          pms_distance_interval_km INTEGER,
+          pms_time_interval_months INTEGER,
+          next_pms_due_date INTEGER,
+          next_pms_odometer_target INTEGER
+        );
+        CREATE TABLE tasks (
+          record_id TEXT NOT NULL PRIMARY KEY,
+          due_date INTEGER,
+          priority TEXT NOT NULL DEFAULT 'medium',
+          status TEXT NOT NULL DEFAULT 'pending',
+          completed_at INTEGER,
+          recurrence_rule TEXT
+        );
+        CREATE TABLE documents (
+          record_id TEXT NOT NULL PRIMARY KEY,
+          file_name TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          file_size_bytes INTEGER NOT NULL,
+          mime_type TEXT NOT NULL,
+          notes TEXT,
+          captured_at INTEGER
+        );
+        CREATE TABLE expenses (
+          record_id TEXT NOT NULL PRIMARY KEY,
+          amount_minor INTEGER NOT NULL,
+          currency TEXT NOT NULL DEFAULT 'PHP',
+          expense_category TEXT NOT NULL DEFAULT 'other',
+          expense_date INTEGER NOT NULL,
+          vendor TEXT,
+          receipt_document_id TEXT,
+          is_tax_deductible INTEGER NOT NULL DEFAULT 0,
+          odometer_reading INTEGER,
+          linked_bill_record_id TEXT
+        );
+        CREATE TABLE bills (
+          record_id TEXT NOT NULL PRIMARY KEY,
+          provider_name TEXT,
+          account_number TEXT,
+          amount_due_minor INTEGER NOT NULL,
+          due_date INTEGER,
+          billing_period_start INTEGER,
+          billing_period_end INTEGER,
+          payment_status TEXT NOT NULL DEFAULT 'unpaid',
+          paid_date INTEGER,
+          paid_amount_minor INTEGER,
+          is_recurring INTEGER NOT NULL DEFAULT 0,
+          recurrence_interval TEXT,
+          auto_pay_enabled INTEGER NOT NULL DEFAULT 0,
+          utility_type TEXT
+        );
+        PRAGMA user_version = 7;
+      ''');
+
+      // Seed pre-existing v7 data
+      final epochMillis = DateTime.utc(2026, 11, 4).millisecondsSinceEpoch;
+      rawDb.execute('''
+        INSERT INTO workspaces (id, name, created_at, updated_at)
+        VALUES ('ws-v7', 'Legacy Workspace', $epochMillis, $epochMillis);
+
+        INSERT INTO categories (id, workspace_id, name, icon_key, color_hex, is_system, created_at)
+        VALUES ('cat-v7', 'ws-v7', 'Legacy Category', 'folder', '#123456', 1, $epochMillis);
+
+        INSERT INTO records (id, workspace_id, category_id, record_type, title, created_at, updated_at)
+        VALUES ('rec-v7', 'ws-v7', 'cat-v7', 'asset', 'Legacy Vehicle', $epochMillis, $epochMillis);
+
+        INSERT INTO assets (record_id, brand, model, odometer_reading)
+        VALUES ('rec-v7', 'Toyota', 'Vios', 15000);
+      ''');
+
+      // 2. Open via AppDatabase, which will execute onUpgrade from 7 to 8
+      final migratedDb = AppDatabase.forTesting(NativeDatabase.opened(rawDb));
+
+      // Verify categories preserved and gained archivedAt (null)
+      final category = await (migratedDb.select(migratedDb.categories)..where((c) => c.id.equals('cat-v7'))).getSingle();
+      expect(category.name, 'Legacy Category');
+      expect(category.archivedAt, isNull);
+
+      // Verify assets preserved and gained warrantyExpiryDate (null)
+      final asset = await (migratedDb.select(migratedDb.assets)..where((a) => a.recordId.equals('rec-v7'))).getSingle();
+      expect(asset.brand, 'Toyota');
+      expect(asset.model, 'Vios');
+      expect(asset.odometerReading, 15000);
+      expect(asset.warrantyExpiryDate, isNull);
+
+      // Verify new tables FieldDefinitions and FieldValues can be queried and inserted
+      await migratedDb.into(migratedDb.fieldDefinitions).insert(
+            FieldDefinitionsCompanion.insert(
+              id: 'fdef-v8',
+              workspaceId: 'ws-v7',
+              fieldKey: 'Engine No',
+              label: 'Engine Number',
+              createdAt: DateTime.utc(2026, 11, 9),
+            ),
+          );
+
+      final defs = await migratedDb.select(migratedDb.fieldDefinitions).get();
+      expect(defs.length, 1);
+      expect(defs.first.fieldKey, 'Engine No');
+
+      await migratedDb.close();
     });
   });
 }
