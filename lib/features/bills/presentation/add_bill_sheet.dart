@@ -11,6 +11,10 @@ import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
 import '../domain/bill_item.dart';
 
+const List<String> _availableCurrencies = [
+  'PHP', 'USD', 'EUR', 'JPY', 'GBP', 'SGD', 'AUD', 'CAD',
+];
+
 class AddBillSheet extends ConsumerStatefulWidget {
   final String? initialAssetRecordId;
 
@@ -29,6 +33,7 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
   final _notesController = TextEditingController();
 
   late String _utilityType;
+  String _selectedCurrency = AppConstants.defaultCurrency;
   DateTime? _dueDate;
   DateTime? _billingPeriodStart;
   DateTime? _billingPeriodEnd;
@@ -123,7 +128,7 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
           billingPeriodEnd: _billingPeriodEnd,
           dueDate: _dueDate,
           amountDueMinor: amountMinor,
-          currencyCode: AppConstants.defaultCurrency,
+          currencyCode: _selectedCurrency,
           paymentStatus: BillPaymentStatus.unpaid.value,
           linkedAssetRecordId: _selectedAssetRecordId,
         ),
@@ -134,7 +139,7 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Added bill: $title (${AppConstants.defaultCurrency} ${parsedAmount.toStringAsFixed(2)})',
+              'Added bill: $title ($_selectedCurrency ${parsedAmount.toStringAsFixed(2)})',
             ),
           ),
         );
@@ -154,10 +159,12 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -202,17 +209,65 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Amount Due & Utility Type
+                // Utility Type (Full-width for non-cramped display)
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _utilityType,
+                  decoration: const InputDecoration(labelText: 'Utility Type'),
+                  items: UtilityType.values.map((type) {
+                    return DropdownMenuItem<String>(
+                      value: type.value,
+                      child: Row(
+                        children: [
+                          Icon(type.icon, size: 18, color: context.brandAccent),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              type.label,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _utilityType = val);
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Responsive Currency Selector (flex 3) & Amount Due (flex 7) -> No truncation!
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 5,
-                      child: TextFormField(
-                        controller: _amountDueController,
+                      flex: 3,
+                      child: DropdownButtonFormField<String>(
+                        key: const Key('bill_currency_dropdown'),
+                        initialValue: _selectedCurrency,
                         decoration: const InputDecoration(
-                          labelText: 'Amount Due (PHP) *',
+                          labelText: 'Currency',
+                        ),
+                        isExpanded: true,
+                        items: _availableCurrencies.map((c) {
+                          return DropdownMenuItem(value: c, child: Text(c));
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _selectedCurrency = val);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 7,
+                      child: TextFormField(
+                        key: const Key('bill_amount_due_field'),
+                        controller: _amountDueController,
+                        decoration: InputDecoration(
+                          labelText: 'Amount Due *',
                           hintText: 'e.g. 2450.00',
-                          prefixText: '₱ ',
+                          prefixText: '$_selectedCurrency ',
                         ),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         validator: (val) {
@@ -224,35 +279,6 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                             return 'Enter valid amount';
                           }
                           return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 5,
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _utilityType,
-                        decoration: const InputDecoration(labelText: 'Utility Type'),
-                        items: UtilityType.values.map((type) {
-                          return DropdownMenuItem<String>(
-                            value: type.value,
-                            child: Row(
-                              children: [
-                                Icon(type.icon, size: 16, color: AppColors.brandPrimary),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    type.label,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _utilityType = val);
                         },
                       ),
                     ),
@@ -286,26 +312,32 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Due Date Selector
+                // Due Date Selector (Dark-adapted touch target >= 48px)
                 InkWell(
                   onTap: () => _pickDueDate(context),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLow,
+                      color: context.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.borderSubtle),
+                      border: Border.all(color: context.borderSubtle),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.event, size: 20, color: AppColors.brandPrimary),
+                        Icon(Icons.event_outlined, size: 20, color: context.brandAccent),
                         const SizedBox(width: 10),
-                        Text(
-                          _dueDate == null
-                              ? 'Select Due Date *'
-                              : 'Due Date: ${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}',
-                          style: AppTypography.bodyPrimary,
+                        Expanded(
+                          child: Text(
+                            _dueDate == null
+                                ? 'Select Due Date *'
+                                : 'Due Date: ${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}',
+                            style: AppTypography.bodyPrimary.copyWith(
+                              color: _dueDate == null ? context.textSecondary : context.textPrimary,
+                              fontWeight: _dueDate == null ? FontWeight.normal : FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -313,43 +345,87 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Billing Period Row (Optional)
+                // Billing Period Selectors (High-contrast, touch-friendly cards >= 44px)
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: () => _pickBillingPeriod(context, isStart: true),
-                        icon: const Icon(Icons.date_range, size: 16),
-                        label: Text(
-                          _billingPeriodStart == null
-                              ? 'Period Start'
-                              : '${_billingPeriodStart!.month}/${_billingPeriodStart!.day}/${_billingPeriodStart!.year}',
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
+                      child: InkWell(
+                        key: const Key('billing_period_start_card'),
+                        onTap: () => _pickBillingPeriod(context, isStart: true),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: context.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: context.borderSubtle),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.date_range_outlined, size: 16, color: context.brandAccent),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _billingPeriodStart == null
+                                      ? 'Period Start'
+                                      : '${_billingPeriodStart!.month}/${_billingPeriodStart!.day}/${_billingPeriodStart!.year}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _billingPeriodStart == null ? context.textSecondary : context.textPrimary,
+                                    fontWeight: _billingPeriodStart == null ? FontWeight.normal : FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_billingPeriodStart != null)
+                                GestureDetector(
+                                  onTap: () => setState(() => _billingPeriodStart = null),
+                                  child: Icon(Icons.close, size: 14, color: context.textSecondary),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: () => _pickBillingPeriod(context, isStart: false),
-                        icon: const Icon(Icons.date_range, size: 16),
-                        label: Text(
-                          _billingPeriodEnd == null
-                              ? 'Period End'
-                              : '${_billingPeriodEnd!.month}/${_billingPeriodEnd!.day}/${_billingPeriodEnd!.year}',
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
+                      child: InkWell(
+                        key: const Key('billing_period_end_card'),
+                        onTap: () => _pickBillingPeriod(context, isStart: false),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: context.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: context.borderSubtle),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.date_range_outlined, size: 16, color: context.brandAccent),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _billingPeriodEnd == null
+                                      ? 'Period End'
+                                      : '${_billingPeriodEnd!.month}/${_billingPeriodEnd!.day}/${_billingPeriodEnd!.year}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _billingPeriodEnd == null ? context.textSecondary : context.textPrimary,
+                                    fontWeight: _billingPeriodEnd == null ? FontWeight.normal : FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_billingPeriodEnd != null)
+                                GestureDetector(
+                                  onTap: () => setState(() => _billingPeriodEnd = null),
+                                  child: Icon(Icons.close, size: 14, color: context.textSecondary),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -384,7 +460,7 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppColors.brandOnPrimary,
+                            color: Colors.white,
                           ),
                         )
                       : const Text('Save Bill'),

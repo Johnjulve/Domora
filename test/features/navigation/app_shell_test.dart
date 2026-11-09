@@ -737,7 +737,7 @@ void main() {
 
       // Fill in details
       await tester.enterText(find.widgetWithText(TextFormField, 'Bill Title *'), 'Meralco Electric Bill');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Amount Due (PHP) *'), '3450.50');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Amount Due *'), '3450.50');
       await tester.enterText(find.widgetWithText(TextFormField, 'Provider / Issuer'), 'Meralco Power');
       await tester.enterText(find.widgetWithText(TextFormField, 'Account / Ref No.'), 'ACC-987654');
 

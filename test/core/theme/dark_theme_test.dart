@@ -6,6 +6,10 @@ import 'package:domora/core/services/notification_service.dart';
 import 'package:domora/core/theme/app_colors.dart';
 import 'package:domora/core/theme/app_theme.dart';
 import 'package:domora/core/theme/app_typography.dart';
+import 'package:domora/features/bills/data/bill_repository_impl.dart';
+import 'package:domora/features/bills/domain/bill_item.dart';
+import 'package:domora/features/bills/presentation/add_bill_sheet.dart';
+import 'package:domora/features/bills/presentation/bill_detail_sheet.dart';
 import 'package:domora/features/categories/data/category_repository_impl.dart';
 import 'package:domora/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:domora/features/onboarding/presentation/widgets/storage_choice_step.dart';
@@ -974,6 +978,140 @@ void main() {
       ).first);
       final caughtUpDec = caughtUpCircle.decoration as BoxDecoration;
       expect(caughtUpDec.color, AppTheme.darkSurfaceContainerLow);
+    });
+
+    testWidgets('AddBillSheet and BillDetailSheet render with dark theme tokens, responsive inputs, and high contrast in Dark Mode',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          billRepositoryProvider.overrideWithValue(BillRepositoryImpl(db)),
+          activeAssetsStreamProvider.overrideWith((ref) => Stream.value([])),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // 1. Pump AddBillSheet in Dark Mode
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const Scaffold(
+              body: AddBillSheet(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify AddBillSheet root container has darkSurfaceCard
+      final addBillContainer = tester.widget<Container>(find.descendant(
+        of: find.byType(AddBillSheet),
+        matching: find.byType(Container),
+      ).first);
+      final addBillDec = addBillContainer.decoration as BoxDecoration;
+      expect(addBillDec.color, AppTheme.darkSurfaceCard);
+
+      // Verify responsive Currency selector and non-truncated Amount Due field
+      expect(find.byKey(const Key('bill_currency_dropdown')), findsOneWidget);
+      expect(find.byKey(const Key('bill_amount_due_field')), findsOneWidget);
+      expect(find.text('Amount Due *'), findsOneWidget);
+
+      // Verify Due Date container has darkSurfaceContainerLow and darkBorderSubtle
+      final dueDateFinder = find.ancestor(
+        of: find.textContaining('Due Date:'),
+        matching: find.byType(Container),
+      );
+      expect(dueDateFinder, findsWidgets);
+      final dueDateContainer = tester.widget<Container>(dueDateFinder.first);
+      final dueDateDec = dueDateContainer.decoration as BoxDecoration;
+      expect(dueDateDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((dueDateDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      // Verify Billing Period selector cards have darkSurfaceContainerLow and darkBorderSubtle
+      final periodStartCard = tester.widget<Container>(find.descendant(
+        of: find.byKey(const Key('billing_period_start_card')),
+        matching: find.byType(Container),
+      ).first);
+      final periodStartDec = periodStartCard.decoration as BoxDecoration;
+      expect(periodStartDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((periodStartDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      final periodEndCard = tester.widget<Container>(find.descendant(
+        of: find.byKey(const Key('billing_period_end_card')),
+        matching: find.byType(Container),
+      ).first);
+      final periodEndDec = periodEndCard.decoration as BoxDecoration;
+      expect(periodEndDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((periodEndDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      // 2. Pump BillDetailSheet in Dark Mode
+      final now = DateTime.now().toUtc();
+      final billRecord = Record(
+        id: 'bill-1',
+        workspaceId: AppConstants.defaultWorkspaceId,
+        recordType: 'bill',
+        title: 'Electricity Oct 2026',
+        createdAt: now,
+        updatedAt: now,
+      );
+      final billItem = BillItem(
+        recordId: 'bill-1',
+        utilityType: 'electricity',
+        providerName: 'Meralco',
+        accountNumber: '1092837465',
+        amountDueMinor: 245000,
+        currencyCode: 'PHP',
+        paymentStatus: 'unpaid',
+      );
+      final recordWithBill = RecordWithBill(
+        record: billRecord,
+        bill: billItem,
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: Scaffold(
+              body: BillDetailSheet(item: recordWithBill),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify BillDetailSheet root container has darkSurfaceCard
+      final detailSheetContainer = tester.widget<Container>(find.descendant(
+        of: find.byType(BillDetailSheet),
+        matching: find.byType(Container),
+      ).first);
+      final detailSheetDec = detailSheetContainer.decoration as BoxDecoration;
+      expect(detailSheetDec.color, AppTheme.darkSurfaceCard);
+
+      // Verify header utility icon container has darkSurfaceContainerLow and darkBrandSecondary icon
+      final boltIcon = tester.widget<Icon>(find.byIcon(Icons.bolt));
+      expect(boltIcon.color, AppTheme.darkBrandSecondary);
+
+      final boltContainer = tester.widget<Container>(find.ancestor(
+        of: find.byIcon(Icons.bolt),
+        matching: find.byType(Container),
+      ).first);
+      final boltDec = boltContainer.decoration as BoxDecoration;
+      expect(boltDec.color, AppTheme.darkSurfaceContainerLow);
+
+      // Verify Amount Due value text has darkBrandSecondary
+      final amountDueText = tester.widget<Text>(find.text('PHP 2450.00'));
+      expect(amountDueText.style?.color, AppTheme.darkBrandSecondary);
     });
   });
 }
