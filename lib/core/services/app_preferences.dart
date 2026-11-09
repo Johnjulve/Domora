@@ -87,6 +87,34 @@ class AppPreferences {
     await _save();
   }
 
+  bool get isGoogleDriveBackupEnabled => _data['google_drive_backup_enabled'] == true;
+
+  Future<void> setGoogleDriveBackupEnabled(bool enabled) async {
+    _data['google_drive_backup_enabled'] = enabled;
+    await _save();
+  }
+
+  String? get googleAccountEmail => _data['google_account_email'] as String?;
+
+  Future<void> setGoogleAccountEmail(String? email) async {
+    _data['google_account_email'] = email;
+    await _save();
+  }
+
+  bool get isBackupWifiOnly => _data['backup_wifi_only'] as bool? ?? true;
+
+  Future<void> setBackupWifiOnly(bool wifiOnly) async {
+    _data['backup_wifi_only'] = wifiOnly;
+    await _save();
+  }
+
+  String? get lastBackupTimestamp => _data['last_backup_timestamp'] as String?;
+
+  Future<void> setLastBackupTimestamp(String? timestamp) async {
+    _data['last_backup_timestamp'] = timestamp;
+    await _save();
+  }
+
   Future<void> resetAll() async {
     _data.clear();
     await _save();
