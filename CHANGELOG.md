@@ -5,6 +5,100 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.12] - 2026-11-09
+
+### Added
+- Front-Page Terms of Service & Privacy Policy Mandatory Gate:
+  - Welcome Step Consent Gate: Added an interactive terms agreement section on `WelcomeStep` with a designated checkbox (`terms_acceptance_checkbox`) and formatted links to "Terms of Service" and "Privacy Policy".
+  - Strict Entry Gating: Both "Get Started" and "I already have a backup" actions are strictly disabled (`onPressed: null`) until the user checks the agreement box, preventing unconsented entry into the app.
+  - `TermsAndPrivacySheet`: Sanctuary Archival modal bottom sheet with segmented switcher between "Terms of Service" and "Privacy Policy", outlining Domora's 100% on-device SQLite database, zero tracking, local AES encryption, user-owned Google Drive sandboxed backups (`drive.appdata`), BIP-39 recovery key self-custody, and MIT warranty disclaimers. Includes a primary "I Understand & Agree" action that synchronizes consent directly to the Welcome step.
+  - Persistent Acceptance: Added `hasAcceptedTerms` preference in `AppPreferences` ensuring consent is saved upon proceeding.
+  - Settings Legal Access: Added `terms_and_privacy_tile` under `PRIVACY & SECURITY` in `SettingsProfileScreen` allowing users to review the policies at any time post-onboarding.
+- Visual Contrast & Dark Mode Collision Remediations:
+  - Base Typography Dynamic Color Inheritance: Removed hardcoded `color` properties across all `AppTypography` base styles (`displayHero`, `pageHeader`, `sectionTitle`, `cardTitle`, `bodyPrimary`, `bodySecondary`, `caption`), allowing widgets to inherit the ambient text color from `DefaultTextStyle.of(context)`. Explicitly configured `lightTheme.textTheme` with light tokens and `darkTheme.textTheme` with calibrated dark tokens.
+  - Zero-Boilerplate Theme Extension: Added `SanctuaryThemeContext` on `BuildContext` (`context.isDarkMode`, `context.surfaceCanvas`, `context.surfaceCard`, `context.textPrimary`, `context.textSecondary`, `context.textTertiary`, `context.borderSubtle`, `context.surfaceContainerLow`, `context.brandAccent`).
+  - Onboarding Flow Dark Mode Harmonization: Removed hardcoded canvas backgrounds from `OnboardingScreen` `Scaffold` and `AppBar`. Converted option cards in `StorageChoiceStep` and recovery containers in `RecoveryKeyStep` to `context.surfaceCard`, eliminating white-on-white text collision on Dark Mode canvas. Themed `OnboardingProgressIndicator` active/inactive steps with high contrast tokens.
+  - Records Screen Sheet & Metric Contrast: Updated `AddAssetSheet` and `AssetDetailSheet` container backgrounds to resolve `Theme.of(context).bottomSheetTheme.backgroundColor ?? Theme.of(context).cardColor`, eliminating stark white sheet clash with dark input fields. Replaced `AppColors.brandPrimary` on asset value, maintenance cost, and odometer metrics with `context.brandAccent` (`darkBrandSecondary` `#86CCA4`, achieving 8.9:1 WCAG AAA contrast against `darkSurfaceCard`).
+  - Dark Mode Surface Polish (Batch 2):
+    - `ConnectGoogleDriveConfirmationSheet` (Screen 12): Dynamically resolved modal background, grab handle, Drive icon container, badge container, and 3-Promises box to `context.surfaceContainerLow` and `context.borderSubtle`.
+    - `SecurityStep` Biometric Ring Harmonization: Adapted concentric rings in dark mode with luminous sage alphas and migrated hardware enclave card to contextual tokens.
+    - `AddExpenseSheet` & PMS Scheduling Dialog: Modal sheet surface now resolves adaptive background theme; styled form inputs (title, amount, odometer, notes) with `context.surfaceContainerLow` and contextual borders; converted PMS scheduling dialog to dark card tokens.
+    - `SettingsProfileScreen` Dialogs & Pickers: Converted all 5 settings dialogs (`_openEditProfileModal`, `_openAutoLockDurationPicker`, `_openRecoveryKeyDialog`, `_openDataProtectionModal`, `_openEraseDataConfirmationModal`) and time picker to dark-mode responsive tokens (`ctx.surfaceCard`, `ctx.surfaceContainerLow`, `ctx.borderSubtle`, `ctx.textPrimary`, `ctx.textSecondary`, `ctx.brandAccent`).
+    - `TasksScreen` Sheets & WCAG Contrast: Converted `_AddTaskSheet`, `_TaskDetailSheet`, and snooze modal to adaptive surfaces; task cards and empty states to `context.surfaceCard`; upgraded active cadence dots, action buttons, and spinners to `context.brandAccent` for >8:1 WCAG AA contrast against dark card background.
+    - `VaultScreen` & Document Vault Dark Mode Harmonization: Converted `_VaultFilterChips` to `context.surfaceCard` and `context.textPrimary` with capsule pill borders, eliminating white pill glare and washed-out text on dark canvas. Resolved `AddDocumentSheet` and `DocumentDetailSheet` modal containers to `context.surfaceCard` with transparent bottom sheet backgrounds. Converted document card badges, icon circles, and `_confirmDeleteDocument` dialog to contextual dark tokens.
+    - `AssetPickerTile` & `showAssetPickerModal` Dark Theme Polish: Wrapped modal sheet in `Material` with `context.surfaceCard`, `Clip.antiAlias`, and `context.brandAccent` icons, eliminating hardcoded white surfaces and ink ripple clipping on asset association workflows.
+    - `EmergencyInfoSheet` Dark Theme Harmonization: Resolved sheet root background to `context.surfaceCard` and borders to `context.borderSubtle`, eliminating white modal sheet flash in Dark Mode. Converted grab handle, header shield container, identity card, and child property/bill/document cards to contextual theme tokens (`context.surfaceContainerLow`, `context.surfaceCard`, `context.brandAccent`).
+    - `TodayScreen` Redesign & Bottom Navigation Active Pill (`Today — Dark` Design Parity):
+      - Integrated Top Header Row: Replaced the standard `AppBar` with a custom top header inside `SafeArea` featuring the date caption above the bold greeting headline (`28px`), an `On-device` shield pill (`32px` height) opening `BackupSheet`, and a `44x44` bordered Settings icon button (`14px` radius).
+      - Hero Status & 3-Column Metrics Card: Unified rounded card (`20px` radius) combining the reactive status banner (`"You're all caught up"` / `"Nothing needs your attention today."`) with a 3-column divided metrics row for `Tasks today`, `Overdue`, and `Bills due`.
+      - 2-Column Interactive Summary Cards: Added tappable `Assets tracked` card (navigates to Records tab) and `Spent in [Month]` card (opens Expense logging) with `36x36` icon boxes and trailing chevrons.
+      - 4-Tile "Quick add" Action Grid: Replaced 3-button row with four `80px`-tall cards for `Task`, `Asset`, `Expense`, and `Bill` with `context.brandAccent` icons.
+      - "Set up your sanctuary" Progressive Onboarding Card: Added live `X of 3` progress tracker with 3-segment progress bar and interactive steps (`Add your first asset`, `Attach a receipt or warranty`, `Set a maintenance reminder`).
+      - "Next 30 days" Section: Grouped `Bills & renewals` and `Maintenance` status rows with `Clear` / due count pills and `See all` navigation, while preserving interactive task completion and bill payment tiles underneath when obligations are due.
+      - Bottom Navigation Bar Active Pill (`AppShell`): Added `56x30` rounded pill highlight (`context.brandAccent` at 16% alpha) around active navigation icons with subtle top border.
+    - `AddBillSheet` & `BillDetailSheet` Responsive Overhaul & Dark Theme Polish: Resolved modal sheet containers to `Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard`, eliminating white modal flashes in Dark Mode. Separated Utility Type into its own full-width row with `isExpanded: true` and `context.brandAccent` icons. Replaced cramped 50/50 split with a responsive Currency selector (flex 3) and `Amount Due *` field (flex 7), eliminating mobile label truncation (`Amount Due (PH...)`). Upgraded billing period buttons and due date field into touch-friendly cards ($\ge 44$px and $\ge 48$px min-height) with `context.surfaceContainerLow`, `context.borderSubtle`, `context.brandAccent`, and tap-to-clear actions. Converted payment confirmation and delete dialogs to contextual dark tokens.
+- Sanctuary Archival Dark Theme Engine:
+  - Centralized Semantic Dark Tokens on `AppTheme`: Added 9 dark design constants (`darkSurfaceCanvas`, `darkSurfaceCard`, `darkSurfaceContainerLow`, `darkBorderSubtle`, `darkBrandPrimary`, `darkBrandSecondary`, `darkTextPrimary`, `darkTextSecondary`, `darkTextTertiary`).
+  - Material 3 Dark `ThemeData`: Configured dark canvas (`#121614`), elevated slate cards (`#1A201C`), inputs (`#222925`), and borders (`#2B342F`) matching Sanctuary Archival geometry.
+  - Reactive `themeModeProvider`: State notifier in `app_preferences.dart` coordinating instant app-wide theme switching across `'light'`, `'dark'`, and `'system'` without app restarts.
+  - Connected `MaterialApp` in `main.dart` with `theme: AppTheme.lightTheme`, `darkTheme: AppTheme.darkTheme`, and `themeMode: themeMode`.
+  - Upgraded Appearance Segmented Control in `SettingsProfileScreen` to dynamically highlight active theme and reactively trigger theme switches.
+- Direct APK 1-Tap Download on GitHub Release Update Checker:
+  - Extracted release asset parsing engine checking for binaries ending in `.apk` with non-null `browser_download_url`.
+  - Prominent "Download APK" button with `Icons.download_rounded` launching direct APK download via `LaunchMode.externalApplication`.
+  - Honest fallback to "View Release" with `Icons.open_in_new_rounded` when an update tag has no uploaded APK asset yet.
+- Native Biometric Hardware Enclave Authentication & App Lock Engine (Stage 11):
+  - Integrated `local_auth` cross-platform biometric framework and updated Android `MainActivity` to `FlutterFragmentActivity` to support hardware enclave biometric dialogs.
+  - `BiometricService`: Safe platform wrapper providing `isDeviceSupported`, `canCheckBiometrics`, and `authenticate` with defensive fallback on unsupported platforms and unit test harnesses.
+  - `AppLockScreen` (Screen 4): Sanctuary-designed lock screen with warm canvas, concentric sage circle branding, fingerprint glyph, and primary "Unlock with Biometrics" trigger plus "Quick Unlock (Alpha Fallback)".
+  - Lifecycle Auto-Lock Observer: `WidgetsBindingObserver` in `main.dart` monitoring backgrounding elapsed time against configured `autoLockDuration` ('Immediately', 'After 1 minute', 'After 5 minutes', 'After 15 minutes') to automatically re-lock the vault.
+  - Navigator Leak Protection: Implemented global lock overlay via `MaterialApp.builder` and `Offstage`, ensuring all backgrounded routes, dialogs, and sheets are completely concealed while locked and restored intact upon authentication.
+  - Onboarding Security Step Integration: Removed under-construction notice on `SecurityStep` biometric shield, allowing direct toggle and live visual feedback.
+- Google Drive Cloud Redundancy UI & Zero-Knowledge Confirmation Sheet (Design Screens 11 & 12):
+  - Live Google OAuth2 Web Client ID Integration: Added `google_sign_in: ^7.2.0`, configured Client ID `767402822106-btgbm208ccgv8n6fsh2g8umnajsimg44.apps.googleusercontent.com` in `web/index.html` meta tags and `GoogleAuthService`.
+  - Sandboxed `drive.appdata` Scope: Restricts authorization strictly to Domora's isolated application folder on Google Drive, preserving complete zero-knowledge isolation from personal user documents.
+  - `ConnectGoogleDriveConfirmationSheet` (Screen 12): Upgraded to interactive stateful modal with `PopScope(canPop: !_isLoading)` gesture lock during in-flight OAuth2 handshake, real-time loading feedback, error fallback snackbars, and authentic account email resolution (`account.email`).
+  - Settings Backup & Restore Active State (Screen 11): Interactive Google Drive Backup card displaying active/paused status, connected email badge, master synchronization switch, "Back up on Wi-Fi only" toggle, and "Back up now" manual trigger with honest timestamp tracking.
+  - 12-Word Recovery Passphrase Sheet: Added "Recovery Key" access row under the active Google Drive card allowing users to review and copy their BIP-39 recovery passphrase anytime.
+  - Sign Out & Disconnect Flow: Added "Sign out of Google" action safely disconnecting from `GoogleSignIn`, clearing account metadata, and reverting storage mode to pure local offline.
+  - Onboarding Integration: Replaced under-construction placeholder on Option 2 ("Continue with Google") in `StorageChoiceStep` with direct launch of `ConnectGoogleDriveConfirmationSheet`.
+  - Refactored `_buildBackupCard` with extracted row components (`_buildExportDataRow`, `_buildPrintEmergencySheetRow`, `_buildSanctuaryRestoreRow`), ensuring consistent access to JSON vault snapshots and emergency info in both connected and disconnected states.
+- Emergency Household Dossier & Export Engine (Stage 11):
+  - `EmergencyInfoSheet` Sanctuary-styled modal bottom sheet compiling critical household information for family or executors.
+  - Reactive extraction of household identity (name & address from `AppPreferences`), essential property & vehicles with VIN/plate and serials, utility obligations & account numbers, and vital documents/policies with registration metadata.
+  - Unfiltered Cross-Feature Stream Binding: Wired to `dashboardBillsStreamProvider` and `dashboardDocumentsStreamProvider` to guarantee transient UI tab filters do not inadvertently mask utility accounts or legal deeds in the dossier.
+  - 1-Tap "Copy Dossier" Action: Formats an organized markdown/plain-text emergency dossier with timestamps and writes directly to system clipboard (`Clipboard.setData`) with visual SnackBar feedback.
+  - Robust UI Protections: Fully tokenized with Sanctuary design tokens (`AppColors`, `AppTypography`), layout overflow protection for long addresses, and solid `AppColors.surfaceCard` with `AppTheme.sheetRadius` (24px).
+  - Integrated into `SettingsProfileScreen` replacing legacy under-construction notice on the 'Print Emergency Info Sheet' row.
+- UI Versioning Standardization:
+  - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
+  - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
+- Flexible Asset Management & Category Engine (Blueprint Alignment):
+  - Drift SQLite Schema Migration (v7 -> v8):
+    - Added `warrantyExpiryDate` (nullable DateTime) to `Assets` table.
+    - Added `archivedAt` (nullable DateTime) to `Categories` table for soft-archival without data loss.
+    - Created relational `FieldDefinitions` and `FieldValues` tables with foreign keys and cascading delete for typed user-defined and template custom fields.
+    - Verified non-destructive migration on legacy databases and existing vehicle/property records.
+  - Category Architecture Expansion:
+    - Added built-in seed categories for `Furniture` (`cat-furniture`) and `Tools` (`cat-tools`), expanding system categories to 7.
+    - Preserved existing `Family` records while isolating asset workflows to valid physical asset templates.
+    - Added category management capabilities (`createCategory`, `archiveCategory`, `renameCategory`) with in-sheet `+ Add New Category` creation dialog.
+  - Category-Adaptive Form UX (`AddAssetSheet` & `AssetDetailSheet`):
+    - Replaced fixed one-size-fits-all form with adaptive category templates:
+      - **Vehicle**: License plate (custom field), odometer, PMS distance & time intervals. Strictly isolates PMS schedule generation to vehicles (`cat-vehicles`).
+      - **Property**: Address / location, Title / Deed number (custom field).
+      - **Appliance & Electronics**: Brand, model, serial number, warranty expiry date.
+      - **Furniture & Tools**: Material / construction details, room / placement location, condition.
+      - **General**: Streamlined universal fields.
+    - Non-destructive category switching: changing categories preserves user-entered data without discarding inputs.
+    - ISO 4217 Currency Selection: Replaced hardcoded PHP with explicit multi-currency selector (`PHP`, `USD`, `EUR`, `JPY`, `GBP`, `SGD`, `AUD`, `CAD`) storing integer minor units.
+    - Collapsible Sheet UX: "Warranty, Dates & Notes" and "Custom Fields" accordions keeping core fields within 600px viewport.
+    - Detailed Inspection: `AssetDetailSheet` displays active/expired warranty badges, multiline notes, and custom key-value attributes.
+  - Backup & Restore Compatibility:
+    - Serialized `fieldDefinitions`, `fieldValues`, `warrantyExpiryDate`, and `archivedAt` into `BackupPayload` with SHA-256 integrity checksum.
+    - Enforced reverse foreign-key deletion ordering in `restoreBackup` under `PRAGMA foreign_keys = ON` preventing constraint violations.
+- 75 new automated unit, repository, migration, and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, native biometric lock enforcement, dark theme switching, visual contrast collision verification, mandatory terms consent gating, flexible asset templates, Document Vault dark theme contrast, Today dashboard metrics contrast, and Utility Bills responsive dark theme layout (181 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.11] - 2026-11-09
 
 ### Added

@@ -6,7 +6,18 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Workspaces, Categories, Records, Assets, Tasks, Documents, Expenses, Bills])
+@DriftDatabase(tables: [
+  Workspaces,
+  Categories,
+  Records,
+  Assets,
+  Tasks,
+  Documents,
+  Expenses,
+  Bills,
+  FieldDefinitions,
+  FieldValues,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -46,6 +57,12 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(assets, assets.nextPmsDueDate);
           await m.addColumn(assets, assets.nextPmsOdometerTarget);
           await m.addColumn(expenses, expenses.odometerReading);
+        }
+        if (from < 8) {
+          await m.addColumn(assets, assets.warrantyExpiryDate);
+          await m.addColumn(categories, categories.archivedAt);
+          await m.createTable(fieldDefinitions);
+          await m.createTable(fieldValues);
         }
       },
       beforeOpen: (details) async {

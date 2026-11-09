@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/database_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../records/presentation/records_screen.dart';
 import '../tasks/presentation/tasks_screen.dart';
 import '../today/presentation/today_screen.dart';
@@ -51,31 +52,84 @@ class AppShell extends ConsumerWidget {
           index: selectedIndex,
           children: screens,
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: selectedIndex,
-          onTap: (index) => ref.read(selectedTabIndexProvider.notifier).setIndex(index),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.wb_sunny_outlined),
-              activeIcon: Icon(Icons.wb_sunny),
-              label: 'Today',
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: context.surfaceCard,
+            border: Border(
+              top: BorderSide(color: context.borderSubtle),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.inventory_2_outlined),
-              activeIcon: Icon(Icons.inventory_2),
-              label: 'Records',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.lock_outline),
-              activeIcon: Icon(Icons.lock),
-              label: 'Vault',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.checklist_outlined),
-              activeIcon: Icon(Icons.checklist),
-              label: 'Tasks',
-            ),
-          ],
+          ),
+          child: BottomNavigationBar(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            type: BottomNavigationBarType.fixed,
+            currentIndex: selectedIndex,
+            onTap: (index) => ref.read(selectedTabIndexProvider.notifier).setIndex(index),
+            selectedItemColor: context.textPrimary,
+            unselectedItemColor: context.textSecondary,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            items: [
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.wb_sunny_outlined),
+                activeIcon: Container(
+                  width: 56,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: context.brandAccent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(Icons.wb_sunny, color: context.brandAccent),
+                ),
+                label: 'Today',
+              ),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.inventory_2_outlined),
+                activeIcon: Container(
+                  width: 56,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: context.brandAccent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(Icons.inventory_2, color: context.brandAccent),
+                ),
+                label: 'Records',
+              ),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.lock_outline),
+                activeIcon: Container(
+                  width: 56,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: context.brandAccent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(Icons.lock, color: context.brandAccent),
+                ),
+                label: 'Vault',
+              ),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.checklist_outlined),
+                activeIcon: Container(
+                  width: 56,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: context.brandAccent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(Icons.checklist, color: context.brandAccent),
+                ),
+                label: 'Tasks',
+              ),
+            ],
+          ),
         ),
       ),
     );

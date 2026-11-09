@@ -214,23 +214,23 @@ void main() {
       expect(find.text('Feature Under Construction'), findsNothing);
     });
 
-    testWidgets('Print Emergency Info Sheet triggers Under Construction notice',
+    testWidgets('Print Emergency Info Sheet opens EmergencyInfoSheet',
         (WidgetTester tester) async {
       await tester.pumpWidget(buildTestableScreen());
       await tester.pumpAndSettle();
 
       await scrollAndTap(tester, find.byKey(const Key('print_emergency_sheet_row')));
 
-      expect(find.text('Feature Under Construction'), findsOneWidget);
-      expect(
-        find.text('Print Emergency Info Sheet is currently scheduled for implementation in Phase 2.'),
-        findsOneWidget,
-      );
+      expect(find.text('Emergency Household Dossier'), findsOneWidget);
+      expect(find.byKey(const Key('emergency_info_sheet')), findsOneWidget);
 
-      await tester.tap(find.text('Understood'));
+      await tester.tap(find.byKey(const Key('close_dossier_button')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Feature Under Construction'), findsNothing);
+      expect(find.byKey(const Key('emergency_info_sheet')), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 200));
     });
 
     testWidgets('Data protection reassurance link opens explainer modal', (WidgetTester tester) async {

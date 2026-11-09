@@ -566,6 +566,17 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _archivedAtMeta = const VerificationMeta(
+    'archivedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> archivedAt = GeneratedColumn<DateTime>(
+    'archived_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -575,6 +586,7 @@ class $CategoriesTable extends Categories
     colorHex,
     isSystem,
     createdAt,
+    archivedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -638,6 +650,12 @@ class $CategoriesTable extends Categories
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('archived_at')) {
+      context.handle(
+        _archivedAtMeta,
+        archivedAt.isAcceptableOrUnknown(data['archived_at']!, _archivedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -675,6 +693,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      archivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}archived_at'],
+      ),
     );
   }
 
@@ -692,6 +714,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
   final String? colorHex;
   final bool isSystem;
   final DateTime createdAt;
+  final DateTime? archivedAt;
   const CategoryEntity({
     required this.id,
     required this.workspaceId,
@@ -700,6 +723,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     this.colorHex,
     required this.isSystem,
     required this.createdAt,
+    this.archivedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -715,6 +739,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     }
     map['is_system'] = Variable<bool>(isSystem);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || archivedAt != null) {
+      map['archived_at'] = Variable<DateTime>(archivedAt);
+    }
     return map;
   }
 
@@ -731,6 +758,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           : Value(colorHex),
       isSystem: Value(isSystem),
       createdAt: Value(createdAt),
+      archivedAt: archivedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(archivedAt),
     );
   }
 
@@ -747,6 +777,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       colorHex: serializer.fromJson<String?>(json['colorHex']),
       isSystem: serializer.fromJson<bool>(json['isSystem']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
     );
   }
   @override
@@ -760,6 +791,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       'colorHex': serializer.toJson<String?>(colorHex),
       'isSystem': serializer.toJson<bool>(isSystem),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'archivedAt': serializer.toJson<DateTime?>(archivedAt),
     };
   }
 
@@ -771,6 +803,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     Value<String?> colorHex = const Value.absent(),
     bool? isSystem,
     DateTime? createdAt,
+    Value<DateTime?> archivedAt = const Value.absent(),
   }) => CategoryEntity(
     id: id ?? this.id,
     workspaceId: workspaceId ?? this.workspaceId,
@@ -779,6 +812,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     colorHex: colorHex.present ? colorHex.value : this.colorHex,
     isSystem: isSystem ?? this.isSystem,
     createdAt: createdAt ?? this.createdAt,
+    archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
   );
   CategoryEntity copyWithCompanion(CategoriesCompanion data) {
     return CategoryEntity(
@@ -791,6 +825,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       isSystem: data.isSystem.present ? data.isSystem.value : this.isSystem,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      archivedAt: data.archivedAt.present
+          ? data.archivedAt.value
+          : this.archivedAt,
     );
   }
 
@@ -803,7 +840,8 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           ..write('iconKey: $iconKey, ')
           ..write('colorHex: $colorHex, ')
           ..write('isSystem: $isSystem, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('archivedAt: $archivedAt')
           ..write(')'))
         .toString();
   }
@@ -817,6 +855,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     colorHex,
     isSystem,
     createdAt,
+    archivedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -828,7 +867,8 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           other.iconKey == this.iconKey &&
           other.colorHex == this.colorHex &&
           other.isSystem == this.isSystem &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.archivedAt == this.archivedAt);
 }
 
 class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
@@ -839,6 +879,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
   final Value<String?> colorHex;
   final Value<bool> isSystem;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> archivedAt;
   final Value<int> rowid;
   const CategoriesCompanion({
     this.id = const Value.absent(),
@@ -848,6 +889,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     this.colorHex = const Value.absent(),
     this.isSystem = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CategoriesCompanion.insert({
@@ -858,6 +900,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     this.colorHex = const Value.absent(),
     this.isSystem = const Value.absent(),
     required DateTime createdAt,
+    this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        workspaceId = Value(workspaceId),
@@ -871,6 +914,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     Expression<String>? colorHex,
     Expression<bool>? isSystem,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? archivedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -881,6 +925,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
       if (colorHex != null) 'color_hex': colorHex,
       if (isSystem != null) 'is_system': isSystem,
       if (createdAt != null) 'created_at': createdAt,
+      if (archivedAt != null) 'archived_at': archivedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -893,6 +938,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     Value<String?>? colorHex,
     Value<bool>? isSystem,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? archivedAt,
     Value<int>? rowid,
   }) {
     return CategoriesCompanion(
@@ -903,6 +949,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
       colorHex: colorHex ?? this.colorHex,
       isSystem: isSystem ?? this.isSystem,
       createdAt: createdAt ?? this.createdAt,
+      archivedAt: archivedAt ?? this.archivedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -931,6 +978,9 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (archivedAt.present) {
+      map['archived_at'] = Variable<DateTime>(archivedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -947,6 +997,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
           ..write('colorHex: $colorHex, ')
           ..write('isSystem: $isSystem, ')
           ..write('createdAt: $createdAt, ')
+          ..write('archivedAt: $archivedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1811,6 +1862,17 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _warrantyExpiryDateMeta =
+      const VerificationMeta('warrantyExpiryDate');
+  @override
+  late final GeneratedColumn<DateTime> warrantyExpiryDate =
+      GeneratedColumn<DateTime>(
+        'warranty_expiry_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     recordId,
@@ -1829,6 +1891,7 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
     pmsTimeIntervalMonths,
     nextPmsDueDate,
     nextPmsOdometerTarget,
+    warrantyExpiryDate,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1973,6 +2036,15 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
         ),
       );
     }
+    if (data.containsKey('warranty_expiry_date')) {
+      context.handle(
+        _warrantyExpiryDateMeta,
+        warrantyExpiryDate.isAcceptableOrUnknown(
+          data['warranty_expiry_date']!,
+          _warrantyExpiryDateMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2046,6 +2118,10 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetEntity> {
         DriftSqlType.int,
         data['${effectivePrefix}next_pms_odometer_target'],
       ),
+      warrantyExpiryDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}warranty_expiry_date'],
+      ),
     );
   }
 
@@ -2072,6 +2148,7 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
   final int? pmsTimeIntervalMonths;
   final DateTime? nextPmsDueDate;
   final int? nextPmsOdometerTarget;
+  final DateTime? warrantyExpiryDate;
   const AssetEntity({
     required this.recordId,
     this.purchaseDate,
@@ -2089,6 +2166,7 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     this.pmsTimeIntervalMonths,
     this.nextPmsDueDate,
     this.nextPmsOdometerTarget,
+    this.warrantyExpiryDate,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2138,6 +2216,9 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     }
     if (!nullToAbsent || nextPmsOdometerTarget != null) {
       map['next_pms_odometer_target'] = Variable<int>(nextPmsOdometerTarget);
+    }
+    if (!nullToAbsent || warrantyExpiryDate != null) {
+      map['warranty_expiry_date'] = Variable<DateTime>(warrantyExpiryDate);
     }
     return map;
   }
@@ -2190,6 +2271,9 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       nextPmsOdometerTarget: nextPmsOdometerTarget == null && nullToAbsent
           ? const Value.absent()
           : Value(nextPmsOdometerTarget),
+      warrantyExpiryDate: warrantyExpiryDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(warrantyExpiryDate),
     );
   }
 
@@ -2225,6 +2309,9 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       nextPmsOdometerTarget: serializer.fromJson<int?>(
         json['nextPmsOdometerTarget'],
       ),
+      warrantyExpiryDate: serializer.fromJson<DateTime?>(
+        json['warrantyExpiryDate'],
+      ),
     );
   }
   @override
@@ -2247,6 +2334,7 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       'pmsTimeIntervalMonths': serializer.toJson<int?>(pmsTimeIntervalMonths),
       'nextPmsDueDate': serializer.toJson<DateTime?>(nextPmsDueDate),
       'nextPmsOdometerTarget': serializer.toJson<int?>(nextPmsOdometerTarget),
+      'warrantyExpiryDate': serializer.toJson<DateTime?>(warrantyExpiryDate),
     };
   }
 
@@ -2267,6 +2355,7 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     Value<int?> pmsTimeIntervalMonths = const Value.absent(),
     Value<DateTime?> nextPmsDueDate = const Value.absent(),
     Value<int?> nextPmsOdometerTarget = const Value.absent(),
+    Value<DateTime?> warrantyExpiryDate = const Value.absent(),
   }) => AssetEntity(
     recordId: recordId ?? this.recordId,
     purchaseDate: purchaseDate.present ? purchaseDate.value : this.purchaseDate,
@@ -2300,6 +2389,9 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     nextPmsOdometerTarget: nextPmsOdometerTarget.present
         ? nextPmsOdometerTarget.value
         : this.nextPmsOdometerTarget,
+    warrantyExpiryDate: warrantyExpiryDate.present
+        ? warrantyExpiryDate.value
+        : this.warrantyExpiryDate,
   );
   AssetEntity copyWithCompanion(AssetsCompanion data) {
     return AssetEntity(
@@ -2343,6 +2435,9 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
       nextPmsOdometerTarget: data.nextPmsOdometerTarget.present
           ? data.nextPmsOdometerTarget.value
           : this.nextPmsOdometerTarget,
+      warrantyExpiryDate: data.warrantyExpiryDate.present
+          ? data.warrantyExpiryDate.value
+          : this.warrantyExpiryDate,
     );
   }
 
@@ -2364,7 +2459,8 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
           ..write('pmsDistanceIntervalKm: $pmsDistanceIntervalKm, ')
           ..write('pmsTimeIntervalMonths: $pmsTimeIntervalMonths, ')
           ..write('nextPmsDueDate: $nextPmsDueDate, ')
-          ..write('nextPmsOdometerTarget: $nextPmsOdometerTarget')
+          ..write('nextPmsOdometerTarget: $nextPmsOdometerTarget, ')
+          ..write('warrantyExpiryDate: $warrantyExpiryDate')
           ..write(')'))
         .toString();
   }
@@ -2387,6 +2483,7 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
     pmsTimeIntervalMonths,
     nextPmsDueDate,
     nextPmsOdometerTarget,
+    warrantyExpiryDate,
   );
   @override
   bool operator ==(Object other) =>
@@ -2407,7 +2504,8 @@ class AssetEntity extends DataClass implements Insertable<AssetEntity> {
           other.pmsDistanceIntervalKm == this.pmsDistanceIntervalKm &&
           other.pmsTimeIntervalMonths == this.pmsTimeIntervalMonths &&
           other.nextPmsDueDate == this.nextPmsDueDate &&
-          other.nextPmsOdometerTarget == this.nextPmsOdometerTarget);
+          other.nextPmsOdometerTarget == this.nextPmsOdometerTarget &&
+          other.warrantyExpiryDate == this.warrantyExpiryDate);
 }
 
 class AssetsCompanion extends UpdateCompanion<AssetEntity> {
@@ -2427,6 +2525,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
   final Value<int?> pmsTimeIntervalMonths;
   final Value<DateTime?> nextPmsDueDate;
   final Value<int?> nextPmsOdometerTarget;
+  final Value<DateTime?> warrantyExpiryDate;
   final Value<int> rowid;
   const AssetsCompanion({
     this.recordId = const Value.absent(),
@@ -2445,6 +2544,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     this.pmsTimeIntervalMonths = const Value.absent(),
     this.nextPmsDueDate = const Value.absent(),
     this.nextPmsOdometerTarget = const Value.absent(),
+    this.warrantyExpiryDate = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AssetsCompanion.insert({
@@ -2464,6 +2564,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     this.pmsTimeIntervalMonths = const Value.absent(),
     this.nextPmsDueDate = const Value.absent(),
     this.nextPmsOdometerTarget = const Value.absent(),
+    this.warrantyExpiryDate = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : recordId = Value(recordId);
   static Insertable<AssetEntity> custom({
@@ -2483,6 +2584,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     Expression<int>? pmsTimeIntervalMonths,
     Expression<DateTime>? nextPmsDueDate,
     Expression<int>? nextPmsOdometerTarget,
+    Expression<DateTime>? warrantyExpiryDate,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2507,6 +2609,8 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
       if (nextPmsDueDate != null) 'next_pms_due_date': nextPmsDueDate,
       if (nextPmsOdometerTarget != null)
         'next_pms_odometer_target': nextPmsOdometerTarget,
+      if (warrantyExpiryDate != null)
+        'warranty_expiry_date': warrantyExpiryDate,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2528,6 +2632,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
     Value<int?>? pmsTimeIntervalMonths,
     Value<DateTime?>? nextPmsDueDate,
     Value<int?>? nextPmsOdometerTarget,
+    Value<DateTime?>? warrantyExpiryDate,
     Value<int>? rowid,
   }) {
     return AssetsCompanion(
@@ -2550,6 +2655,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
       nextPmsDueDate: nextPmsDueDate ?? this.nextPmsDueDate,
       nextPmsOdometerTarget:
           nextPmsOdometerTarget ?? this.nextPmsOdometerTarget,
+      warrantyExpiryDate: warrantyExpiryDate ?? this.warrantyExpiryDate,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2611,6 +2717,11 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
         nextPmsOdometerTarget.value,
       );
     }
+    if (warrantyExpiryDate.present) {
+      map['warranty_expiry_date'] = Variable<DateTime>(
+        warrantyExpiryDate.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2636,6 +2747,7 @@ class AssetsCompanion extends UpdateCompanion<AssetEntity> {
           ..write('pmsTimeIntervalMonths: $pmsTimeIntervalMonths, ')
           ..write('nextPmsDueDate: $nextPmsDueDate, ')
           ..write('nextPmsOdometerTarget: $nextPmsOdometerTarget, ')
+          ..write('warrantyExpiryDate: $warrantyExpiryDate, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5177,6 +5289,969 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
   }
 }
 
+class $FieldDefinitionsTable extends FieldDefinitions
+    with TableInfo<$FieldDefinitionsTable, FieldDefinitionEntity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FieldDefinitionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _workspaceIdMeta = const VerificationMeta(
+    'workspaceId',
+  );
+  @override
+  late final GeneratedColumn<String> workspaceId = GeneratedColumn<String>(
+    'workspace_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES workspaces (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _fieldKeyMeta = const VerificationMeta(
+    'fieldKey',
+  );
+  @override
+  late final GeneratedColumn<String> fieldKey = GeneratedColumn<String>(
+    'field_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 100,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 255,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataTypeMeta = const VerificationMeta(
+    'dataType',
+  );
+  @override
+  late final GeneratedColumn<String> dataType = GeneratedColumn<String>(
+    'data_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('text'),
+  );
+  static const VerificationMeta _displayOrderMeta = const VerificationMeta(
+    'displayOrder',
+  );
+  @override
+  late final GeneratedColumn<int> displayOrder = GeneratedColumn<int>(
+    'display_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    workspaceId,
+    categoryId,
+    fieldKey,
+    label,
+    dataType,
+    displayOrder,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'field_definitions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FieldDefinitionEntity> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('workspace_id')) {
+      context.handle(
+        _workspaceIdMeta,
+        workspaceId.isAcceptableOrUnknown(
+          data['workspace_id']!,
+          _workspaceIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_workspaceIdMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('field_key')) {
+      context.handle(
+        _fieldKeyMeta,
+        fieldKey.isAcceptableOrUnknown(data['field_key']!, _fieldKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fieldKeyMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('data_type')) {
+      context.handle(
+        _dataTypeMeta,
+        dataType.isAcceptableOrUnknown(data['data_type']!, _dataTypeMeta),
+      );
+    }
+    if (data.containsKey('display_order')) {
+      context.handle(
+        _displayOrderMeta,
+        displayOrder.isAcceptableOrUnknown(
+          data['display_order']!,
+          _displayOrderMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FieldDefinitionEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FieldDefinitionEntity(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      workspaceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}workspace_id'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      fieldKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}field_key'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      dataType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}data_type'],
+      )!,
+      displayOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}display_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $FieldDefinitionsTable createAlias(String alias) {
+    return $FieldDefinitionsTable(attachedDatabase, alias);
+  }
+}
+
+class FieldDefinitionEntity extends DataClass
+    implements Insertable<FieldDefinitionEntity> {
+  final String id;
+  final String workspaceId;
+  final String? categoryId;
+  final String fieldKey;
+  final String label;
+  final String dataType;
+  final int displayOrder;
+  final DateTime createdAt;
+  const FieldDefinitionEntity({
+    required this.id,
+    required this.workspaceId,
+    this.categoryId,
+    required this.fieldKey,
+    required this.label,
+    required this.dataType,
+    required this.displayOrder,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['workspace_id'] = Variable<String>(workspaceId);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    map['field_key'] = Variable<String>(fieldKey);
+    map['label'] = Variable<String>(label);
+    map['data_type'] = Variable<String>(dataType);
+    map['display_order'] = Variable<int>(displayOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  FieldDefinitionsCompanion toCompanion(bool nullToAbsent) {
+    return FieldDefinitionsCompanion(
+      id: Value(id),
+      workspaceId: Value(workspaceId),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      fieldKey: Value(fieldKey),
+      label: Value(label),
+      dataType: Value(dataType),
+      displayOrder: Value(displayOrder),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory FieldDefinitionEntity.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FieldDefinitionEntity(
+      id: serializer.fromJson<String>(json['id']),
+      workspaceId: serializer.fromJson<String>(json['workspaceId']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      fieldKey: serializer.fromJson<String>(json['fieldKey']),
+      label: serializer.fromJson<String>(json['label']),
+      dataType: serializer.fromJson<String>(json['dataType']),
+      displayOrder: serializer.fromJson<int>(json['displayOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'workspaceId': serializer.toJson<String>(workspaceId),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'fieldKey': serializer.toJson<String>(fieldKey),
+      'label': serializer.toJson<String>(label),
+      'dataType': serializer.toJson<String>(dataType),
+      'displayOrder': serializer.toJson<int>(displayOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  FieldDefinitionEntity copyWith({
+    String? id,
+    String? workspaceId,
+    Value<String?> categoryId = const Value.absent(),
+    String? fieldKey,
+    String? label,
+    String? dataType,
+    int? displayOrder,
+    DateTime? createdAt,
+  }) => FieldDefinitionEntity(
+    id: id ?? this.id,
+    workspaceId: workspaceId ?? this.workspaceId,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    fieldKey: fieldKey ?? this.fieldKey,
+    label: label ?? this.label,
+    dataType: dataType ?? this.dataType,
+    displayOrder: displayOrder ?? this.displayOrder,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  FieldDefinitionEntity copyWithCompanion(FieldDefinitionsCompanion data) {
+    return FieldDefinitionEntity(
+      id: data.id.present ? data.id.value : this.id,
+      workspaceId: data.workspaceId.present
+          ? data.workspaceId.value
+          : this.workspaceId,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      fieldKey: data.fieldKey.present ? data.fieldKey.value : this.fieldKey,
+      label: data.label.present ? data.label.value : this.label,
+      dataType: data.dataType.present ? data.dataType.value : this.dataType,
+      displayOrder: data.displayOrder.present
+          ? data.displayOrder.value
+          : this.displayOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldDefinitionEntity(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fieldKey: $fieldKey, ')
+          ..write('label: $label, ')
+          ..write('dataType: $dataType, ')
+          ..write('displayOrder: $displayOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    workspaceId,
+    categoryId,
+    fieldKey,
+    label,
+    dataType,
+    displayOrder,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FieldDefinitionEntity &&
+          other.id == this.id &&
+          other.workspaceId == this.workspaceId &&
+          other.categoryId == this.categoryId &&
+          other.fieldKey == this.fieldKey &&
+          other.label == this.label &&
+          other.dataType == this.dataType &&
+          other.displayOrder == this.displayOrder &&
+          other.createdAt == this.createdAt);
+}
+
+class FieldDefinitionsCompanion extends UpdateCompanion<FieldDefinitionEntity> {
+  final Value<String> id;
+  final Value<String> workspaceId;
+  final Value<String?> categoryId;
+  final Value<String> fieldKey;
+  final Value<String> label;
+  final Value<String> dataType;
+  final Value<int> displayOrder;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const FieldDefinitionsCompanion({
+    this.id = const Value.absent(),
+    this.workspaceId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.fieldKey = const Value.absent(),
+    this.label = const Value.absent(),
+    this.dataType = const Value.absent(),
+    this.displayOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FieldDefinitionsCompanion.insert({
+    required String id,
+    required String workspaceId,
+    this.categoryId = const Value.absent(),
+    required String fieldKey,
+    required String label,
+    this.dataType = const Value.absent(),
+    this.displayOrder = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       workspaceId = Value(workspaceId),
+       fieldKey = Value(fieldKey),
+       label = Value(label),
+       createdAt = Value(createdAt);
+  static Insertable<FieldDefinitionEntity> custom({
+    Expression<String>? id,
+    Expression<String>? workspaceId,
+    Expression<String>? categoryId,
+    Expression<String>? fieldKey,
+    Expression<String>? label,
+    Expression<String>? dataType,
+    Expression<int>? displayOrder,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (workspaceId != null) 'workspace_id': workspaceId,
+      if (categoryId != null) 'category_id': categoryId,
+      if (fieldKey != null) 'field_key': fieldKey,
+      if (label != null) 'label': label,
+      if (dataType != null) 'data_type': dataType,
+      if (displayOrder != null) 'display_order': displayOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FieldDefinitionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? workspaceId,
+    Value<String?>? categoryId,
+    Value<String>? fieldKey,
+    Value<String>? label,
+    Value<String>? dataType,
+    Value<int>? displayOrder,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return FieldDefinitionsCompanion(
+      id: id ?? this.id,
+      workspaceId: workspaceId ?? this.workspaceId,
+      categoryId: categoryId ?? this.categoryId,
+      fieldKey: fieldKey ?? this.fieldKey,
+      label: label ?? this.label,
+      dataType: dataType ?? this.dataType,
+      displayOrder: displayOrder ?? this.displayOrder,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (workspaceId.present) {
+      map['workspace_id'] = Variable<String>(workspaceId.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (fieldKey.present) {
+      map['field_key'] = Variable<String>(fieldKey.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (dataType.present) {
+      map['data_type'] = Variable<String>(dataType.value);
+    }
+    if (displayOrder.present) {
+      map['display_order'] = Variable<int>(displayOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldDefinitionsCompanion(')
+          ..write('id: $id, ')
+          ..write('workspaceId: $workspaceId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fieldKey: $fieldKey, ')
+          ..write('label: $label, ')
+          ..write('dataType: $dataType, ')
+          ..write('displayOrder: $displayOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FieldValuesTable extends FieldValues
+    with TableInfo<$FieldValuesTable, FieldValueEntity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FieldValuesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordIdMeta = const VerificationMeta(
+    'recordId',
+  );
+  @override
+  late final GeneratedColumn<String> recordId = GeneratedColumn<String>(
+    'record_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES records (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _fieldDefinitionIdMeta = const VerificationMeta(
+    'fieldDefinitionId',
+  );
+  @override
+  late final GeneratedColumn<String> fieldDefinitionId =
+      GeneratedColumn<String>(
+        'field_definition_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES field_definitions (id) ON DELETE CASCADE',
+        ),
+      );
+  static const VerificationMeta _valueTextMeta = const VerificationMeta(
+    'valueText',
+  );
+  @override
+  late final GeneratedColumn<String> valueText = GeneratedColumn<String>(
+    'value_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    recordId,
+    fieldDefinitionId,
+    valueText,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'field_values';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FieldValueEntity> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('record_id')) {
+      context.handle(
+        _recordIdMeta,
+        recordId.isAcceptableOrUnknown(data['record_id']!, _recordIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordIdMeta);
+    }
+    if (data.containsKey('field_definition_id')) {
+      context.handle(
+        _fieldDefinitionIdMeta,
+        fieldDefinitionId.isAcceptableOrUnknown(
+          data['field_definition_id']!,
+          _fieldDefinitionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fieldDefinitionIdMeta);
+    }
+    if (data.containsKey('value_text')) {
+      context.handle(
+        _valueTextMeta,
+        valueText.isAcceptableOrUnknown(data['value_text']!, _valueTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueTextMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FieldValueEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FieldValueEntity(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      recordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_id'],
+      )!,
+      fieldDefinitionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}field_definition_id'],
+      )!,
+      valueText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value_text'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $FieldValuesTable createAlias(String alias) {
+    return $FieldValuesTable(attachedDatabase, alias);
+  }
+}
+
+class FieldValueEntity extends DataClass
+    implements Insertable<FieldValueEntity> {
+  final String id;
+  final String recordId;
+  final String fieldDefinitionId;
+  final String valueText;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const FieldValueEntity({
+    required this.id,
+    required this.recordId,
+    required this.fieldDefinitionId,
+    required this.valueText,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['record_id'] = Variable<String>(recordId);
+    map['field_definition_id'] = Variable<String>(fieldDefinitionId);
+    map['value_text'] = Variable<String>(valueText);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  FieldValuesCompanion toCompanion(bool nullToAbsent) {
+    return FieldValuesCompanion(
+      id: Value(id),
+      recordId: Value(recordId),
+      fieldDefinitionId: Value(fieldDefinitionId),
+      valueText: Value(valueText),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory FieldValueEntity.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FieldValueEntity(
+      id: serializer.fromJson<String>(json['id']),
+      recordId: serializer.fromJson<String>(json['recordId']),
+      fieldDefinitionId: serializer.fromJson<String>(json['fieldDefinitionId']),
+      valueText: serializer.fromJson<String>(json['valueText']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'recordId': serializer.toJson<String>(recordId),
+      'fieldDefinitionId': serializer.toJson<String>(fieldDefinitionId),
+      'valueText': serializer.toJson<String>(valueText),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  FieldValueEntity copyWith({
+    String? id,
+    String? recordId,
+    String? fieldDefinitionId,
+    String? valueText,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => FieldValueEntity(
+    id: id ?? this.id,
+    recordId: recordId ?? this.recordId,
+    fieldDefinitionId: fieldDefinitionId ?? this.fieldDefinitionId,
+    valueText: valueText ?? this.valueText,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  FieldValueEntity copyWithCompanion(FieldValuesCompanion data) {
+    return FieldValueEntity(
+      id: data.id.present ? data.id.value : this.id,
+      recordId: data.recordId.present ? data.recordId.value : this.recordId,
+      fieldDefinitionId: data.fieldDefinitionId.present
+          ? data.fieldDefinitionId.value
+          : this.fieldDefinitionId,
+      valueText: data.valueText.present ? data.valueText.value : this.valueText,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldValueEntity(')
+          ..write('id: $id, ')
+          ..write('recordId: $recordId, ')
+          ..write('fieldDefinitionId: $fieldDefinitionId, ')
+          ..write('valueText: $valueText, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    recordId,
+    fieldDefinitionId,
+    valueText,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FieldValueEntity &&
+          other.id == this.id &&
+          other.recordId == this.recordId &&
+          other.fieldDefinitionId == this.fieldDefinitionId &&
+          other.valueText == this.valueText &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class FieldValuesCompanion extends UpdateCompanion<FieldValueEntity> {
+  final Value<String> id;
+  final Value<String> recordId;
+  final Value<String> fieldDefinitionId;
+  final Value<String> valueText;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const FieldValuesCompanion({
+    this.id = const Value.absent(),
+    this.recordId = const Value.absent(),
+    this.fieldDefinitionId = const Value.absent(),
+    this.valueText = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FieldValuesCompanion.insert({
+    required String id,
+    required String recordId,
+    required String fieldDefinitionId,
+    required String valueText,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       recordId = Value(recordId),
+       fieldDefinitionId = Value(fieldDefinitionId),
+       valueText = Value(valueText),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<FieldValueEntity> custom({
+    Expression<String>? id,
+    Expression<String>? recordId,
+    Expression<String>? fieldDefinitionId,
+    Expression<String>? valueText,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (recordId != null) 'record_id': recordId,
+      if (fieldDefinitionId != null) 'field_definition_id': fieldDefinitionId,
+      if (valueText != null) 'value_text': valueText,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FieldValuesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? recordId,
+    Value<String>? fieldDefinitionId,
+    Value<String>? valueText,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return FieldValuesCompanion(
+      id: id ?? this.id,
+      recordId: recordId ?? this.recordId,
+      fieldDefinitionId: fieldDefinitionId ?? this.fieldDefinitionId,
+      valueText: valueText ?? this.valueText,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (recordId.present) {
+      map['record_id'] = Variable<String>(recordId.value);
+    }
+    if (fieldDefinitionId.present) {
+      map['field_definition_id'] = Variable<String>(fieldDefinitionId.value);
+    }
+    if (valueText.present) {
+      map['value_text'] = Variable<String>(valueText.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FieldValuesCompanion(')
+          ..write('id: $id, ')
+          ..write('recordId: $recordId, ')
+          ..write('fieldDefinitionId: $fieldDefinitionId, ')
+          ..write('valueText: $valueText, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5188,6 +6263,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DocumentsTable documents = $DocumentsTable(this);
   late final $ExpensesTable expenses = $ExpensesTable(this);
   late final $BillsTable bills = $BillsTable(this);
+  late final $FieldDefinitionsTable fieldDefinitions = $FieldDefinitionsTable(
+    this,
+  );
+  late final $FieldValuesTable fieldValues = $FieldValuesTable(this);
   late final Index categoriesWorkspaceNameIdx = Index(
     'categories_workspace_name_idx',
     'CREATE INDEX categories_workspace_name_idx ON categories (workspace_id, name)',
@@ -5236,6 +6315,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'bills_asset_idx',
     'CREATE INDEX bills_asset_idx ON bills (linked_asset_record_id)',
   );
+  late final Index fieldDefinitionsWorkspaceCatIdx = Index(
+    'field_definitions_workspace_cat_idx',
+    'CREATE INDEX field_definitions_workspace_cat_idx ON field_definitions (workspace_id, category_id)',
+  );
+  late final Index fieldValuesRecordDefIdx = Index(
+    'field_values_record_def_idx',
+    'CREATE INDEX field_values_record_def_idx ON field_values (record_id, field_definition_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5249,6 +6336,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     documents,
     expenses,
     bills,
+    fieldDefinitions,
+    fieldValues,
     categoriesWorkspaceNameIdx,
     recordsWorkspaceTypeIdx,
     recordsDeletedIdx,
@@ -5261,6 +6350,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     expensesDateIdx,
     billsStatusDueIdx,
     billsAssetIdx,
+    fieldDefinitionsWorkspaceCatIdx,
+    fieldValuesRecordDefIdx,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -5369,6 +6460,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('bills', kind: UpdateKind.update)],
     ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'workspaces',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('field_definitions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'categories',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('field_definitions', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'records',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('field_values', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'field_definitions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('field_values', kind: UpdateKind.delete)],
+    ),
   ]);
 }
 
@@ -5433,6 +6552,27 @@ final class $$WorkspacesTableReferences
     ).filter((f) => f.workspaceId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_recordsInWorkspaceTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $FieldDefinitionsTable,
+    List<FieldDefinitionEntity>
+  >
+  _fieldsInWorkspaceTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fieldDefinitions,
+    aliasName: 'workspaces__id__field_definitions__workspace_id',
+  );
+
+  $$FieldDefinitionsTableProcessedTableManager get fieldsInWorkspace {
+    final manager = $$FieldDefinitionsTableTableManager(
+      $_db,
+      $_db.fieldDefinitions,
+    ).filter((f) => f.workspaceId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fieldsInWorkspaceTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5524,6 +6664,31 @@ class $$WorkspacesTableFilterComposer
           }) => $$RecordsTableFilterComposer(
             $db: $db,
             $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fieldsInWorkspace(
+    Expression<bool> Function($$FieldDefinitionsTableFilterComposer f) f,
+  ) {
+    final $$FieldDefinitionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.workspaceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5662,6 +6827,31 @@ class $$WorkspacesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> fieldsInWorkspace<T extends Object>(
+    Expression<T> Function($$FieldDefinitionsTableAnnotationComposer a) f,
+  ) {
+    final $$FieldDefinitionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.workspaceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$WorkspacesTableTableManager
@@ -5680,6 +6870,7 @@ class $$WorkspacesTableTableManager
           PrefetchHooks Function({
             bool categoriesInWorkspace,
             bool recordsInWorkspace,
+            bool fieldsInWorkspace,
           })
         > {
   $$WorkspacesTableTableManager(_$AppDatabase db, $WorkspacesTable table)
@@ -5742,12 +6933,17 @@ class $$WorkspacesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({categoriesInWorkspace = false, recordsInWorkspace = false}) {
+              ({
+                categoriesInWorkspace = false,
+                recordsInWorkspace = false,
+                fieldsInWorkspace = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (categoriesInWorkspace) db.categories,
                     if (recordsInWorkspace) db.records,
+                    if (fieldsInWorkspace) db.fieldDefinitions,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -5792,6 +6988,26 @@ class $$WorkspacesTableTableManager
                           referencedColumn: 'workspace_id',
                           typedResults: items,
                         ),
+                      if (fieldsInWorkspace)
+                        await $_getPrefetchedDataByColumns<
+                          WorkspaceEntity,
+                          $WorkspacesTable,
+                          FieldDefinitionEntity,
+                          $FieldDefinitionsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorkspacesTableReferences
+                              ._fieldsInWorkspaceTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorkspacesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fieldsInWorkspace,
+                          currentColumn: 'id',
+                          referencedColumn: 'workspace_id',
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -5815,6 +7031,7 @@ typedef $$WorkspacesTableProcessedTableManager =
       PrefetchHooks Function({
         bool categoriesInWorkspace,
         bool recordsInWorkspace,
+        bool fieldsInWorkspace,
       })
     >;
 typedef $$CategoriesTableCreateCompanionBuilder =
@@ -5826,6 +7043,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String?> colorHex,
       Value<bool> isSystem,
       required DateTime createdAt,
+      Value<DateTime?> archivedAt,
       Value<int> rowid,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
@@ -5837,6 +7055,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String?> colorHex,
       Value<bool> isSystem,
       Value<DateTime> createdAt,
+      Value<DateTime?> archivedAt,
       Value<int> rowid,
     });
 
@@ -5874,6 +7093,27 @@ final class $$CategoriesTableReferences
     ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_recordsInCategoryTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $FieldDefinitionsTable,
+    List<FieldDefinitionEntity>
+  >
+  _fieldsInCategoryTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fieldDefinitions,
+    aliasName: 'categories__id__field_definitions__category_id',
+  );
+
+  $$FieldDefinitionsTableProcessedTableManager get fieldsInCategory {
+    final manager = $$FieldDefinitionsTableTableManager(
+      $_db,
+      $_db.fieldDefinitions,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fieldsInCategoryTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5916,6 +7156,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5966,6 +7211,31 @@ class $$CategoriesTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> fieldsInCategory(
+    Expression<bool> Function($$FieldDefinitionsTableFilterComposer f) f,
+  ) {
+    final $$FieldDefinitionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CategoriesTableOrderingComposer
@@ -6004,6 +7274,11 @@ class $$CategoriesTableOrderingComposer
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6058,6 +7333,11 @@ class $$CategoriesTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get archivedAt => $composableBuilder(
+    column: $table.archivedAt,
+    builder: (column) => column,
+  );
+
   $$WorkspacesTableAnnotationComposer get workspaceId {
     final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -6105,6 +7385,31 @@ class $$CategoriesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> fieldsInCategory<T extends Object>(
+    Expression<T> Function($$FieldDefinitionsTableAnnotationComposer a) f,
+  ) {
+    final $$FieldDefinitionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CategoriesTableTableManager
@@ -6120,7 +7425,11 @@ class $$CategoriesTableTableManager
           $$CategoriesTableUpdateCompanionBuilder,
           (CategoryEntity, $$CategoriesTableReferences),
           CategoryEntity,
-          PrefetchHooks Function({bool workspaceId, bool recordsInCategory})
+          PrefetchHooks Function({
+            bool workspaceId,
+            bool recordsInCategory,
+            bool fieldsInCategory,
+          })
         > {
   $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
     : super(
@@ -6142,6 +7451,7 @@ class $$CategoriesTableTableManager
                 Value<String?> colorHex = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion(
                 id: id,
@@ -6151,6 +7461,7 @@ class $$CategoriesTableTableManager
                 colorHex: colorHex,
                 isSystem: isSystem,
                 createdAt: createdAt,
+                archivedAt: archivedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6162,6 +7473,7 @@ class $$CategoriesTableTableManager
                 Value<String?> colorHex = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
                 required DateTime createdAt,
+                Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 id: id,
@@ -6171,6 +7483,7 @@ class $$CategoriesTableTableManager
                 colorHex: colorHex,
                 isSystem: isSystem,
                 createdAt: createdAt,
+                archivedAt: archivedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6182,10 +7495,17 @@ class $$CategoriesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({workspaceId = false, recordsInCategory = false}) {
+              ({
+                workspaceId = false,
+                recordsInCategory = false,
+                fieldsInCategory = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [if (recordsInCategory) db.records],
+                  explicitlyWatchedTables: [
+                    if (recordsInCategory) db.records,
+                    if (fieldsInCategory) db.fieldDefinitions,
+                  ],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -6241,6 +7561,26 @@ class $$CategoriesTableTableManager
                           referencedColumn: 'category_id',
                           typedResults: items,
                         ),
+                      if (fieldsInCategory)
+                        await $_getPrefetchedDataByColumns<
+                          CategoryEntity,
+                          $CategoriesTable,
+                          FieldDefinitionEntity,
+                          $FieldDefinitionsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._fieldsInCategoryTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fieldsInCategory,
+                          currentColumn: 'id',
+                          referencedColumn: 'category_id',
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6261,7 +7601,11 @@ typedef $$CategoriesTableProcessedTableManager =
       $$CategoriesTableUpdateCompanionBuilder,
       (CategoryEntity, $$CategoriesTableReferences),
       CategoryEntity,
-      PrefetchHooks Function({bool workspaceId, bool recordsInCategory})
+      PrefetchHooks Function({
+        bool workspaceId,
+        bool recordsInCategory,
+        bool fieldsInCategory,
+      })
     >;
 typedef $$RecordsTableCreateCompanionBuilder =
     RecordsCompanion Function({
@@ -6542,6 +7886,24 @@ final class $$RecordsTableReferences
     );
 
     final cache = $_typedResult.readTableOrNull(_billLinkedExpenseTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FieldValuesTable, List<FieldValueEntity>>
+  _fieldValueRecordTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fieldValues,
+    aliasName: 'records__id__field_values__record_id',
+  );
+
+  $$FieldValuesTableProcessedTableManager get fieldValueRecord {
+    final manager = $$FieldValuesTableTableManager(
+      $_db,
+      $_db.fieldValues,
+    ).filter((f) => f.recordId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fieldValueRecordTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -6939,6 +8301,31 @@ class $$RecordsTableFilterComposer
           }) => $$BillsTableFilterComposer(
             $db: $db,
             $table: $db.bills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fieldValueRecord(
+    Expression<bool> Function($$FieldValuesTableFilterComposer f) f,
+  ) {
+    final $$FieldValuesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldValues,
+      getReferencedColumn: (t) => t.recordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldValuesTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldValues,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7437,6 +8824,31 @@ class $$RecordsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> fieldValueRecord<T extends Object>(
+    Expression<T> Function($$FieldValuesTableAnnotationComposer a) f,
+  ) {
+    final $$FieldValuesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldValues,
+      getReferencedColumn: (t) => t.recordId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldValuesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fieldValues,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RecordsTableTableManager
@@ -7467,6 +8879,7 @@ class $$RecordsTableTableManager
             bool billRecord,
             bool billsForAsset,
             bool billLinkedExpense,
+            bool fieldValueRecord,
           })
         > {
   $$RecordsTableTableManager(_$AppDatabase db, $RecordsTable table)
@@ -7560,6 +8973,7 @@ class $$RecordsTableTableManager
                 billRecord = false,
                 billsForAsset = false,
                 billLinkedExpense = false,
+                fieldValueRecord = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7576,6 +8990,7 @@ class $$RecordsTableTableManager
                     if (billRecord) db.bills,
                     if (billsForAsset) db.bills,
                     if (billLinkedExpense) db.bills,
+                    if (fieldValueRecord) db.fieldValues,
                   ],
                   addJoins:
                       <
@@ -7864,6 +9279,26 @@ class $$RecordsTableTableManager
                           referencedColumn: 'linked_expense_record_id',
                           typedResults: items,
                         ),
+                      if (fieldValueRecord)
+                        await $_getPrefetchedDataByColumns<
+                          RecordEntity,
+                          $RecordsTable,
+                          FieldValueEntity,
+                          $FieldValuesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RecordsTableReferences
+                              ._fieldValueRecordTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RecordsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fieldValueRecord,
+                          currentColumn: 'id',
+                          referencedColumn: 'record_id',
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -7899,6 +9334,7 @@ typedef $$RecordsTableProcessedTableManager =
         bool billRecord,
         bool billsForAsset,
         bool billLinkedExpense,
+        bool fieldValueRecord,
       })
     >;
 typedef $$AssetsTableCreateCompanionBuilder =
@@ -7919,6 +9355,7 @@ typedef $$AssetsTableCreateCompanionBuilder =
       Value<int?> pmsTimeIntervalMonths,
       Value<DateTime?> nextPmsDueDate,
       Value<int?> nextPmsOdometerTarget,
+      Value<DateTime?> warrantyExpiryDate,
       Value<int> rowid,
     });
 typedef $$AssetsTableUpdateCompanionBuilder =
@@ -7939,6 +9376,7 @@ typedef $$AssetsTableUpdateCompanionBuilder =
       Value<int?> pmsTimeIntervalMonths,
       Value<DateTime?> nextPmsDueDate,
       Value<int?> nextPmsOdometerTarget,
+      Value<DateTime?> warrantyExpiryDate,
       Value<int> rowid,
     });
 
@@ -8045,6 +9483,11 @@ class $$AssetsTableFilterComposer
 
   ColumnFilters<int> get nextPmsOdometerTarget => $composableBuilder(
     column: $table.nextPmsOdometerTarget,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get warrantyExpiryDate => $composableBuilder(
+    column: $table.warrantyExpiryDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8156,6 +9599,11 @@ class $$AssetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get warrantyExpiryDate => $composableBuilder(
+    column: $table.warrantyExpiryDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RecordsTableOrderingComposer get recordId {
     final $$RecordsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8258,6 +9706,11 @@ class $$AssetsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<DateTime> get warrantyExpiryDate => $composableBuilder(
+    column: $table.warrantyExpiryDate,
+    builder: (column) => column,
+  );
+
   $$RecordsTableAnnotationComposer get recordId {
     final $$RecordsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -8326,6 +9779,7 @@ class $$AssetsTableTableManager
                 Value<int?> pmsTimeIntervalMonths = const Value.absent(),
                 Value<DateTime?> nextPmsDueDate = const Value.absent(),
                 Value<int?> nextPmsOdometerTarget = const Value.absent(),
+                Value<DateTime?> warrantyExpiryDate = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AssetsCompanion(
                 recordId: recordId,
@@ -8344,6 +9798,7 @@ class $$AssetsTableTableManager
                 pmsTimeIntervalMonths: pmsTimeIntervalMonths,
                 nextPmsDueDate: nextPmsDueDate,
                 nextPmsOdometerTarget: nextPmsOdometerTarget,
+                warrantyExpiryDate: warrantyExpiryDate,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8364,6 +9819,7 @@ class $$AssetsTableTableManager
                 Value<int?> pmsTimeIntervalMonths = const Value.absent(),
                 Value<DateTime?> nextPmsDueDate = const Value.absent(),
                 Value<int?> nextPmsOdometerTarget = const Value.absent(),
+                Value<DateTime?> warrantyExpiryDate = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AssetsCompanion.insert(
                 recordId: recordId,
@@ -8382,6 +9838,7 @@ class $$AssetsTableTableManager
                 pmsTimeIntervalMonths: pmsTimeIntervalMonths,
                 nextPmsDueDate: nextPmsDueDate,
                 nextPmsOdometerTarget: nextPmsOdometerTarget,
+                warrantyExpiryDate: warrantyExpiryDate,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -10710,6 +12167,1019 @@ typedef $$BillsTableProcessedTableManager =
         bool linkedExpenseRecordId,
       })
     >;
+typedef $$FieldDefinitionsTableCreateCompanionBuilder =
+    FieldDefinitionsCompanion Function({
+      required String id,
+      required String workspaceId,
+      Value<String?> categoryId,
+      required String fieldKey,
+      required String label,
+      Value<String> dataType,
+      Value<int> displayOrder,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$FieldDefinitionsTableUpdateCompanionBuilder =
+    FieldDefinitionsCompanion Function({
+      Value<String> id,
+      Value<String> workspaceId,
+      Value<String?> categoryId,
+      Value<String> fieldKey,
+      Value<String> label,
+      Value<String> dataType,
+      Value<int> displayOrder,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$FieldDefinitionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $FieldDefinitionsTable,
+          FieldDefinitionEntity
+        > {
+  $$FieldDefinitionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorkspacesTable _workspaceIdTable(_$AppDatabase db) => db.workspaces
+      .createAlias('field_definitions__workspace_id__workspaces__id');
+
+  $$WorkspacesTableProcessedTableManager get workspaceId {
+    final $_column = $_itemColumn<String>('workspace_id')!;
+
+    final manager = $$WorkspacesTableTableManager(
+      $_db,
+      $_db.workspaces,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workspaceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) => db.categories
+      .createAlias('field_definitions__category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager? get categoryId {
+    final $_column = $_itemColumn<String>('category_id');
+    if ($_column == null) return null;
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$FieldValuesTable, List<FieldValueEntity>>
+  _fieldValueDefinitionTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fieldValues,
+    aliasName: 'field_definitions__id__field_values__field_definition_id',
+  );
+
+  $$FieldValuesTableProcessedTableManager get fieldValueDefinition {
+    final manager = $$FieldValuesTableTableManager($_db, $_db.fieldValues)
+        .filter(
+          (f) => f.fieldDefinitionId.id.sqlEquals($_itemColumn<String>('id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _fieldValueDefinitionTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$FieldDefinitionsTableFilterComposer
+    extends Composer<_$AppDatabase, $FieldDefinitionsTable> {
+  $$FieldDefinitionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fieldKey => $composableBuilder(
+    column: $table.fieldKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dataType => $composableBuilder(
+    column: $table.dataType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorkspacesTableFilterComposer get workspaceId {
+    final $$WorkspacesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceId,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableFilterComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> fieldValueDefinition(
+    Expression<bool> Function($$FieldValuesTableFilterComposer f) f,
+  ) {
+    final $$FieldValuesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldValues,
+      getReferencedColumn: (t) => t.fieldDefinitionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldValuesTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldValues,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FieldDefinitionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FieldDefinitionsTable> {
+  $$FieldDefinitionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fieldKey => $composableBuilder(
+    column: $table.fieldKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dataType => $composableBuilder(
+    column: $table.dataType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorkspacesTableOrderingComposer get workspaceId {
+    final $$WorkspacesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceId,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableOrderingComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldDefinitionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FieldDefinitionsTable> {
+  $$FieldDefinitionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fieldKey =>
+      $composableBuilder(column: $table.fieldKey, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get dataType =>
+      $composableBuilder(column: $table.dataType, builder: (column) => column);
+
+  GeneratedColumn<int> get displayOrder => $composableBuilder(
+    column: $table.displayOrder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$WorkspacesTableAnnotationComposer get workspaceId {
+    final $$WorkspacesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.workspaceId,
+      referencedTable: $db.workspaces,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorkspacesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> fieldValueDefinition<T extends Object>(
+    Expression<T> Function($$FieldValuesTableAnnotationComposer a) f,
+  ) {
+    final $$FieldValuesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fieldValues,
+      getReferencedColumn: (t) => t.fieldDefinitionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldValuesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fieldValues,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FieldDefinitionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FieldDefinitionsTable,
+          FieldDefinitionEntity,
+          $$FieldDefinitionsTableFilterComposer,
+          $$FieldDefinitionsTableOrderingComposer,
+          $$FieldDefinitionsTableAnnotationComposer,
+          $$FieldDefinitionsTableCreateCompanionBuilder,
+          $$FieldDefinitionsTableUpdateCompanionBuilder,
+          (FieldDefinitionEntity, $$FieldDefinitionsTableReferences),
+          FieldDefinitionEntity,
+          PrefetchHooks Function({
+            bool workspaceId,
+            bool categoryId,
+            bool fieldValueDefinition,
+          })
+        > {
+  $$FieldDefinitionsTableTableManager(
+    _$AppDatabase db,
+    $FieldDefinitionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FieldDefinitionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FieldDefinitionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FieldDefinitionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> workspaceId = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String> fieldKey = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> dataType = const Value.absent(),
+                Value<int> displayOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FieldDefinitionsCompanion(
+                id: id,
+                workspaceId: workspaceId,
+                categoryId: categoryId,
+                fieldKey: fieldKey,
+                label: label,
+                dataType: dataType,
+                displayOrder: displayOrder,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String workspaceId,
+                Value<String?> categoryId = const Value.absent(),
+                required String fieldKey,
+                required String label,
+                Value<String> dataType = const Value.absent(),
+                Value<int> displayOrder = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => FieldDefinitionsCompanion.insert(
+                id: id,
+                workspaceId: workspaceId,
+                categoryId: categoryId,
+                fieldKey: fieldKey,
+                label: label,
+                dataType: dataType,
+                displayOrder: displayOrder,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FieldDefinitionsTable, FieldDefinitionEntity>(
+                    table,
+                  ),
+                  $$FieldDefinitionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                workspaceId = false,
+                categoryId = false,
+                fieldValueDefinition = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (fieldValueDefinition) db.fieldValues,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (workspaceId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.workspaceId,
+                                    referencedTable:
+                                        $$FieldDefinitionsTableReferences
+                                            ._workspaceIdTable(db),
+                                    referencedColumn:
+                                        $$FieldDefinitionsTableReferences
+                                            ._workspaceIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (categoryId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.categoryId,
+                                    referencedTable:
+                                        $$FieldDefinitionsTableReferences
+                                            ._categoryIdTable(db),
+                                    referencedColumn:
+                                        $$FieldDefinitionsTableReferences
+                                            ._categoryIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (fieldValueDefinition)
+                        await $_getPrefetchedDataByColumns<
+                          FieldDefinitionEntity,
+                          $FieldDefinitionsTable,
+                          FieldValueEntity,
+                          $FieldValuesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FieldDefinitionsTableReferences
+                              ._fieldValueDefinitionTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FieldDefinitionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fieldValueDefinition,
+                          currentColumn: 'id',
+                          referencedColumn: 'field_definition_id',
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FieldDefinitionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FieldDefinitionsTable,
+      FieldDefinitionEntity,
+      $$FieldDefinitionsTableFilterComposer,
+      $$FieldDefinitionsTableOrderingComposer,
+      $$FieldDefinitionsTableAnnotationComposer,
+      $$FieldDefinitionsTableCreateCompanionBuilder,
+      $$FieldDefinitionsTableUpdateCompanionBuilder,
+      (FieldDefinitionEntity, $$FieldDefinitionsTableReferences),
+      FieldDefinitionEntity,
+      PrefetchHooks Function({
+        bool workspaceId,
+        bool categoryId,
+        bool fieldValueDefinition,
+      })
+    >;
+typedef $$FieldValuesTableCreateCompanionBuilder =
+    FieldValuesCompanion Function({
+      required String id,
+      required String recordId,
+      required String fieldDefinitionId,
+      required String valueText,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$FieldValuesTableUpdateCompanionBuilder =
+    FieldValuesCompanion Function({
+      Value<String> id,
+      Value<String> recordId,
+      Value<String> fieldDefinitionId,
+      Value<String> valueText,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$FieldValuesTableReferences
+    extends BaseReferences<_$AppDatabase, $FieldValuesTable, FieldValueEntity> {
+  $$FieldValuesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $RecordsTable _recordIdTable(_$AppDatabase db) =>
+      db.records.createAlias('field_values__record_id__records__id');
+
+  $$RecordsTableProcessedTableManager get recordId {
+    final $_column = $_itemColumn<String>('record_id')!;
+
+    final manager = $$RecordsTableTableManager(
+      $_db,
+      $_db.records,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_recordIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FieldDefinitionsTable _fieldDefinitionIdTable(_$AppDatabase db) => db
+      .fieldDefinitions
+      .createAlias('field_values__field_definition_id__field_definitions__id');
+
+  $$FieldDefinitionsTableProcessedTableManager get fieldDefinitionId {
+    final $_column = $_itemColumn<String>('field_definition_id')!;
+
+    final manager = $$FieldDefinitionsTableTableManager(
+      $_db,
+      $_db.fieldDefinitions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_fieldDefinitionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FieldValuesTableFilterComposer
+    extends Composer<_$AppDatabase, $FieldValuesTable> {
+  $$FieldValuesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get valueText => $composableBuilder(
+    column: $table.valueText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$RecordsTableFilterComposer get recordId {
+    final $$RecordsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableFilterComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FieldDefinitionsTableFilterComposer get fieldDefinitionId {
+    final $$FieldDefinitionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fieldDefinitionId,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldValuesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FieldValuesTable> {
+  $$FieldValuesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get valueText => $composableBuilder(
+    column: $table.valueText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$RecordsTableOrderingComposer get recordId {
+    final $$RecordsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableOrderingComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FieldDefinitionsTableOrderingComposer get fieldDefinitionId {
+    final $$FieldDefinitionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fieldDefinitionId,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldValuesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FieldValuesTable> {
+  $$FieldValuesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get valueText =>
+      $composableBuilder(column: $table.valueText, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$RecordsTableAnnotationComposer get recordId {
+    final $$RecordsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.recordId,
+      referencedTable: $db.records,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RecordsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.records,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FieldDefinitionsTableAnnotationComposer get fieldDefinitionId {
+    final $$FieldDefinitionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fieldDefinitionId,
+      referencedTable: $db.fieldDefinitions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FieldDefinitionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fieldDefinitions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FieldValuesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FieldValuesTable,
+          FieldValueEntity,
+          $$FieldValuesTableFilterComposer,
+          $$FieldValuesTableOrderingComposer,
+          $$FieldValuesTableAnnotationComposer,
+          $$FieldValuesTableCreateCompanionBuilder,
+          $$FieldValuesTableUpdateCompanionBuilder,
+          (FieldValueEntity, $$FieldValuesTableReferences),
+          FieldValueEntity,
+          PrefetchHooks Function({bool recordId, bool fieldDefinitionId})
+        > {
+  $$FieldValuesTableTableManager(_$AppDatabase db, $FieldValuesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FieldValuesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FieldValuesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FieldValuesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> recordId = const Value.absent(),
+                Value<String> fieldDefinitionId = const Value.absent(),
+                Value<String> valueText = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FieldValuesCompanion(
+                id: id,
+                recordId: recordId,
+                fieldDefinitionId: fieldDefinitionId,
+                valueText: valueText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String recordId,
+                required String fieldDefinitionId,
+                required String valueText,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => FieldValuesCompanion.insert(
+                id: id,
+                recordId: recordId,
+                fieldDefinitionId: fieldDefinitionId,
+                valueText: valueText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FieldValuesTable, FieldValueEntity>(table),
+                  $$FieldValuesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({recordId = false, fieldDefinitionId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (recordId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.recordId,
+                                    referencedTable:
+                                        $$FieldValuesTableReferences
+                                            ._recordIdTable(db),
+                                    referencedColumn:
+                                        $$FieldValuesTableReferences
+                                            ._recordIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (fieldDefinitionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.fieldDefinitionId,
+                                    referencedTable:
+                                        $$FieldValuesTableReferences
+                                            ._fieldDefinitionIdTable(db),
+                                    referencedColumn:
+                                        $$FieldValuesTableReferences
+                                            ._fieldDefinitionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FieldValuesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FieldValuesTable,
+      FieldValueEntity,
+      $$FieldValuesTableFilterComposer,
+      $$FieldValuesTableOrderingComposer,
+      $$FieldValuesTableAnnotationComposer,
+      $$FieldValuesTableCreateCompanionBuilder,
+      $$FieldValuesTableUpdateCompanionBuilder,
+      (FieldValueEntity, $$FieldValuesTableReferences),
+      FieldValueEntity,
+      PrefetchHooks Function({bool recordId, bool fieldDefinitionId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10730,4 +13200,8 @@ class $AppDatabaseManager {
       $$ExpensesTableTableManager(_db, _db.expenses);
   $$BillsTableTableManager get bills =>
       $$BillsTableTableManager(_db, _db.bills);
+  $$FieldDefinitionsTableTableManager get fieldDefinitions =>
+      $$FieldDefinitionsTableTableManager(_db, _db.fieldDefinitions);
+  $$FieldValuesTableTableManager get fieldValues =>
+      $$FieldValuesTableTableManager(_db, _db.fieldValues);
 }

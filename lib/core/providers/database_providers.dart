@@ -138,6 +138,12 @@ final dashboardRecordsStreamProvider = StreamProvider<List<RecordWithAsset>>((re
   return repository.watchActiveRecordsByWorkspace(AppConstants.defaultWorkspaceId);
 });
 
+/// Future provider for custom fields of a record.
+final recordCustomFieldsProvider = FutureProvider.family<List<CustomFieldEntry>, String>((ref, recordId) {
+  final repository = ref.watch(recordRepositoryProvider);
+  return repository.getCustomFieldsForRecord(recordId);
+});
+
 /// Notifier for task status filtering ('pending', 'completed', 'all').
 class TaskFilterNotifier extends Notifier<String> {
   @override
@@ -304,4 +310,3 @@ final workspaceTotalUnpaidBillsProvider = StreamProvider<int>((ref) {
   final repository = ref.watch(billRepositoryProvider);
   return repository.watchTotalUnpaidBillsAmount(AppConstants.defaultWorkspaceId);
 });
-

@@ -7,6 +7,7 @@ class Category {
   final String? colorHex;
   final bool isSystem;
   final DateTime createdAt;
+  final DateTime? archivedAt;
 
   const Category({
     required this.id,
@@ -16,7 +17,10 @@ class Category {
     this.colorHex,
     this.isSystem = true,
     required this.createdAt,
+    this.archivedAt,
   });
+
+  bool get isArchived => archivedAt != null;
 
   Category copyWith({
     String? id,
@@ -26,6 +30,7 @@ class Category {
     String? colorHex,
     bool? isSystem,
     DateTime? createdAt,
+    DateTime? archivedAt,
   }) {
     return Category(
       id: id ?? this.id,
@@ -35,6 +40,7 @@ class Category {
       colorHex: colorHex ?? this.colorHex,
       isSystem: isSystem ?? this.isSystem,
       createdAt: createdAt ?? this.createdAt,
+      archivedAt: archivedAt ?? this.archivedAt,
     );
   }
 
@@ -49,7 +55,8 @@ class Category {
           iconKey == other.iconKey &&
           colorHex == other.colorHex &&
           isSystem == other.isSystem &&
-          createdAt == other.createdAt;
+          createdAt == other.createdAt &&
+          archivedAt == other.archivedAt;
 
   @override
   int get hashCode => Object.hash(
@@ -60,20 +67,27 @@ class Category {
         colorHex,
         isSystem,
         createdAt,
+        archivedAt,
       );
 }
 
 /// Abstract contract for category persistence operations.
 abstract class CategoryRepository {
-  /// Retrieves all categories belonging to a workspace.
+  /// Retrieves all active categories belonging to a workspace.
   Future<List<Category>> getCategoriesByWorkspace(String workspaceId);
 
-  /// Watches categories belonging to a workspace reactively.
+  /// Watches active categories belonging to a workspace reactively.
   Stream<List<Category>> watchCategoriesByWorkspace(String workspaceId);
 
-  /// Idempotently seeds default Sanctuary categories (Properties, Vehicles, Appliances, Electronics, Family).
+  /// Idempotently seeds default Sanctuary categories.
   Future<void> seedDefaultCategories(String workspaceId);
 
   /// Creates a new user-defined category.
   Future<Category> createCategory(Category category);
+
+  /// Archives a category by setting its `archivedAt` timestamp.
+  Future<void> archiveCategory(String id);
+
+  /// Renames an existing category.
+  Future<void> renameCategory(String id, String newName);
 }

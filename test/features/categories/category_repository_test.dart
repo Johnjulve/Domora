@@ -25,14 +25,25 @@ void main() {
   });
 
   group('CategoryRepositoryImpl Tests', () {
-    test('seedDefaultCategories seeds all 5 sanctuary categories', () async {
+    test('seedDefaultCategories seeds all 7 sanctuary categories', () async {
       await categoryRepo.seedDefaultCategories(AppConstants.defaultWorkspaceId);
 
       final categories = await categoryRepo.getCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
-      expect(categories.length, 5);
+      expect(categories.length, 7);
 
       final names = categories.map((c) => c.name).toSet();
-      expect(names, containsAll(['Properties', 'Vehicles', 'Appliances', 'Electronics', 'Family']));
+      expect(
+        names,
+        containsAll([
+          'Properties',
+          'Vehicles',
+          'Appliances',
+          'Electronics',
+          'Family',
+          'Furniture',
+          'Tools',
+        ]),
+      );
     });
 
     test('seedDefaultCategories is idempotent on repeated execution', () async {
@@ -40,7 +51,7 @@ void main() {
       await categoryRepo.seedDefaultCategories(AppConstants.defaultWorkspaceId);
 
       final categories = await categoryRepo.getCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
-      expect(categories.length, 5);
+      expect(categories.length, 7);
     });
 
     test('Can create a custom category and retrieve it', () async {
@@ -68,10 +79,30 @@ void main() {
 
       expectLater(
         stream,
-        emitsThrough(hasLength(5)),
+        emitsThrough(hasLength(7)),
       );
 
       await categoryRepo.seedDefaultCategories(AppConstants.defaultWorkspaceId);
+    });
+
+    test('renameCategory updates name cleanly', () async {
+      await categoryRepo.seedDefaultCategories(AppConstants.defaultWorkspaceId);
+
+      await categoryRepo.renameCategory('cat-furniture', 'Living Room Furniture');
+
+      final categories = await categoryRepo.getCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
+      final updated = categories.firstWhere((c) => c.id == 'cat-furniture');
+      expect(updated.name, 'Living Room Furniture');
+    });
+
+    test('archiveCategory hides category from active queries', () async {
+      await categoryRepo.seedDefaultCategories(AppConstants.defaultWorkspaceId);
+
+      await categoryRepo.archiveCategory('cat-tools');
+
+      final active = await categoryRepo.getCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
+      expect(active.length, 6);
+      expect(active.any((c) => c.id == 'cat-tools'), isFalse);
     });
   });
 }

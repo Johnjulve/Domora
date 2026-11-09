@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../domain/record.dart';
@@ -13,7 +14,7 @@ class RecordRepositoryImpl implements RecordRepository {
   Future<Record> createRecord(Record record) async {
     final now = DateTime.now().toUtc();
     final stampedRecord = record.copyWith(
-      createdAt: record.createdAt,
+      createdAt: record.createdAt.toUtc(),
       updatedAt: now,
     );
 
@@ -25,6 +26,7 @@ class RecordRepositoryImpl implements RecordRepository {
   Future<RecordWithAsset> createAssetRecord({
     required Record record,
     required Asset asset,
+    Map<String, String>? customFields,
   }) async {
     return _db.transaction(() async {
       final now = DateTime.now().toUtc();
@@ -37,7 +39,52 @@ class RecordRepositoryImpl implements RecordRepository {
       await _db.into(_db.records).insert(_toRecordCompanion(stampedRecord));
       await _db.into(_db.assets).insert(_toAssetCompanion(syncedAsset));
 
-      return RecordWithAsset(record: stampedRecord, asset: syncedAsset);
+      final customFieldEntries = <CustomFieldEntry>[];
+
+      if (customFields != null && customFields.isNotEmpty) {
+        for (final entry in customFields.entries) {
+          final trimmedValue = entry.value.trim();
+          if (trimmedValue.isEmpty) continue;
+
+          final definition = await _getOrCreateFieldDefinitionInternal(
+            workspaceId: record.workspaceId,
+            categoryId: record.categoryId,
+            fieldKey: entry.key,
+            label: entry.key,
+          );
+
+          final valueId = const Uuid().v4();
+          final valEntity = FieldValuesCompanion(
+            id: Value(valueId),
+            recordId: Value(record.id),
+            fieldDefinitionId: Value(definition.id),
+            valueText: Value(trimmedValue),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          );
+
+          await _db.into(_db.fieldValues).insert(valEntity);
+          customFieldEntries.add(
+            CustomFieldEntry(
+              definition: definition,
+              value: FieldValue(
+                id: valueId,
+                recordId: record.id,
+                fieldDefinitionId: definition.id,
+                valueText: trimmedValue,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            ),
+          );
+        }
+      }
+
+      return RecordWithAsset(
+        record: stampedRecord,
+        asset: syncedAsset,
+        customFields: customFieldEntries,
+      );
     });
   }
 
@@ -52,10 +99,12 @@ class RecordRepositoryImpl implements RecordRepository {
 
     final recordEntity = row.readTable(_db.records);
     final assetEntity = row.readTableOrNull(_db.assets);
+    final customFields = await getCustomFieldsForRecord(recordId);
 
     return RecordWithAsset(
       record: _toDomainRecord(recordEntity),
       asset: assetEntity != null ? _toDomainAsset(assetEntity) : null,
+      customFields: customFields,
     );
   }
 
@@ -141,6 +190,167 @@ class RecordRepositoryImpl implements RecordRepository {
     );
   }
 
+  @override
+  Future<FieldDefinition> getOrCreateFieldDefinition({
+    required String workspaceId,
+    String? categoryId,
+    required String fieldKey,
+    required String label,
+    String dataType = 'text',
+    int displayOrder = 0,
+  }) async {
+    return _getOrCreateFieldDefinitionInternal(
+      workspaceId: workspaceId,
+      categoryId: categoryId,
+      fieldKey: fieldKey,
+      label: label,
+      dataType: dataType,
+      displayOrder: displayOrder,
+    );
+  }
+
+  Future<FieldDefinition> _getOrCreateFieldDefinitionInternal({
+    required String workspaceId,
+    String? categoryId,
+    required String fieldKey,
+    required String label,
+    String dataType = 'text',
+    int displayOrder = 0,
+  }) async {
+    final query = _db.select(_db.fieldDefinitions)
+      ..where((f) {
+        var expr = f.workspaceId.equals(workspaceId) & f.fieldKey.equals(fieldKey);
+        if (categoryId != null) {
+          expr = expr & f.categoryId.equals(categoryId);
+        } else {
+          expr = expr & f.categoryId.isNull();
+        }
+        return expr;
+      });
+
+    final existing = await query.getSingleOrNull();
+    if (existing != null) {
+      return _toDomainFieldDefinition(existing);
+    }
+
+    final now = DateTime.now().toUtc();
+    final id = const Uuid().v4();
+    final companion = FieldDefinitionsCompanion.insert(
+      id: id,
+      workspaceId: workspaceId,
+      categoryId: Value(categoryId),
+      fieldKey: fieldKey,
+      label: label,
+      dataType: Value(dataType),
+      displayOrder: Value(displayOrder),
+      createdAt: now,
+    );
+
+    await _db.into(_db.fieldDefinitions).insert(companion);
+
+    return FieldDefinition(
+      id: id,
+      workspaceId: workspaceId,
+      categoryId: categoryId,
+      fieldKey: fieldKey,
+      label: label,
+      dataType: dataType,
+      displayOrder: displayOrder,
+      createdAt: now,
+    );
+  }
+
+  @override
+  Future<List<FieldDefinition>> getFieldDefinitions(
+    String workspaceId, {
+    String? categoryId,
+  }) async {
+    final query = _db.select(_db.fieldDefinitions)
+      ..where((f) {
+        var expr = f.workspaceId.equals(workspaceId);
+        if (categoryId != null) {
+          expr = expr & (f.categoryId.equals(categoryId) | f.categoryId.isNull());
+        }
+        return expr;
+      })
+      ..orderBy([(f) => OrderingTerm.asc(f.displayOrder), (f) => OrderingTerm.asc(f.label)]);
+
+    final rows = await query.get();
+    return rows.map(_toDomainFieldDefinition).toList();
+  }
+
+  @override
+  Future<List<CustomFieldEntry>> getCustomFieldsForRecord(String recordId) async {
+    final query = _db.select(_db.fieldValues).join([
+      innerJoin(
+        _db.fieldDefinitions,
+        _db.fieldDefinitions.id.equalsExp(_db.fieldValues.fieldDefinitionId),
+      ),
+    ])..where(_db.fieldValues.recordId.equals(recordId));
+
+    final rows = await query.get();
+    return rows.map((row) {
+      final def = row.readTable(_db.fieldDefinitions);
+      final val = row.readTable(_db.fieldValues);
+      return CustomFieldEntry(
+        definition: _toDomainFieldDefinition(def),
+        value: _toDomainFieldValue(val),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> saveCustomFieldValues({
+    required String recordId,
+    required String workspaceId,
+    required Map<String, String> fieldValues,
+    String? categoryId,
+  }) async {
+    await _db.transaction(() async {
+      final now = DateTime.now().toUtc();
+      for (final entry in fieldValues.entries) {
+        final trimmed = entry.value.trim();
+        if (trimmed.isEmpty) continue;
+
+        final definition = await _getOrCreateFieldDefinitionInternal(
+          workspaceId: workspaceId,
+          categoryId: categoryId,
+          fieldKey: entry.key,
+          label: entry.key,
+        );
+
+        // Check if value already exists for this record and definition
+        final existingValue = await (_db.select(_db.fieldValues)
+              ..where((v) =>
+                  v.recordId.equals(recordId) &
+                  v.fieldDefinitionId.equals(definition.id)))
+            .getSingleOrNull();
+
+        if (existingValue != null) {
+          await (_db.update(_db.fieldValues)
+                ..where((v) => v.id.equals(existingValue.id)))
+              .write(
+            FieldValuesCompanion(
+              valueText: Value(trimmed),
+              updatedAt: Value(now),
+            ),
+          );
+        } else {
+          await _db.into(_db.fieldValues).insert(
+                FieldValuesCompanion.insert(
+                  id: const Uuid().v4(),
+                  recordId: recordId,
+                  fieldDefinitionId: definition.id,
+                  valueText: trimmed,
+                  createdAt: now,
+                  updatedAt: now,
+                ),
+              );
+        }
+      }
+    });
+  }
+
   JoinedSelectStatement _buildActiveWorkspaceQuery(
     String workspaceId, {
     String? recordType,
@@ -185,17 +395,17 @@ class RecordRepositoryImpl implements RecordRepository {
       title: entity.title,
       description: entity.description,
       status: entity.status,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-      archivedAt: entity.archivedAt,
-      deletedAt: entity.deletedAt,
+      createdAt: entity.createdAt.toUtc(),
+      updatedAt: entity.updatedAt.toUtc(),
+      archivedAt: entity.archivedAt?.toUtc(),
+      deletedAt: entity.deletedAt?.toUtc(),
     );
   }
 
   Asset _toDomainAsset(AssetEntity entity) {
     return Asset(
       recordId: entity.recordId,
-      purchaseDate: entity.purchaseDate,
+      purchaseDate: entity.purchaseDate?.toUtc(),
       purchaseAmountMinor: entity.purchaseAmountMinor,
       purchaseCurrency: entity.purchaseCurrency ?? 'PHP',
       brand: entity.brand,
@@ -204,12 +414,37 @@ class RecordRepositoryImpl implements RecordRepository {
       condition: entity.condition,
       locationDescription: entity.locationDescription,
       acquiredFrom: entity.acquiredFrom,
-      disposedAt: entity.disposedAt,
+      disposedAt: entity.disposedAt?.toUtc(),
       odometerReading: entity.odometerReading,
       pmsDistanceIntervalKm: entity.pmsDistanceIntervalKm,
       pmsTimeIntervalMonths: entity.pmsTimeIntervalMonths,
-      nextPmsDueDate: entity.nextPmsDueDate,
+      nextPmsDueDate: entity.nextPmsDueDate?.toUtc(),
       nextPmsOdometerTarget: entity.nextPmsOdometerTarget,
+      warrantyExpiryDate: entity.warrantyExpiryDate?.toUtc(),
+    );
+  }
+
+  FieldDefinition _toDomainFieldDefinition(FieldDefinitionEntity entity) {
+    return FieldDefinition(
+      id: entity.id,
+      workspaceId: entity.workspaceId,
+      categoryId: entity.categoryId,
+      fieldKey: entity.fieldKey,
+      label: entity.label,
+      dataType: entity.dataType,
+      displayOrder: entity.displayOrder,
+      createdAt: entity.createdAt.toUtc(),
+    );
+  }
+
+  FieldValue _toDomainFieldValue(FieldValueEntity entity) {
+    return FieldValue(
+      id: entity.id,
+      recordId: entity.recordId,
+      fieldDefinitionId: entity.fieldDefinitionId,
+      valueText: entity.valueText,
+      createdAt: entity.createdAt.toUtc(),
+      updatedAt: entity.updatedAt.toUtc(),
     );
   }
 
@@ -222,17 +457,17 @@ class RecordRepositoryImpl implements RecordRepository {
       title: Value(record.title),
       description: Value(record.description),
       status: Value(record.status),
-      createdAt: Value(record.createdAt),
-      updatedAt: Value(record.updatedAt),
-      archivedAt: Value(record.archivedAt),
-      deletedAt: Value(record.deletedAt),
+      createdAt: Value(record.createdAt.toUtc()),
+      updatedAt: Value(record.updatedAt.toUtc()),
+      archivedAt: Value(record.archivedAt?.toUtc()),
+      deletedAt: Value(record.deletedAt?.toUtc()),
     );
   }
 
   AssetsCompanion _toAssetCompanion(Asset asset) {
     return AssetsCompanion(
       recordId: Value(asset.recordId),
-      purchaseDate: Value(asset.purchaseDate),
+      purchaseDate: Value(asset.purchaseDate?.toUtc()),
       purchaseAmountMinor: Value(asset.purchaseAmountMinor),
       purchaseCurrency: Value(asset.purchaseCurrency),
       brand: Value(asset.brand),
@@ -241,12 +476,13 @@ class RecordRepositoryImpl implements RecordRepository {
       condition: Value(asset.condition),
       locationDescription: Value(asset.locationDescription),
       acquiredFrom: Value(asset.acquiredFrom),
-      disposedAt: Value(asset.disposedAt),
+      disposedAt: Value(asset.disposedAt?.toUtc()),
       odometerReading: Value(asset.odometerReading),
       pmsDistanceIntervalKm: Value(asset.pmsDistanceIntervalKm),
       pmsTimeIntervalMonths: Value(asset.pmsTimeIntervalMonths),
-      nextPmsDueDate: Value(asset.nextPmsDueDate),
+      nextPmsDueDate: Value(asset.nextPmsDueDate?.toUtc()),
       nextPmsOdometerTarget: Value(asset.nextPmsOdometerTarget),
+      warrantyExpiryDate: Value(asset.warrantyExpiryDate?.toUtc()),
     );
   }
 }

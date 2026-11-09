@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/under_construction_dialog.dart';
+import '../../../settings/presentation/widgets/connect_google_drive_sheet.dart';
 import 'onboarding_shared_widgets.dart';
 
 final onboardingStorageChoiceProvider = NotifierProvider<OnboardingStorageChoiceNotifier, String>(
@@ -22,6 +23,19 @@ class StorageChoiceStep extends ConsumerWidget {
   final VoidCallback onContinue;
 
   const StorageChoiceStep({super.key, required this.onContinue});
+
+  Future<void> _handleGoogleConnection(BuildContext context, WidgetRef ref) async {
+    ref.read(onboardingStorageChoiceProvider.notifier).setChoice('google');
+    final connected = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ConnectGoogleDriveConfirmationSheet(),
+    );
+    if (connected == true) {
+      onContinue();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,22 +70,13 @@ class StorageChoiceStep extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
 
-          // Option 2: Continue with Google (Scheduled for Phase 2)
+          // Option 2: Continue with Google (Zero-Knowledge Cloud Redundancy)
           _StorageOptionCard(
             isSelected: selectedMode == 'google',
-            onTap: () {
-              ref.read(onboardingStorageChoiceProvider.notifier).setChoice('google');
-              showUnderConstructionNotice(
-                context,
-                featureName: 'Google Drive Cloud Backup',
-                scheduledPhase: 'Phase 2',
-              );
-            },
+            onTap: () => _handleGoogleConnection(context, ref),
             icon: Icons.cloud_sync_outlined,
             title: 'Continue with Google',
-            badge: 'Scheduled for Phase 2',
-            badgeBgColor: AppColors.statusWarningFill,
-            badgeTextColor: AppColors.statusWarningText,
+            badge: 'Zero-Knowledge',
             description: 'Automated encrypted vault synchronization with your personal Google Drive storage.',
             perks: const ['Automatic sync', 'End-to-end encrypted backup'],
           ),
@@ -81,11 +86,11 @@ class StorageChoiceStep extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.tune, size: 14, color: AppColors.textTertiary),
+              Icon(Icons.tune, size: 14, color: context.textTertiary),
               const SizedBox(width: 6),
               Text(
                 'You can configure backup preferences anytime in Settings.',
-                style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                style: AppTypography.caption.copyWith(color: context.textTertiary),
               ),
             ],
           ),
@@ -94,11 +99,7 @@ class StorageChoiceStep extends ConsumerWidget {
           ElevatedButton(
             onPressed: () {
               if (selectedMode == 'google') {
-                showUnderConstructionNotice(
-                  context,
-                  featureName: 'Google Drive Cloud Backup',
-                  scheduledPhase: 'Phase 2',
-                );
+                _handleGoogleConnection(context, ref);
               } else {
                 onContinue();
               }
@@ -106,7 +107,7 @@ class StorageChoiceStep extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(selectedMode == 'google' ? 'Continue with Google (Phase 2)' : 'Continue Offline'),
+                Text(selectedMode == 'google' ? 'Continue with Google' : 'Continue Offline'),
                 const SizedBox(width: 8),
                 const Icon(Icons.arrow_forward, size: 18),
               ],
@@ -124,8 +125,6 @@ class _StorageOptionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? badge;
-  final Color? badgeBgColor;
-  final Color? badgeTextColor;
   final String description;
   final List<String> perks;
 
@@ -135,24 +134,25 @@ class _StorageOptionCard extends StatelessWidget {
     required this.icon,
     required this.title,
     this.badge,
-    this.badgeBgColor,
-    this.badgeTextColor,
     required this.description,
     required this.perks,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveBadgeBg = context.isDarkMode ? AppTheme.darkSurfaceContainerLow : AppColors.brandAccentSage;
+    final effectiveBadgeText = context.brandAccent;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
+          color: context.surfaceCard,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+            color: isSelected ? context.brandAccent : context.borderSubtle,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -168,23 +168,23 @@ class _StorageOptionCard extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow,
+                        color: context.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(icon, color: AppColors.brandPrimary, size: 22),
+                      child: Icon(icon, color: context.brandAccent, size: 22),
                     ),
                     if (badge != null) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: badgeBgColor ?? AppColors.brandAccentSage,
+                          color: effectiveBadgeBg,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           badge!,
                           style: AppTypography.badge.copyWith(
-                            color: badgeTextColor ?? AppColors.brandPrimary,
+                            color: effectiveBadgeText,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -197,9 +197,9 @@ class _StorageOptionCard extends StatelessWidget {
                   height: 22,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isSelected ? AppColors.brandPrimary : Colors.transparent,
+                    color: isSelected ? context.brandAccent : Colors.transparent,
                     border: Border.all(
-                      color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+                      color: isSelected ? context.brandAccent : context.borderSubtle,
                       width: 2,
                     ),
                   ),
@@ -221,9 +221,9 @@ class _StorageOptionCard extends StatelessWidget {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle, size: 14, color: AppColors.brandPrimary),
+                    Icon(Icons.check_circle, size: 14, color: context.brandAccent),
                     const SizedBox(width: 4),
-                    Text(perk, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                    Text(perk, style: AppTypography.caption.copyWith(color: context.textSecondary)),
                   ],
                 );
               }).toList(),

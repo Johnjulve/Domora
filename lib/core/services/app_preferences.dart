@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -35,6 +36,13 @@ class AppPreferences {
 
   Future<void> setOnboardingCompleted(bool value) async {
     _data['onboarding_completed'] = value;
+    await _save();
+  }
+
+  bool get hasAcceptedTerms => _data['has_accepted_terms'] == true;
+
+  Future<void> setAcceptedTerms(bool value) async {
+    _data['has_accepted_terms'] = value;
     await _save();
   }
 
@@ -87,6 +95,34 @@ class AppPreferences {
     await _save();
   }
 
+  bool get isGoogleDriveBackupEnabled => _data['google_drive_backup_enabled'] == true;
+
+  Future<void> setGoogleDriveBackupEnabled(bool enabled) async {
+    _data['google_drive_backup_enabled'] = enabled;
+    await _save();
+  }
+
+  String? get googleAccountEmail => _data['google_account_email'] as String?;
+
+  Future<void> setGoogleAccountEmail(String? email) async {
+    _data['google_account_email'] = email;
+    await _save();
+  }
+
+  bool get isBackupWifiOnly => _data['backup_wifi_only'] as bool? ?? true;
+
+  Future<void> setBackupWifiOnly(bool wifiOnly) async {
+    _data['backup_wifi_only'] = wifiOnly;
+    await _save();
+  }
+
+  String? get lastBackupTimestamp => _data['last_backup_timestamp'] as String?;
+
+  Future<void> setLastBackupTimestamp(String? timestamp) async {
+    _data['last_backup_timestamp'] = timestamp;
+    await _save();
+  }
+
   Future<void> resetAll() async {
     _data.clear();
     await _save();
@@ -105,3 +141,40 @@ class AppPreferences {
 final appPreferencesProvider = Provider<AppPreferences>((ref) {
   return AppPreferences._(File(''), {});
 });
+
+/// Reactive notifier managing [ThemeMode] persisted to [AppPreferences].
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    try {
+      final prefs = ref.watch(appPreferencesProvider);
+      return _parseThemeMode(prefs.themeMode);
+    } catch (_) {
+      return ThemeMode.system;
+    }
+  }
+
+  static ThemeMode _parseThemeMode(String mode) {
+    switch (mode.toLowerCase()) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  Future<void> setThemeMode(String modeString) async {
+    final newMode = _parseThemeMode(modeString);
+    state = newMode;
+    try {
+      final prefs = ref.read(appPreferencesProvider);
+      await prefs.setThemeMode(modeString.toLowerCase());
+    } catch (_) {}
+  }
+}
+
+/// Riverpod provider exposing reactive [ThemeMode].
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);

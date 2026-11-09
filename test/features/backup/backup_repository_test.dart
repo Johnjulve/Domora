@@ -166,14 +166,14 @@ void main() {
       expect(payload.manifest.version, equals(BackupManifest.currentFormatVersion));
       expect(payload.manifest.workspaceId, equals(AppConstants.defaultWorkspaceId));
       expect(payload.manifest.counts.workspaces, equals(1));
-      expect(payload.manifest.counts.categories, equals(5)); // 5 default categories seeded
+      expect(payload.manifest.counts.categories, equals(7)); // 7 default categories seeded
       expect(payload.manifest.counts.records, equals(5)); // asset, task, doc, expense, bill
       expect(payload.manifest.counts.assets, equals(1));
       expect(payload.manifest.counts.tasks, equals(1));
       expect(payload.manifest.counts.documents, equals(1));
       expect(payload.manifest.counts.expenses, equals(1));
       expect(payload.manifest.counts.bills, equals(1));
-      expect(payload.manifest.counts.totalItems, equals(16));
+      expect(payload.manifest.counts.totalItems, equals(18));
 
       // Verify SHA-256 Checksum integrity
       final rawDataMap = (payload.toJson()['data'] as Map<String, dynamic>);
@@ -466,6 +466,77 @@ void main() {
         AppConstants.defaultWorkspaceId,
       ).first;
       expect(recordsAfter.any((r) => r.record.id == 'initial-record'), isTrue);
+    });
+
+    test('restoreBackup round-trips warrantyExpiryDate, archivedAt, custom field definitions and values', () async {
+      final now = DateTime.utc(2026, 11, 8, 10, 0, 0);
+      final warrantyDate = DateTime.utc(2028, 11, 8, 10, 0, 0);
+
+      // Create asset with warrantyExpiryDate and custom fields
+      await recordRepo.createAssetRecord(
+        record: Record(
+          id: 'asset-macbook',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          categoryId: 'cat-electronics',
+          recordType: 'asset',
+          title: 'MacBook Pro 16 M3 Max',
+          description: 'Personal work machine with AppleCare+',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: Asset(
+          recordId: 'asset-macbook',
+          brand: 'Apple',
+          model: 'MacBook Pro 16"',
+          warrantyExpiryDate: warrantyDate,
+          purchaseAmountMinor: 25000000,
+          purchaseCurrency: 'PHP',
+        ),
+        customFields: {
+          'Color': 'Space Black',
+          'Memory': '64GB Unified',
+        },
+      );
+
+      // Archive a category
+      await categoryRepo.archiveCategory('cat-family');
+
+      // Export
+      final exportedJson = await backupRepo.exportBackupToJson(AppConstants.defaultWorkspaceId);
+
+      // Verify validation passes
+      final validation = await backupRepo.validateBackup(exportedJson);
+      expect(validation.isValid, isTrue);
+      expect(validation.payload!.fieldDefinitions.length, greaterThanOrEqualTo(2));
+      expect(validation.payload!.fieldValues.length, greaterThanOrEqualTo(2));
+
+      // Restore to target fresh database
+      final dbTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      final targetBackupRepo = BackupRepositoryImpl(dbTarget);
+      final targetRecordRepo = RecordRepositoryImpl(dbTarget);
+      final targetCategoryRepo = CategoryRepositoryImpl(dbTarget);
+
+      await targetBackupRepo.restoreBackup(validation.payload!, clearExisting: true);
+
+      // Verify asset and warrantyExpiryDate
+      final restored = await targetRecordRepo.getRecordWithAsset('asset-macbook');
+      expect(restored, isNotNull);
+      expect(restored!.asset?.warrantyExpiryDate, equals(warrantyDate));
+      expect(restored.record.description, equals('Personal work machine with AppleCare+'));
+
+      // Verify custom fields
+      final fields = await targetRecordRepo.getCustomFieldsForRecord('asset-macbook');
+      expect(fields.length, equals(2));
+      final colorField = fields.firstWhere((f) => f.definition.fieldKey == 'Color');
+      expect(colorField.value.valueText, equals('Space Black'));
+      final memField = fields.firstWhere((f) => f.definition.fieldKey == 'Memory');
+      expect(memField.value.valueText, equals('64GB Unified'));
+
+      // Verify category archived state
+      final activeCategories = await targetCategoryRepo.getCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
+      expect(activeCategories.any((c) => c.id == 'cat-family'), isFalse);
+
+      await dbTarget.close();
     });
   });
 }

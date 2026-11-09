@@ -21,7 +21,6 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     height: 1.2,
     letterSpacing: -0.7,
-    color: AppColors.textPrimary,
   );
 
   static const TextStyle pageHeader = TextStyle(
@@ -31,7 +30,6 @@ class AppTypography {
     fontWeight: FontWeight.w700,
     height: 1.25,
     letterSpacing: -0.5,
-    color: AppColors.textPrimary,
   );
 
   static const TextStyle sectionTitle = TextStyle(
@@ -41,7 +39,6 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     height: 1.3,
     letterSpacing: -0.2,
-    color: AppColors.textPrimary,
   );
 
   static const TextStyle cardTitle = TextStyle(
@@ -50,7 +47,6 @@ class AppTypography {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.35,
-    color: AppColors.textPrimary,
   );
 
   static const TextStyle bodyPrimary = TextStyle(
@@ -59,7 +55,6 @@ class AppTypography {
     fontSize: 15,
     fontWeight: FontWeight.w400,
     height: 1.5,
-    color: AppColors.textPrimary,
   );
 
   static const TextStyle bodySecondary = TextStyle(
@@ -68,7 +63,6 @@ class AppTypography {
     fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.45,
-    color: AppColors.textSecondary,
   );
 
   static const TextStyle caption = TextStyle(
@@ -78,7 +72,6 @@ class AppTypography {
     fontWeight: FontWeight.w500,
     height: 1.4,
     letterSpacing: 0.1,
-    color: AppColors.textTertiary,
   );
 
   static const TextStyle badge = TextStyle(

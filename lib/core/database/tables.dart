@@ -27,6 +27,7 @@ class Categories extends Table {
   TextColumn get colorHex => text().nullable()();
   BoolColumn get isSystem => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get archivedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -75,6 +76,7 @@ class Assets extends Table {
   IntColumn get pmsTimeIntervalMonths => integer().nullable()(); // PMS time cycle (e.g. 3 or 6 months)
   DateTimeColumn get nextPmsDueDate => dateTime().nullable()(); // Next target PMS calendar date
   IntColumn get nextPmsOdometerTarget => integer().nullable()(); // Next target PMS odometer reading (km)
+  DateTimeColumn get warrantyExpiryDate => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {recordId};
@@ -167,4 +169,40 @@ class Bills extends Table {
 
   @override
   Set<Column> get primaryKey => {recordId};
+}
+
+/// Table definition for User-defined and Template Custom Field Definitions.
+@DataClassName('FieldDefinitionEntity')
+@TableIndex(name: 'field_definitions_workspace_cat_idx', columns: {#workspaceId, #categoryId})
+class FieldDefinitions extends Table {
+  TextColumn get id => text()();
+  @ReferenceName('fieldsInWorkspace')
+  TextColumn get workspaceId => text().references(Workspaces, #id, onDelete: KeyAction.cascade)();
+  @ReferenceName('fieldsInCategory')
+  TextColumn get categoryId => text().nullable().references(Categories, #id, onDelete: KeyAction.cascade)();
+  TextColumn get fieldKey => text().withLength(min: 1, max: 100)();
+  TextColumn get label => text().withLength(min: 1, max: 255)();
+  TextColumn get dataType => text().withDefault(const Constant('text'))();
+  IntColumn get displayOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Table definition for Custom Field Values linked to records.
+@DataClassName('FieldValueEntity')
+@TableIndex(name: 'field_values_record_def_idx', columns: {#recordId, #fieldDefinitionId})
+class FieldValues extends Table {
+  TextColumn get id => text()();
+  @ReferenceName('fieldValueRecord')
+  TextColumn get recordId => text().references(Records, #id, onDelete: KeyAction.cascade)();
+  @ReferenceName('fieldValueDefinition')
+  TextColumn get fieldDefinitionId => text().references(FieldDefinitions, #id, onDelete: KeyAction.cascade)();
+  TextColumn get valueText => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
