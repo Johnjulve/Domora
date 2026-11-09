@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:domora/core/database/app_database.dart';
 import 'package:domora/core/providers/database_providers.dart';
 import 'package:domora/core/services/app_preferences.dart';
+import 'package:domora/core/services/google_auth_service.dart';
 import 'package:domora/core/theme/app_theme.dart';
 import 'package:domora/features/backup/data/backup_repository_impl.dart';
 import 'package:domora/features/categories/data/category_repository_impl.dart';
@@ -14,6 +16,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -34,12 +37,75 @@ class FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getApplicationCachePath() async => testPath;
 }
 
+class FakeGoogleSignInAccount implements GoogleSignInAccount {
+  FakeGoogleSignInAccount({
+    required this.email,
+    this.displayName = 'Test User',
+    this.id = '123456789',
+    this.photoUrl,
+  });
+
+  @override
+  final String email;
+
+  @override
+  final String? displayName;
+
+  @override
+  final String id;
+
+  @override
+  final String? photoUrl;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeGoogleAuthService extends GoogleAuthService {
+  FakeGoogleAuthService({
+    this.fakeAccount,
+    this.shouldThrow = false,
+  });
+
+  final GoogleSignInAccount? fakeAccount;
+  final bool shouldThrow;
+  bool signOutCalled = false;
+  int signInCallCount = 0;
+
+  @override
+  GoogleSignInAccount? get currentUser => fakeAccount;
+
+  @override
+  Future<GoogleSignInAccount?> signIn() async {
+    signInCallCount++;
+    if (shouldThrow) {
+      return null;
+    }
+    return fakeAccount;
+  }
+
+  @override
+  Future<void> signOut() async {
+    signOutCalled = true;
+  }
+}
+
+class DelayGoogleAuthService extends GoogleAuthService {
+  final Future<GoogleSignInAccount?> future;
+  DelayGoogleAuthService(this.future);
+
+  @override
+  Future<GoogleSignInAccount?> signIn() => future;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late AppDatabase db;
   late AppPreferences prefs;
   late Directory tempTestDir;
+  late FakeGoogleAuthService fakeAuthService;
+  late FakeGoogleSignInAccount defaultFakeAccount;
 
   setUp(() async {
     tempTestDir = Directory.systemTemp.createTempSync('domora_gdrive_test_');
@@ -47,6 +113,8 @@ void main() {
 
     db = AppDatabase.forTesting(NativeDatabase.memory());
     prefs = AppPreferences.forTesting();
+    defaultFakeAccount = FakeGoogleSignInAccount(email: 'test.user@example.com');
+    fakeAuthService = FakeGoogleAuthService(fakeAccount: defaultFakeAccount);
   });
 
   tearDown(() async {
@@ -58,10 +126,14 @@ void main() {
     } catch (_) {}
   });
 
-  Widget buildTestableSheet({AppPreferences? testPrefs}) {
+  Widget buildTestableSheet({
+    AppPreferences? testPrefs,
+    GoogleAuthService? testAuthService,
+  }) {
     return ProviderScope(
       overrides: [
         appPreferencesProvider.overrideWithValue(testPrefs ?? prefs),
+        googleAuthServiceProvider.overrideWithValue(testAuthService ?? fakeAuthService),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
@@ -84,11 +156,15 @@ void main() {
     );
   }
 
-  Widget buildTestableSettingsScreen({AppPreferences? testPrefs}) {
+  Widget buildTestableSettingsScreen({
+    AppPreferences? testPrefs,
+    GoogleAuthService? testAuthService,
+  }) {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
         appPreferencesProvider.overrideWithValue(testPrefs ?? prefs),
+        googleAuthServiceProvider.overrideWithValue(testAuthService ?? fakeAuthService),
         workspaceRepositoryProvider.overrideWithValue(WorkspaceRepositoryImpl(db)),
         categoryRepositoryProvider.overrideWithValue(CategoryRepositoryImpl(db)),
         backupRepositoryProvider.overrideWithValue(BackupRepositoryImpl(db)),
@@ -147,6 +223,7 @@ void main() {
         ProviderScope(
           overrides: [
             appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(fakeAuthService),
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme,
@@ -182,11 +259,130 @@ void main() {
       await tester.tap(find.byKey(const Key('connect_google_account_button')));
       await tester.pumpAndSettle();
 
-      // Verified modal result & preferences updated
+      // Verified modal result & preferences updated with real account email
       expect(modalResult, isTrue);
       expect(prefs.isGoogleDriveBackupEnabled, isTrue);
-      expect(prefs.googleAccountEmail, 'elena.miller@gmail.com');
-      expect(prefs.lastBackupTimestamp, 'Just now');
+      expect(prefs.googleAccountEmail, 'test.user@example.com');
+      // Authentic metric: backup timestamp remains null until actual sync occurs
+      expect(prefs.lastBackupTimestamp, isNull);
+      expect(fakeAuthService.signInCallCount, 1);
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
+    });
+
+    testWidgets('PopScope prevents dismissing sheet while sign-in is in flight',
+        (WidgetTester tester) async {
+      final completer = Completer<GoogleSignInAccount?>();
+      final slowAuthService = DelayGoogleAuthService(completer.future);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(slowAuthService),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showModalBottomSheet<bool>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const ConnectGoogleDriveConfirmationSheet(),
+                  ),
+                  child: const Text('Open Sheet'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      // Tap connect to enter loading state
+      await tester.tap(find.byKey(const Key('connect_google_account_button')));
+      await tester.pump();
+
+      // Loading indicator is visible
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // Verify PopScope canPop is false
+      final popScopeFinder = find.byType(PopScope);
+      expect(popScopeFinder, findsWidgets);
+      final popScope = tester.widget<PopScope>(popScopeFinder.first);
+      expect(popScope.canPop, isFalse);
+
+      // Complete sign-in
+      completer.complete(defaultFakeAccount);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
+      expect(prefs.isGoogleDriveBackupEnabled, isTrue);
+      expect(prefs.googleAccountEmail, 'test.user@example.com');
+      expect(prefs.lastBackupTimestamp, isNull);
+    });
+
+    testWidgets('Cancellation (returning null) does not enable backup and displays notice',
+        (WidgetTester tester) async {
+      final cancelledAuthService = FakeGoogleAuthService(fakeAccount: null);
+      bool? modalResult;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(cancelledAuthService),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async {
+                    modalResult = await showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const ConnectGoogleDriveConfirmationSheet(),
+                    );
+                  },
+                  child: const Text('Open Sheet'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(prefs.isGoogleDriveBackupEnabled, false);
+      expect(prefs.googleAccountEmail, isNull);
+
+      // Open sheet
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      // Tap Connect with cancelled auth
+      await tester.tap(find.byKey(const Key('connect_google_account_button')));
+      await tester.pumpAndSettle();
+
+      // Sheet remains open, backup not enabled, notice displayed
+      expect(modalResult, isNull);
+      expect(prefs.isGoogleDriveBackupEnabled, false);
+      expect(prefs.googleAccountEmail, isNull);
+      expect(cancelledAuthService.signInCallCount, 1);
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsOneWidget);
+      expect(find.text('Google sign-in cancelled or unavailable'), findsOneWidget);
+
+      // Tap Not now to dismiss
+      await tester.tap(find.byKey(const Key('not_now_button')));
+      await tester.pumpAndSettle();
+
+      expect(modalResult, isFalse);
       expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
     });
 
@@ -198,6 +394,7 @@ void main() {
         ProviderScope(
           overrides: [
             appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(fakeAuthService),
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme,
@@ -268,7 +465,7 @@ void main() {
         (WidgetTester tester) async {
       final activePrefs = AppPreferences.forTesting({
         'google_drive_backup_enabled': true,
-        'google_account_email': 'elena.miller@gmail.com',
+        'google_account_email': 'test.user@example.com',
         'backup_wifi_only': true,
         'last_backup_timestamp': 'Today, 2:14 PM',
       });
@@ -283,14 +480,14 @@ void main() {
       // Section 3: Backup Active Card
       expect(find.text('Google Drive'), findsOneWidget);
       expect(find.text('Active'), findsOneWidget);
-      expect(find.text('elena.miller@gmail.com'), findsOneWidget);
+      expect(find.text('test.user@example.com'), findsOneWidget);
       expect(masterSwitch, findsOneWidget);
 
       // Toggling master switch pauses backup without destroying the card
       await tester.tap(masterSwitch);
       await tester.pumpAndSettle();
       expect(activePrefs.isGoogleDriveBackupEnabled, false);
-      expect(activePrefs.googleAccountEmail, 'elena.miller@gmail.com');
+      expect(activePrefs.googleAccountEmail, 'test.user@example.com');
       expect(find.text('Paused'), findsOneWidget);
       expect(find.byKey(const Key('google_drive_master_switch')), findsOneWidget);
 
@@ -364,6 +561,7 @@ void main() {
       expect(find.text('Disconnected from Google Drive'), findsOneWidget);
       expect(activePrefs.isGoogleDriveBackupEnabled, false);
       expect(activePrefs.googleAccountEmail, isNull);
+      expect(fakeAuthService.signOutCalled, isTrue);
 
       // UI should transition back to inactive card
       expect(find.text('Google Drive Cloud Backup'), findsOneWidget);
@@ -374,7 +572,7 @@ void main() {
         (WidgetTester tester) async {
       final unbackedPrefs = AppPreferences.forTesting({
         'google_drive_backup_enabled': true,
-        'google_account_email': 'elena.miller@gmail.com',
+        'google_account_email': 'test.user@example.com',
         'last_backup_timestamp': null,
       });
 
@@ -398,6 +596,7 @@ void main() {
         ProviderScope(
           overrides: [
             appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(fakeAuthService),
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme,
@@ -426,6 +625,8 @@ void main() {
       expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
       expect(onContinueCalled, isTrue);
       expect(prefs.isGoogleDriveBackupEnabled, isTrue);
+      expect(prefs.googleAccountEmail, 'test.user@example.com');
+      expect(prefs.lastBackupTimestamp, isNull);
     });
 
     testWidgets('Tapping primary button when Google is selected opens sheet and dismissal preserves step',
@@ -436,6 +637,7 @@ void main() {
         ProviderScope(
           overrides: [
             appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(fakeAuthService),
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme,
@@ -474,6 +676,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(onContinueCalled, isTrue);
+      expect(prefs.isGoogleDriveBackupEnabled, isTrue);
+      expect(prefs.googleAccountEmail, 'test.user@example.com');
+      expect(prefs.lastBackupTimestamp, isNull);
     });
   });
 }

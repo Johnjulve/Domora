@@ -16,10 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Navigator Leak Protection: Implemented global lock overlay via `MaterialApp.builder` and `Offstage`, ensuring all backgrounded routes, dialogs, and sheets are completely concealed while locked and restored intact upon authentication.
   - Onboarding Security Step Integration: Removed under-construction notice on `SecurityStep` biometric shield, allowing direct toggle and live visual feedback.
 - Google Drive Cloud Redundancy UI & Zero-Knowledge Confirmation Sheet (Design Screens 11 & 12):
-  - `ConnectGoogleDriveConfirmationSheet` (Screen 12): Sanctuary modal bottom sheet with Google Drive branding, Zero-Knowledge badge (`verified_user`), and 3 explicit privacy promises (*Encrypted before upload*, *Only you can read it*, *Stored in a private app folder*).
+  - Live Google OAuth2 Web Client ID Integration: Added `google_sign_in: ^7.2.0`, configured Client ID `767402822106-btgbm208ccgv8n6fsh2g8umnajsimg44.apps.googleusercontent.com` in `web/index.html` meta tags and `GoogleAuthService`.
+  - Sandboxed `drive.appdata` Scope: Restricts authorization strictly to Domora's isolated application folder on Google Drive, preserving complete zero-knowledge isolation from personal user documents.
+  - `ConnectGoogleDriveConfirmationSheet` (Screen 12): Upgraded to interactive stateful modal with `PopScope(canPop: !_isLoading)` gesture lock during in-flight OAuth2 handshake, real-time loading feedback, error fallback snackbars, and authentic account email resolution (`account.email`).
   - Settings Backup & Restore Active State (Screen 11): Interactive Google Drive Backup card displaying active/paused status, connected email badge, master synchronization switch, "Back up on Wi-Fi only" toggle, and "Back up now" manual trigger with honest timestamp tracking.
   - 12-Word Recovery Passphrase Sheet: Added "Recovery Key" access row under the active Google Drive card allowing users to review and copy their BIP-39 recovery passphrase anytime.
-  - Sign Out & Disconnect Flow: Added "Sign out of Google" action safely clearing account metadata and reverting storage mode to pure local offline.
+  - Sign Out & Disconnect Flow: Added "Sign out of Google" action safely disconnecting from `GoogleSignIn`, clearing account metadata, and reverting storage mode to pure local offline.
   - Onboarding Integration: Replaced under-construction placeholder on Option 2 ("Continue with Google") in `StorageChoiceStep` with direct launch of `ConnectGoogleDriveConfirmationSheet`.
   - Refactored `_buildBackupCard` with extracted row components (`_buildExportDataRow`, `_buildPrintEmergencySheetRow`, `_buildSanctuaryRestoreRow`), ensuring consistent access to JSON vault snapshots and emergency info in both connected and disconnected states.
 - Emergency Household Dossier & Export Engine (Stage 11):
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI Versioning Standardization:
   - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
   - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
-- 28 new automated unit and widget tests covering emergency dossier rendering, Google Drive redundancy flows, and native biometric lock enforcement (134 total passing tests, 0 analysis issues).
+- 30 new automated unit and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, and native biometric lock enforcement (136 total passing tests, 0 analysis issues).
 
 ## [0.1.0-alpha.11] - 2026-11-09
 
