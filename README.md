@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Version](https://img.shields.io/badge/Version-0.1.0--alpha.12-emerald.svg)](CHANGELOG.md)
-[![Automated Tests](https://img.shields.io/badge/Tests-163%20Passing-success.svg)](CHANGELOG.md)
+[![Automated Tests](https://img.shields.io/badge/Tests-181%20Passing-success.svg)](CHANGELOG.md)
 [![Aesthetic](https://img.shields.io/badge/Design-Sanctuary%20Archival-1E4B38.svg)](docs/design/Design/domora_design.md)
 
 > **Know what you have, what needs attention, what it costs, and what you need to do next.**
@@ -26,7 +26,7 @@ Domora is an offline-first, local-ownership personal and household management pl
 ## 🏗 Architecture & Tech Stack
 
 - **Framework**: [Flutter](https://flutter.dev) (Dart 3.x) — mobile-first (Android target)
-- **Local Persistence**: SQLite via [Drift](https://drift.simonbinder.eu/) (strongly-typed DAOs, transactions, and schema migrations through v7)
+- **Local Persistence**: SQLite via [Drift](https://drift.simonbinder.eu/) (strongly-typed DAOs, transactions, and schema migrations through v8)
 - **State Management**: [Riverpod 3.x](https://riverpod.dev/) (reactive `StreamProvider` bindings)
 - **Navigation**: [GoRouter](https://pub.dev/packages/go_router) with offstage route concealing
 - **Hardware Enclave Security**: [`local_auth`](https://pub.dev/packages/local_auth) running on `FlutterFragmentActivity`
@@ -40,7 +40,7 @@ Domora is an offline-first, local-ownership personal and household management pl
 ```text
 lib/
 ├── core/             # Shared contracts, database, design tokens, background services
-│   ├── database/     # Drift SQLite tables, DAOs, and v1-v7 migrations
+│   ├── database/     # Drift SQLite tables, DAOs, and v1-v8 migrations
 │   ├── services/     # Biometric, GoogleAuth, Notification, and Backup services
 │   └── theme/        # Sanctuary Archival light & dark themes, typography, tokens
 ├── features/         # Modular feature slices
@@ -76,7 +76,7 @@ cd Domora
 # Install dependencies
 flutter pub get
 
-# Run test suite (163 tests)
+# Run test suite (181 tests)
 flutter test
 
 # Run on connected device or emulator
