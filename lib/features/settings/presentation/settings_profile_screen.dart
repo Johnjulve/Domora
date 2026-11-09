@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/services/app_preferences.dart';
+import '../../../core/services/google_auth_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -1611,6 +1612,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             key: const Key('sign_out_google_button'),
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
             onTap: () async {
+              await ref.read(googleAuthServiceProvider).signOut();
               await prefs.setGoogleDriveBackupEnabled(false);
               await prefs.setGoogleAccountEmail(null);
               if (mounted) {
