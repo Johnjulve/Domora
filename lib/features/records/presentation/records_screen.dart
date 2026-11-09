@@ -48,12 +48,12 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
         title: const Text('Life Records'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.receipt_long_outlined, color: AppColors.brandPrimary),
+            icon: Icon(Icons.receipt_long_outlined, color: context.brandAccent),
             tooltip: 'Add Utility Bill',
             onPressed: () => _openAddBillModal(context),
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.brandPrimary),
+            icon: Icon(Icons.add_circle_outline, color: context.brandAccent),
             tooltip: 'Add Record',
             onPressed: () => _openAddAssetModal(context),
           ),
@@ -68,10 +68,10 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by title, brand, model, location...',
-                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                prefixIcon: Icon(Icons.search, color: context.textSecondary),
                 suffixIcon: searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+                        icon: Icon(Icons.clear, color: context.textSecondary),
                         onPressed: () {
                           _searchController.clear();
                           ref.read(recordSearchQueryProvider.notifier).clear();
@@ -121,8 +121,8 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           // Records List
           Expanded(
             child: recordsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.brandPrimary),
+              loading: () => Center(
+                child: CircularProgressIndicator(color: context.brandAccent),
               ),
               error: (err, stack) => Center(
                 child: Padding(
@@ -156,7 +156,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                                   color: AppColors.brandAccentSage,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.inventory_2_outlined, color: AppColors.brandPrimary, size: 36),
+                                child: Icon(Icons.inventory_2_outlined, color: context.brandAccent, size: 36),
                               ),
                               const SizedBox(height: 20),
                               Text(
@@ -257,7 +257,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                                     'Value: ${asset.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
                                     style: AppTypography.bodyPrimary.copyWith(
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.brandPrimary,
+                                      color: context.brandAccent,
                                     ),
                                   ),
                                 ],
@@ -295,10 +295,10 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.brandPrimary : AppColors.surfaceCard,
+              color: isSelected ? AppColors.brandPrimary : context.surfaceCard,
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+                color: isSelected ? AppColors.brandPrimary : context.borderSubtle,
                 width: 1,
               ),
             ),
@@ -307,7 +307,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? AppColors.brandOnPrimary : AppColors.textPrimary,
+                color: isSelected ? AppColors.brandOnPrimary : context.textPrimary,
               ),
             ),
           ),
@@ -315,7 +315,6 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       ),
     );
   }
-
 
   void _openAddBillModal(BuildContext context) {
     showModalBottomSheet<void>(
@@ -477,11 +476,13 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(defaultCategoriesStreamProvider);
+    final theme = Theme.of(context);
+    final sheetBg = theme.bottomSheetTheme.backgroundColor ?? theme.cardColor;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -617,16 +618,16 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLow,
+                    color: context.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.brandAccentBorder),
+                    border: Border.all(color: context.borderSubtle),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.directions_car_outlined, size: 18, color: AppColors.brandPrimary),
+                          Icon(Icons.directions_car_outlined, size: 18, color: context.brandAccent),
                           const SizedBox(width: 8),
                           Text(
                             'Vehicle PMS Limits & Odometer',
@@ -725,11 +726,13 @@ class AssetDetailSheet extends ConsumerWidget {
     final hasPurchasePrice = asset?.purchaseAmountMinor != null;
     final purchasePriceMinor = asset?.purchaseAmountMinor ?? 0;
     final totalOwnershipCostMinor = purchasePriceMinor + maintenanceCostsMinor;
+    final theme = Theme.of(context);
+    final sheetBg = theme.bottomSheetTheme.backgroundColor ?? theme.cardColor;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -890,6 +893,7 @@ class AssetDetailSheet extends ConsumerWidget {
       ),
     );
   }
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -914,10 +918,10 @@ class AssetDetailSheet extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
+        backgroundColor: Theme.of(ctx).dialogTheme.backgroundColor ?? Theme.of(ctx).cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
-          side: const BorderSide(color: AppColors.borderSubtle),
+          side: BorderSide(color: Theme.of(ctx).colorScheme.outline),
         ),
         title: const Text('Move to Trash?', style: AppTypography.cardTitle),
         content: Text(
@@ -966,7 +970,6 @@ class AssetDetailSheet extends ConsumerWidget {
   }
 }
 
-
 class _AssetServiceHistorySection extends ConsumerWidget {
   final String assetRecordId;
   final String currency;
@@ -988,7 +991,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.history_toggle_off_outlined, size: 18, color: AppColors.brandPrimary),
+                Icon(Icons.history_toggle_off_outlined, size: 18, color: context.brandAccent),
                 const SizedBox(width: 6),
                 Text(
                   'Service & Maintenance History',
@@ -1000,9 +1003,9 @@ class _AssetServiceHistorySection extends ConsumerWidget {
               data: (list) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
+                  color: context.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: context.borderSubtle),
                 ),
                 child: Text(
                   '${list.length}',
@@ -1016,10 +1019,10 @@ class _AssetServiceHistorySection extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         expensesAsync.when(
-          loading: () => const Center(
+          loading: () => Center(
             child: Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+              padding: const EdgeInsets.all(12),
+              child: CircularProgressIndicator(strokeWidth: 2, color: context.brandAccent),
             ),
           ),
           error: (err, _) => Padding(
@@ -1031,13 +1034,13 @@ class _AssetServiceHistorySection extends ConsumerWidget {
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
+                  color: context.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: context.borderSubtle),
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.car_repair_outlined, size: 28, color: AppColors.textTertiary),
+                    Icon(Icons.car_repair_outlined, size: 28, color: context.textTertiary),
                     const SizedBox(height: 6),
                     Text(
                       'No maintenance logged yet',
@@ -1046,7 +1049,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Service logs and odometer updates will appear here in chronological timeline.',
-                      style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                      style: AppTypography.caption.copyWith(color: context.textTertiary),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -1098,7 +1101,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                               color: AppColors.brandAccentSage,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.build_outlined, size: 18, color: AppColors.brandPrimary),
+                            child: Icon(Icons.build_outlined, size: 18, color: context.brandAccent),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -1120,7 +1123,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                                       'Cost: $currency ${(expense.amountMinor / 100).toStringAsFixed(2)}',
                                       style: AppTypography.cardTitle.copyWith(
                                         fontSize: 14,
-                                        color: AppColors.brandPrimary,
+                                        color: context.brandAccent,
                                       ),
                                     ),
                                   ],
@@ -1128,15 +1131,15 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Text(dateStr, style: AppTypography.caption.copyWith(color: AppColors.textTertiary)),
+                                    Text(dateStr, style: AppTypography.caption.copyWith(color: context.textTertiary)),
                                     if (expense.odometerReading != null) ...[
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                         decoration: BoxDecoration(
-                                          color: AppColors.surfaceContainerLow,
+                                          color: context.surfaceContainerLow,
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: AppColors.borderSubtle),
+                                          border: Border.all(color: context.borderSubtle),
                                         ),
                                         child: Text(
                                           '${expense.odometerReading} km',
@@ -1149,7 +1152,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                                       Text(
                                         '+$deltaKm km delta',
                                         style: AppTypography.caption.copyWith(
-                                          color: AppColors.brandPrimary,
+                                          color: context.brandAccent,
                                           fontSize: 10,
                                         ),
                                       ),
@@ -1200,7 +1203,7 @@ class _AssetLinkedDocumentsSection extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.folder_shared_outlined, size: 18, color: AppColors.brandPrimary),
+                    Icon(Icons.folder_shared_outlined, size: 18, color: context.brandAccent),
                     const SizedBox(width: 6),
                     Text(
                       'Vault Documents & Attachments',
@@ -1209,7 +1212,7 @@ class _AssetLinkedDocumentsSection extends ConsumerWidget {
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline, size: 20, color: AppColors.brandPrimary),
+                  icon: Icon(Icons.add_circle_outline, size: 20, color: context.brandAccent),
                   tooltip: 'Attach Document',
                   visualDensity: VisualDensity.compact,
                   onPressed: () {
@@ -1236,11 +1239,11 @@ class _AssetLinkedDocumentsSection extends ConsumerWidget {
                   margin: EdgeInsets.zero,
                   child: ListTile(
                     dense: true,
-                    leading: const Icon(Icons.description_outlined, color: AppColors.brandPrimary, size: 20),
+                    leading: Icon(Icons.description_outlined, color: context.brandAccent, size: 20),
                     title: Text(item.record.title, style: AppTypography.cardTitle.copyWith(fontSize: 13)),
                     subtitle: Text(
                       '${item.document.fileName} • ${item.document.formattedFileSize}',
-                      style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                      style: AppTypography.caption.copyWith(color: context.textTertiary),
                     ),
                     trailing: const Icon(Icons.chevron_right, size: 18),
                     onTap: () {
