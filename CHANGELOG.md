@@ -61,7 +61,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI Versioning Standardization:
   - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
   - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
-- 57 new automated unit and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, native biometric lock enforcement, dark theme switching, visual contrast collision verification, and mandatory terms consent gating (163 total passing tests, 0 analysis issues).
+- Flexible Asset Management & Category Engine (Blueprint Alignment):
+  - Drift SQLite Schema Migration (v7 -> v8):
+    - Added `warrantyExpiryDate` (nullable DateTime) to `Assets` table.
+    - Added `archivedAt` (nullable DateTime) to `Categories` table for soft-archival without data loss.
+    - Created relational `FieldDefinitions` and `FieldValues` tables with foreign keys and cascading delete for typed user-defined and template custom fields.
+    - Verified non-destructive migration on legacy databases and existing vehicle/property records.
+  - Category Architecture Expansion:
+    - Added built-in seed categories for `Furniture` (`cat-furniture`) and `Tools` (`cat-tools`), expanding system categories to 7.
+    - Preserved existing `Family` records while isolating asset workflows to valid physical asset templates.
+    - Added category management capabilities (`createCategory`, `archiveCategory`, `renameCategory`) with in-sheet `+ Add New Category` creation dialog.
+  - Category-Adaptive Form UX (`AddAssetSheet` & `AssetDetailSheet`):
+    - Replaced fixed one-size-fits-all form with adaptive category templates:
+      - **Vehicle**: License plate (custom field), odometer, PMS distance & time intervals. Strictly isolates PMS schedule generation to vehicles (`cat-vehicles`).
+      - **Property**: Address / location, Title / Deed number (custom field).
+      - **Appliance & Electronics**: Brand, model, serial number, warranty expiry date.
+      - **Furniture & Tools**: Material / construction details, room / placement location, condition.
+      - **General**: Streamlined universal fields.
+    - Non-destructive category switching: changing categories preserves user-entered data without discarding inputs.
+    - ISO 4217 Currency Selection: Replaced hardcoded PHP with explicit multi-currency selector (`PHP`, `USD`, `EUR`, `JPY`, `GBP`, `SGD`, `AUD`, `CAD`) storing integer minor units.
+    - Collapsible Sheet UX: "Warranty, Dates & Notes" and "Custom Fields" accordions keeping core fields within 600px viewport.
+    - Detailed Inspection: `AssetDetailSheet` displays active/expired warranty badges, multiline notes, and custom key-value attributes.
+  - Backup & Restore Compatibility:
+    - Serialized `fieldDefinitions`, `fieldValues`, `warrantyExpiryDate`, and `archivedAt` into `BackupPayload` with SHA-256 integrity checksum.
+    - Enforced reverse foreign-key deletion ordering in `restoreBackup` under `PRAGMA foreign_keys = ON` preventing constraint violations.
+- 69 new automated unit, repository, migration, and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, native biometric lock enforcement, dark theme switching, visual contrast collision verification, mandatory terms consent gating, and flexible asset templates (175 total passing tests, 0 analysis issues).
 
 ## [0.1.0-alpha.11] - 2026-11-09
 
