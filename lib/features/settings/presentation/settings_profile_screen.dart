@@ -16,6 +16,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/under_construction_dialog.dart';
 import '../../backup/presentation/backup_sheet.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
+import 'widgets/emergency_info_sheet.dart';
 
 /// Full Settings & Profile Screen matching Sanctuary Archival specification.
 class SettingsProfileScreen extends ConsumerStatefulWidget {
@@ -760,7 +761,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 // Minimal Clean Footer
                 Center(
                   child: Text(
-                    'Domora ${AppConstants.fullVersionTag}',
+                    'Domora ${AppConstants.displayVersion}',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textTertiary.withValues(alpha: 0.8),
@@ -1121,10 +1122,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           InkWell(
             key: const Key('print_emergency_sheet_row'),
             onTap: () {
-              showUnderConstructionNotice(
-                context,
-                featureName: 'Print Emergency Info Sheet',
-                scheduledPhase: 'Phase 2',
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const EmergencyInfoSheet(),
               );
             },
             child: const Padding(
@@ -1482,9 +1484,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'App Version & Updates',
-                      style: TextStyle(
+                    Text(
+                      'Domora ${AppConstants.displayVersion}',
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: AppColors.textPrimary,
@@ -1492,7 +1494,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Domora ${AppConstants.fullVersionTag}',
+                      'Build 12 • Offline Sanctuary (${AppConstants.appReleaseChannel})',
                       style: const TextStyle(
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
