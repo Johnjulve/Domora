@@ -13,6 +13,8 @@ class BackupCounts {
   final int documents;
   final int expenses;
   final int bills;
+  final int fieldDefinitions;
+  final int fieldValues;
 
   const BackupCounts({
     required this.workspaces,
@@ -23,10 +25,21 @@ class BackupCounts {
     required this.documents,
     required this.expenses,
     this.bills = 0,
+    this.fieldDefinitions = 0,
+    this.fieldValues = 0,
   });
 
   int get totalItems =>
-      workspaces + categories + records + assets + tasks + documents + expenses + bills;
+      workspaces +
+      categories +
+      records +
+      assets +
+      tasks +
+      documents +
+      expenses +
+      bills +
+      fieldDefinitions +
+      fieldValues;
 
   Map<String, dynamic> toJson() => {
         'workspaces': workspaces,
@@ -37,6 +50,8 @@ class BackupCounts {
         'documents': documents,
         'expenses': expenses,
         'bills': bills,
+        'fieldDefinitions': fieldDefinitions,
+        'fieldValues': fieldValues,
       };
 
   factory BackupCounts.fromJson(Map<String, dynamic> json) => BackupCounts(
@@ -48,6 +63,8 @@ class BackupCounts {
         documents: json['documents'] as int? ?? 0,
         expenses: json['expenses'] as int? ?? 0,
         bills: json['bills'] as int? ?? 0,
+        fieldDefinitions: json['fieldDefinitions'] as int? ?? 0,
+        fieldValues: json['fieldValues'] as int? ?? 0,
       );
 }
 
@@ -105,6 +122,8 @@ class BackupPayload {
   final List<Map<String, dynamic>> documents;
   final List<Map<String, dynamic>> expenses;
   final List<Map<String, dynamic>> bills;
+  final List<Map<String, dynamic>> fieldDefinitions;
+  final List<Map<String, dynamic>> fieldValues;
 
   const BackupPayload({
     required this.manifest,
@@ -116,6 +135,8 @@ class BackupPayload {
     required this.documents,
     required this.expenses,
     this.bills = const [],
+    this.fieldDefinitions = const [],
+    this.fieldValues = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -129,6 +150,8 @@ class BackupPayload {
           'documents': documents,
           'expenses': expenses,
           'bills': bills,
+          'fieldDefinitions': fieldDefinitions,
+          'fieldValues': fieldValues,
         },
       };
 

@@ -65,7 +65,18 @@ class BackupRepositoryImpl implements BackupRepository {
               ..where((b) => b.recordId.isIn(recordIds)))
             .get();
 
-    // 5. Serialize into normalized Map representations
+    // 5. Fetch custom field definitions and values
+    final fieldDefRows = await (_db.select(_db.fieldDefinitions)
+          ..where((f) => f.workspaceId.equals(workspaceId)))
+        .get();
+
+    final fieldValueRows = recordIds.isEmpty
+        ? <FieldValueEntity>[]
+        : await (_db.select(_db.fieldValues)
+              ..where((v) => v.recordId.isIn(recordIds)))
+            .get();
+
+    // 6. Serialize into normalized Map representations
     final workspacesJson = workspaceRows.map((w) => {
           'id': w.id,
           'name': w.name,
@@ -84,6 +95,7 @@ class BackupRepositoryImpl implements BackupRepository {
           'colorHex': c.colorHex,
           'isSystem': c.isSystem,
           'createdAt': c.createdAt.toIso8601String(),
+          'archivedAt': c.archivedAt?.toIso8601String(),
         }).toList();
 
     final recordsJson = recordRows.map((r) => {
@@ -117,6 +129,7 @@ class BackupRepositoryImpl implements BackupRepository {
           'pmsTimeIntervalMonths': a.pmsTimeIntervalMonths,
           'nextPmsDueDate': a.nextPmsDueDate?.toIso8601String(),
           'nextPmsOdometerTarget': a.nextPmsOdometerTarget,
+          'warrantyExpiryDate': a.warrantyExpiryDate?.toIso8601String(),
         }).toList();
 
     final tasksJson = taskRows.map((t) => {
@@ -168,6 +181,26 @@ class BackupRepositoryImpl implements BackupRepository {
           'linkedExpenseRecordId': b.linkedExpenseRecordId,
         }).toList();
 
+    final fieldDefinitionsJson = fieldDefRows.map((f) => {
+          'id': f.id,
+          'workspaceId': f.workspaceId,
+          'categoryId': f.categoryId,
+          'fieldKey': f.fieldKey,
+          'label': f.label,
+          'dataType': f.dataType,
+          'displayOrder': f.displayOrder,
+          'createdAt': f.createdAt.toIso8601String(),
+        }).toList();
+
+    final fieldValuesJson = fieldValueRows.map((v) => {
+          'id': v.id,
+          'recordId': v.recordId,
+          'fieldDefinitionId': v.fieldDefinitionId,
+          'valueText': v.valueText,
+          'createdAt': v.createdAt.toIso8601String(),
+          'updatedAt': v.updatedAt.toIso8601String(),
+        }).toList();
+
     final dataMap = <String, dynamic>{
       'workspaces': workspacesJson,
       'categories': categoriesJson,
@@ -177,6 +210,8 @@ class BackupRepositoryImpl implements BackupRepository {
       'documents': documentsJson,
       'expenses': expensesJson,
       'bills': billsJson,
+      'fieldDefinitions': fieldDefinitionsJson,
+      'fieldValues': fieldValuesJson,
     };
 
     final checksum = BackupPayload.computeChecksum(dataMap);
@@ -190,6 +225,8 @@ class BackupRepositoryImpl implements BackupRepository {
       documents: documentsJson.length,
       expenses: expensesJson.length,
       bills: billsJson.length,
+      fieldDefinitions: fieldDefinitionsJson.length,
+      fieldValues: fieldValuesJson.length,
     );
 
     final manifest = BackupManifest(
@@ -212,6 +249,8 @@ class BackupRepositoryImpl implements BackupRepository {
       documents: documentsJson,
       expenses: expensesJson,
       bills: billsJson,
+      fieldDefinitions: fieldDefinitionsJson,
+      fieldValues: fieldValuesJson,
     );
   }
 
@@ -281,6 +320,10 @@ class BackupRepositoryImpl implements BackupRepository {
           .cast<Map<String, dynamic>>();
       final bills = (dataRaw['bills'] as List<dynamic>? ?? [])
           .cast<Map<String, dynamic>>();
+      final fieldDefinitions = (dataRaw['fieldDefinitions'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+      final fieldValues = (dataRaw['fieldValues'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
 
       final payload = BackupPayload(
         manifest: manifest,
@@ -292,6 +335,8 @@ class BackupRepositoryImpl implements BackupRepository {
         documents: documents,
         expenses: expenses,
         bills: bills,
+        fieldDefinitions: fieldDefinitions,
+        fieldValues: fieldValues,
       );
 
       return BackupValidationResult.valid(
@@ -322,6 +367,9 @@ class BackupRepositoryImpl implements BackupRepository {
         final existingRecordIds = existingRecords.map((r) => r.id).toSet();
 
         if (existingRecordIds.isNotEmpty) {
+          await (_db.delete(_db.fieldValues)
+                ..where((v) => v.recordId.isIn(existingRecordIds)))
+              .go();
           await (_db.delete(_db.bills)
                 ..where((b) => b.recordId.isIn(existingRecordIds)))
               .go();
@@ -339,6 +387,9 @@ class BackupRepositoryImpl implements BackupRepository {
               .go();
         }
 
+        await (_db.delete(_db.fieldDefinitions)
+              ..where((f) => f.workspaceId.equals(workspaceId)))
+            .go();
         await (_db.delete(_db.records)
               ..where((r) => r.workspaceId.equals(workspaceId)))
             .go();
@@ -354,13 +405,13 @@ class BackupRepositoryImpl implements BackupRepository {
                 id: Value(w['id'] as String),
                 name: Value(w['name'] as String),
                 workspaceType: Value(w['workspaceType'] as String? ?? 'personal'),
-                createdAt: Value(DateTime.parse(w['createdAt'] as String)),
-                updatedAt: Value(DateTime.parse(w['updatedAt'] as String)),
+                createdAt: Value(DateTime.parse(w['createdAt'] as String).toUtc()),
+                updatedAt: Value(DateTime.parse(w['updatedAt'] as String).toUtc()),
                 archivedAt: Value(w['archivedAt'] != null
-                    ? DateTime.parse(w['archivedAt'] as String)
+                    ? DateTime.parse(w['archivedAt'] as String).toUtc()
                     : null),
                 deletedAt: Value(w['deletedAt'] != null
-                    ? DateTime.parse(w['deletedAt'] as String)
+                    ? DateTime.parse(w['deletedAt'] as String).toUtc()
                     : null),
               ),
             );
@@ -376,7 +427,10 @@ class BackupRepositoryImpl implements BackupRepository {
                 iconKey: Value(c['iconKey'] as String?),
                 colorHex: Value(c['colorHex'] as String?),
                 isSystem: Value(c['isSystem'] as bool? ?? false),
-                createdAt: Value(DateTime.parse(c['createdAt'] as String)),
+                createdAt: Value(DateTime.parse(c['createdAt'] as String).toUtc()),
+                archivedAt: Value(c['archivedAt'] != null
+                    ? DateTime.parse(c['archivedAt'] as String).toUtc()
+                    : null),
               ),
             );
       }
@@ -392,13 +446,13 @@ class BackupRepositoryImpl implements BackupRepository {
                 title: Value(r['title'] as String),
                 description: Value(r['description'] as String?),
                 status: Value(r['status'] as String? ?? 'active'),
-                createdAt: Value(DateTime.parse(r['createdAt'] as String)),
-                updatedAt: Value(DateTime.parse(r['updatedAt'] as String)),
+                createdAt: Value(DateTime.parse(r['createdAt'] as String).toUtc()),
+                updatedAt: Value(DateTime.parse(r['updatedAt'] as String).toUtc()),
                 archivedAt: Value(r['archivedAt'] != null
-                    ? DateTime.parse(r['archivedAt'] as String)
+                    ? DateTime.parse(r['archivedAt'] as String).toUtc()
                     : null),
                 deletedAt: Value(r['deletedAt'] != null
-                    ? DateTime.parse(r['deletedAt'] as String)
+                    ? DateTime.parse(r['deletedAt'] as String).toUtc()
                     : null),
               ),
             );
@@ -414,22 +468,25 @@ class BackupRepositoryImpl implements BackupRepository {
                 serialNumber: Value(a['serialNumber'] as String?),
                 condition: Value(a['condition'] as String?),
                 purchaseDate: Value(a['purchaseDate'] != null
-                    ? DateTime.parse(a['purchaseDate'] as String)
+                    ? DateTime.parse(a['purchaseDate'] as String).toUtc()
                     : null),
                 purchaseAmountMinor: Value(a['purchaseAmountMinor'] as int?),
                 purchaseCurrency: Value(a['purchaseCurrency'] as String? ?? 'PHP'),
                 locationDescription: Value(a['locationDescription'] as String?),
                 acquiredFrom: Value(a['acquiredFrom'] as String?),
                 disposedAt: Value(a['disposedAt'] != null
-                    ? DateTime.parse(a['disposedAt'] as String)
+                    ? DateTime.parse(a['disposedAt'] as String).toUtc()
                     : null),
                 odometerReading: Value(a['odometerReading'] as int?),
                 pmsDistanceIntervalKm: Value(a['pmsDistanceIntervalKm'] as int?),
                 pmsTimeIntervalMonths: Value(a['pmsTimeIntervalMonths'] as int?),
                 nextPmsDueDate: Value(a['nextPmsDueDate'] != null
-                    ? DateTime.parse(a['nextPmsDueDate'] as String)
+                    ? DateTime.parse(a['nextPmsDueDate'] as String).toUtc()
                     : null),
                 nextPmsOdometerTarget: Value(a['nextPmsOdometerTarget'] as int?),
+                warrantyExpiryDate: Value(a['warrantyExpiryDate'] != null
+                    ? DateTime.parse(a['warrantyExpiryDate'] as String).toUtc()
+                    : null),
               ),
             );
       }
@@ -442,10 +499,10 @@ class BackupRepositoryImpl implements BackupRepository {
                 priority: Value(t['priority'] as String? ?? 'medium'),
                 status: Value(t['status'] as String? ?? 'pending'),
                 dueDate: Value(t['dueDate'] != null
-                    ? DateTime.parse(t['dueDate'] as String)
+                    ? DateTime.parse(t['dueDate'] as String).toUtc()
                     : null),
                 completedAt: Value(t['completedAt'] != null
-                    ? DateTime.parse(t['completedAt'] as String)
+                    ? DateTime.parse(t['completedAt'] as String).toUtc()
                     : null),
                 recurrenceRule: Value(t['recurrenceRule'] as String?),
                 assetRecordId: Value(t['assetRecordId'] as String?),
@@ -475,7 +532,7 @@ class BackupRepositoryImpl implements BackupRepository {
                 recordId: Value(e['recordId'] as String),
                 amountMinor: Value(e['amountMinor'] as int),
                 currencyCode: Value(e['currencyCode'] as String? ?? 'PHP'),
-                transactionDate: Value(DateTime.parse(e['transactionDate'] as String)),
+                transactionDate: Value(DateTime.parse(e['transactionDate'] as String).toUtc()),
                 paymentMethod: Value(e['paymentMethod'] as String?),
                 expenseCategory: Value(e['expenseCategory'] as String? ?? 'maintenance'),
                 linkedAssetRecordId: Value(e['linkedAssetRecordId'] as String?),
@@ -495,22 +552,52 @@ class BackupRepositoryImpl implements BackupRepository {
                 providerName: Value(b['providerName'] as String?),
                 accountNumber: Value(b['accountNumber'] as String?),
                 billingPeriodStart: Value(b['billingPeriodStart'] != null
-                    ? DateTime.parse(b['billingPeriodStart'] as String)
+                    ? DateTime.parse(b['billingPeriodStart'] as String).toUtc()
                     : null),
                 billingPeriodEnd: Value(b['billingPeriodEnd'] != null
-                    ? DateTime.parse(b['billingPeriodEnd'] as String)
+                    ? DateTime.parse(b['billingPeriodEnd'] as String).toUtc()
                     : null),
                 dueDate: Value(b['dueDate'] != null
-                    ? DateTime.parse(b['dueDate'] as String)
+                    ? DateTime.parse(b['dueDate'] as String).toUtc()
                     : null),
                 amountDueMinor: Value(b['amountDueMinor'] as int),
                 currencyCode: Value(b['currencyCode'] as String? ?? 'PHP'),
                 paymentStatus: Value(b['paymentStatus'] as String? ?? 'unpaid'),
                 paidAt: Value(b['paidAt'] != null
-                    ? DateTime.parse(b['paidAt'] as String)
+                    ? DateTime.parse(b['paidAt'] as String).toUtc()
                     : null),
                 linkedAssetRecordId: Value(b['linkedAssetRecordId'] as String?),
                 linkedExpenseRecordId: Value(b['linkedExpenseRecordId'] as String?),
+              ),
+            );
+      }
+
+      // 9. Insert FieldDefinitions
+      for (final fd in payload.fieldDefinitions) {
+        await _db.into(_db.fieldDefinitions).insertOnConflictUpdate(
+              FieldDefinitionsCompanion(
+                id: Value(fd['id'] as String),
+                workspaceId: Value(fd['workspaceId'] as String),
+                categoryId: Value(fd['categoryId'] as String?),
+                fieldKey: Value(fd['fieldKey'] as String),
+                label: Value(fd['label'] as String),
+                dataType: Value(fd['dataType'] as String? ?? 'text'),
+                displayOrder: Value(fd['displayOrder'] as int? ?? 0),
+                createdAt: Value(DateTime.parse(fd['createdAt'] as String).toUtc()),
+              ),
+            );
+      }
+
+      // 10. Insert FieldValues
+      for (final fv in payload.fieldValues) {
+        await _db.into(_db.fieldValues).insertOnConflictUpdate(
+              FieldValuesCompanion(
+                id: Value(fv['id'] as String),
+                recordId: Value(fv['recordId'] as String),
+                fieldDefinitionId: Value(fv['fieldDefinitionId'] as String),
+                valueText: Value(fv['valueText'] as String),
+                createdAt: Value(DateTime.parse(fv['createdAt'] as String).toUtc()),
+                updatedAt: Value(DateTime.parse(fv['updatedAt'] as String).toUtc()),
               ),
             );
       }
