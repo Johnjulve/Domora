@@ -2,8 +2,13 @@ import 'package:domora/core/database/app_database.dart';
 import 'package:domora/core/providers/database_providers.dart';
 import 'package:domora/core/services/app_preferences.dart';
 import 'package:domora/core/services/notification_service.dart';
+import 'package:domora/core/theme/app_colors.dart';
 import 'package:domora/core/theme/app_theme.dart';
+import 'package:domora/core/theme/app_typography.dart';
 import 'package:domora/features/categories/data/category_repository_impl.dart';
+import 'package:domora/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:domora/features/records/data/record_repository_impl.dart';
+import 'package:domora/features/records/presentation/records_screen.dart';
 import 'package:domora/features/settings/presentation/settings_profile_screen.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 import 'package:domora/main.dart';
@@ -356,6 +361,170 @@ void main() {
         matching: find.byType(Text),
       ));
       expect(darkText.style?.color, AppTheme.darkTextPrimary);
+    });
+  });
+
+  group('Pillar 6: Visual Contrast, Theming & Dark Mode Collision Verification Tests', () {
+    test('AppTypography base styles omit explicit color and inherit ambient theme color in Light and Dark Mode', () {
+      expect(AppTypography.displayHero.color, isNull);
+      expect(AppTypography.pageHeader.color, isNull);
+      expect(AppTypography.sectionTitle.color, isNull);
+      expect(AppTypography.cardTitle.color, isNull);
+      expect(AppTypography.bodyPrimary.color, isNull);
+      expect(AppTypography.bodySecondary.color, isNull);
+      expect(AppTypography.caption.color, isNull);
+      expect(AppTypography.badge.color, AppColors.brandPrimary);
+    });
+
+    testWidgets('AppTypography inherits light text color under light theme and dark text color under dark theme',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.light,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return Column(
+                  children: const [
+                    Text('Hero Title', style: AppTypography.displayHero),
+                    Text('Page Header', style: AppTypography.pageHeader),
+                    Text('Body Content', style: AppTypography.bodyPrimary),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final lightContext = tester.element(find.text('Page Header'));
+      expect(lightContext.isDarkMode, isFalse);
+      expect(lightContext.surfaceCanvas, AppColors.surfaceCanvas);
+      expect(lightContext.surfaceCard, AppColors.surfaceCard);
+      expect(lightContext.textPrimary, AppColors.textPrimary);
+      expect(lightContext.textSecondary, AppColors.textSecondary);
+      expect(lightContext.textTertiary, AppColors.textTertiary);
+      expect(lightContext.borderSubtle, AppColors.borderSubtle);
+      expect(lightContext.surfaceContainerLow, AppColors.surfaceContainerLow);
+      expect(DefaultTextStyle.of(lightContext).style.color, AppColors.textSecondary);
+
+      // Verify effective style inherits from DefaultTextStyle without color override
+      final lightEffective = DefaultTextStyle.of(lightContext).style.merge(AppTypography.pageHeader);
+      expect(lightEffective.color, AppColors.textSecondary);
+
+      // Now pump under dark theme
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.dark,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return Column(
+                  children: const [
+                    Text('Hero Title', style: AppTypography.displayHero),
+                    Text('Page Header', style: AppTypography.pageHeader),
+                    Text('Body Content', style: AppTypography.bodyPrimary),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final darkContext = tester.element(find.text('Page Header'));
+      expect(darkContext.isDarkMode, isTrue);
+      expect(darkContext.surfaceCanvas, AppTheme.darkSurfaceCanvas);
+      expect(darkContext.surfaceCard, AppTheme.darkSurfaceCard);
+      expect(darkContext.textPrimary, AppTheme.darkTextPrimary);
+      expect(darkContext.textSecondary, AppTheme.darkTextSecondary);
+      expect(darkContext.textTertiary, AppTheme.darkTextTertiary);
+      expect(darkContext.borderSubtle, AppTheme.darkBorderSubtle);
+      expect(darkContext.surfaceContainerLow, AppTheme.darkSurfaceContainerLow);
+      expect(DefaultTextStyle.of(darkContext).style.color, AppTheme.darkTextSecondary);
+
+      // Verify dark effective style inherits dark text color without override
+      final darkEffective = DefaultTextStyle.of(darkContext).style.merge(AppTypography.pageHeader);
+      expect(darkEffective.color, AppTheme.darkTextSecondary);
+    });
+
+    testWidgets('OnboardingScreen Scaffold renders dark scaffold background when running under AppTheme.darkTheme',
+        (WidgetTester tester) async {
+      final prefs = AppPreferences.forTesting({
+        'onboarding_completed': false,
+        'theme_mode': 'dark',
+      });
+      final container = ProviderContainer(
+        overrides: [
+          appPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const OnboardingScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, isNull);
+
+      final scaffoldContext = tester.element(find.byType(Scaffold));
+      expect(Theme.of(scaffoldContext).scaffoldBackgroundColor, AppTheme.darkSurfaceCanvas);
+      expect(scaffoldContext.surfaceCanvas, AppTheme.darkSurfaceCanvas);
+    });
+
+    testWidgets('AddAssetSheet bottom sheet container renders dark card color when running under AppTheme.darkTheme',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          categoryRepositoryProvider.overrideWithValue(CategoryRepositoryImpl(db)),
+          recordRepositoryProvider.overrideWithValue(RecordRepositoryImpl(db)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const Scaffold(
+              body: AddAssetSheet(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final containerWidget = tester.widget<Container>(find.descendant(
+        of: find.byType(AddAssetSheet),
+        matching: find.byType(Container).first,
+      ));
+
+      final decoration = containerWidget.decoration as BoxDecoration;
+      expect(decoration.color, AppTheme.darkSurfaceCard);
+      expect(decoration.borderRadius, const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)));
     });
   });
 }
