@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_typography.dart';
 import 'onboarding_shared_widgets.dart';
 
@@ -102,16 +103,16 @@ class _RecoveryKeyStepState extends State<RecoveryKeyStep> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.key, size: 16, color: AppColors.brandPrimary),
-                          SizedBox(width: 6),
-                          Text('12-Word Passphrase', style: AppTypography.cardTitle),
+                          Icon(Icons.key, size: 16, color: context.brandAccent),
+                          const SizedBox(width: 6),
+                          const Text('12-Word Passphrase', style: AppTypography.cardTitle),
                         ],
                       ),
                       Text(
                         'BIP-39 Standard',
-                        style: AppTypography.badge.copyWith(color: AppColors.textTertiary),
+                        style: AppTypography.badge.copyWith(color: context.textTertiary),
                       ),
                     ],
                   ),
@@ -134,9 +135,9 @@ class _RecoveryKeyStepState extends State<RecoveryKeyStep> {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLow,
+                          color: context.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.borderSubtle),
+                          border: Border.all(color: context.borderSubtle),
                         ),
                         child: Row(
                           children: [
@@ -144,7 +145,7 @@ class _RecoveryKeyStepState extends State<RecoveryKeyStep> {
                               numStr,
                               style: AppTypography.caption.copyWith(
                                 fontSize: 10,
-                                color: AppColors.textTertiary,
+                                color: context.textTertiary,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -153,7 +154,7 @@ class _RecoveryKeyStepState extends State<RecoveryKeyStep> {
                                 word,
                                 style: AppTypography.caption.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                  color: context.textPrimary,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -174,9 +175,9 @@ class _RecoveryKeyStepState extends State<RecoveryKeyStep> {
                       Clipboard.setData(ClipboardData(text: _recoveryWords.join(' ')));
                       setState(() => _hasCopiedKey = true);
                       messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Recovery key copied to clipboard!'),
-                          backgroundColor: AppColors.brandPrimary,
+                        SnackBar(
+                          content: const Text('Recovery key copied to clipboard!'),
+                          backgroundColor: context.brandAccent,
                         ),
                       );
                     },
@@ -196,17 +197,17 @@ class _RecoveryKeyStepState extends State<RecoveryKeyStep> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.surfaceCard,
+                color: context.surfaceCard,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: _hasConfirmedKey ? AppColors.brandPrimary : AppColors.borderSubtle,
+                  color: _hasConfirmedKey ? context.brandAccent : context.borderSubtle,
                 ),
               ),
               child: Row(
                 children: [
                   Checkbox(
                     value: _hasConfirmedKey,
-                    activeColor: AppColors.brandPrimary,
+                    activeColor: context.brandAccent,
                     onChanged: (val) => setState(() => _hasConfirmedKey = val ?? false),
                   ),
                   const SizedBox(width: 6),

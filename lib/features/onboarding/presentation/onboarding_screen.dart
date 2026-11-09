@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/app_preferences.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../backup/presentation/backup_sheet.dart';
 import 'widgets/how_it_works_step.dart';
@@ -133,14 +133,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.surfaceCanvas,
         appBar: _currentStep == 0
             ? null
             : AppBar(
-                backgroundColor: AppColors.surfaceCanvas,
                 elevation: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.brandPrimary),
+                  icon: Icon(Icons.arrow_back, color: context.brandAccent),
                   onPressed: _prevPage,
                   tooltip: 'Back',
                 ),
