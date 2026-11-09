@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha.12] - 2026-11-09
 
 ### Added
+- Sanctuary Archival Dark Theme Engine:
+  - Centralized Semantic Dark Tokens on `AppTheme`: Added 9 dark design constants (`darkSurfaceCanvas`, `darkSurfaceCard`, `darkSurfaceContainerLow`, `darkBorderSubtle`, `darkBrandPrimary`, `darkBrandSecondary`, `darkTextPrimary`, `darkTextSecondary`, `darkTextTertiary`).
+  - Material 3 Dark `ThemeData`: Configured dark canvas (`#121614`), elevated slate cards (`#1A201C`), inputs (`#222925`), and borders (`#2B342F`) matching Sanctuary Archival geometry.
+  - Reactive `themeModeProvider`: State notifier in `app_preferences.dart` coordinating instant app-wide theme switching across `'light'`, `'dark'`, and `'system'` without app restarts.
+  - Connected `MaterialApp` in `main.dart` with `theme: AppTheme.lightTheme`, `darkTheme: AppTheme.darkTheme`, and `themeMode: themeMode`.
+  - Upgraded Appearance Segmented Control in `SettingsProfileScreen` to dynamically highlight active theme and reactively trigger theme switches.
+- Direct APK 1-Tap Download on GitHub Release Update Checker:
+  - Extracted release asset parsing engine checking for binaries ending in `.apk` with non-null `browser_download_url`.
+  - Prominent "Download APK" button with `Icons.download_rounded` launching direct APK download via `LaunchMode.externalApplication`.
+  - Honest fallback to "View Release" with `Icons.open_in_new_rounded` when an update tag has no uploaded APK asset yet.
 - Native Biometric Hardware Enclave Authentication & App Lock Engine (Stage 11):
   - Integrated `local_auth` cross-platform biometric framework and updated Android `MainActivity` to `FlutterFragmentActivity` to support hardware enclave biometric dialogs.
   - `BiometricService`: Safe platform wrapper providing `isDeviceSupported`, `canCheckBiometrics`, and `authenticate` with defensive fallback on unsupported platforms and unit test harnesses.
@@ -34,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI Versioning Standardization:
   - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
   - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
-- 30 new automated unit and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, and native biometric lock enforcement (136 total passing tests, 0 analysis issues).
+- 41 new automated unit and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, native biometric lock enforcement, dark theme switching, and direct APK asset download resolution (147 total passing tests, 0 analysis issues).
 
 ## [0.1.0-alpha.11] - 2026-11-09
 

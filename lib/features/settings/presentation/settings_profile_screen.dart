@@ -25,6 +25,23 @@ import 'widgets/emergency_info_sheet.dart';
 class SettingsProfileScreen extends ConsumerStatefulWidget {
   const SettingsProfileScreen({super.key});
 
+  /// Extracts the browser download URL for the first `.apk` asset in GitHub release payload.
+  static String? extractApkDownloadUrl(Map<String, dynamic> releaseData) {
+    final assets = releaseData['assets'];
+    if (assets is! List) return null;
+
+    for (final asset in assets) {
+      if (asset is Map) {
+        final name = asset['name']?.toString() ?? '';
+        final downloadUrl = asset['browser_download_url']?.toString();
+        if (name.toLowerCase().endsWith('.apk') && downloadUrl != null && downloadUrl.isNotEmpty) {
+          return downloadUrl;
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   ConsumerState<SettingsProfileScreen> createState() => _SettingsProfileScreenState();
 }
@@ -53,6 +70,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   String? _updateStatusMessage;
   String? _releaseUrl;
   bool _hasNewUpdate = false;
+  bool _hasApkAsset = false;
+  String? _apkDownloadUrl;
 
   @override
   void initState() {
@@ -160,6 +179,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
       _isCheckingUpdate = true;
       _updateStatusMessage = 'Connecting to GitHub Releases...';
       _hasNewUpdate = false;
+      _hasApkAsset = false;
+      _apkDownloadUrl = null;
     });
 
     try {
@@ -177,14 +198,25 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         final htmlUrl = data['html_url'] as String? ?? 'https://github.com/Johnjulve/Domora/releases';
 
         if (_isTagNewer(tagName)) {
+          final apkUrl = SettingsProfileScreen.extractApkDownloadUrl(data);
           setState(() {
             _hasNewUpdate = true;
-            _releaseUrl = htmlUrl;
+            if (apkUrl != null) {
+              _hasApkAsset = true;
+              _apkDownloadUrl = apkUrl;
+              _releaseUrl = apkUrl;
+            } else {
+              _hasApkAsset = false;
+              _apkDownloadUrl = null;
+              _releaseUrl = htmlUrl;
+            }
             _updateStatusMessage = 'New release available: $tagName';
           });
         } else {
           setState(() {
             _hasNewUpdate = false;
+            _hasApkAsset = false;
+            _apkDownloadUrl = null;
             _updateStatusMessage = 'Domora is up to date (${AppConstants.fullVersionTag})';
           });
         }
@@ -807,28 +839,27 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final prefs = ref.watch(appPreferencesProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceCanvas,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceCanvas,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
           tooltip: 'Go Back',
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Settings & Profile',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 letterSpacing: -0.2,
-                color: AppColors.textPrimary,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(width: 6),
@@ -1760,11 +1791,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildPreferencesCard(AppPreferences prefs) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: theme.cardTheme.color ?? theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: theme.colorScheme.outline),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -1784,9 +1816,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.wb_sunny_outlined, size: 22, color: AppColors.textSecondary),
+                  Icon(Icons.wb_sunny_outlined, size: 22, color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1795,15 +1827,15 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Household morning digest',
                           style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.textSecondary,
+                            color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -1811,40 +1843,40 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   ),
                   Text(
                     prefs.reminderTime,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.textSecondary,
+                      color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: AppColors.textSecondary.withValues(alpha: 0.6),
+                    color: (theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary).withValues(alpha: 0.6),
                   ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: theme.colorScheme.outline),
           // Row 2: Appearance
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.palette_outlined, size: 22, color: AppColors.textSecondary),
+                Icon(Icons.palette_outlined, size: 22, color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Appearance',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
-                _buildAppearanceSegment(prefs),
+                _buildAppearanceSegment(),
               ],
             ),
           ),
@@ -1853,12 +1885,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     );
   }
 
-  Widget _buildAppearanceSegment(AppPreferences prefs) {
-    final current = prefs.themeMode.toLowerCase();
+  Widget _buildAppearanceSegment() {
+    final theme = Theme.of(context);
+    final themeMode = ref.watch(themeModeProvider);
+    final String activeMode = switch (themeMode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: const EdgeInsets.all(2),
@@ -1866,30 +1904,30 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildAppearanceOption(
+            key: const Key('theme_option_light'),
             label: 'Light',
             value: 'light',
-            isSelected: current == 'light',
+            isSelected: activeMode == 'light',
             onTap: () async {
-              await prefs.setThemeMode('light');
-              if (mounted) setState(() {});
+              await ref.read(themeModeProvider.notifier).setThemeMode('light');
             },
           ),
           _buildAppearanceOption(
+            key: const Key('theme_option_dark'),
             label: 'Dark',
             value: 'dark',
-            isSelected: current == 'dark',
+            isSelected: activeMode == 'dark',
             onTap: () async {
-              await prefs.setThemeMode('dark');
-              if (mounted) setState(() {});
+              await ref.read(themeModeProvider.notifier).setThemeMode('dark');
             },
           ),
           _buildAppearanceOption(
+            key: const Key('theme_option_system'),
             label: 'System',
             value: 'system',
-            isSelected: current == 'system',
+            isSelected: activeMode == 'system',
             onTap: () async {
-              await prefs.setThemeMode('system');
-              if (mounted) setState(() {});
+              await ref.read(themeModeProvider.notifier).setThemeMode('system');
             },
           ),
         ],
@@ -1898,16 +1936,19 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildAppearanceOption({
+    Key? key,
     required String label,
     required String value,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return GestureDetector(
+      key: key,
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.surfaceCard : Colors.transparent,
+          color: isSelected ? (theme.cardTheme.color ?? theme.colorScheme.surface) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           boxShadow: isSelected
               ? [
@@ -1925,7 +1966,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+            color: isSelected
+                ? theme.colorScheme.onSurface
+                : (theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
           ),
         ),
       ),
@@ -1995,11 +2038,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildUpdateCard() {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: theme.cardTheme.color ?? theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: theme.colorScheme.outline),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -2014,7 +2058,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.system_update_alt_rounded, size: 22, color: AppColors.brandPrimary),
+              Icon(Icons.system_update_alt_rounded, size: 22, color: theme.colorScheme.primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -2022,18 +2066,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   children: [
                     Text(
                       'Domora ${AppConstants.displayVersion}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Build 12 • Offline Sanctuary (${AppConstants.appReleaseChannel})',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
-                        color: AppColors.textSecondary,
+                        color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -2042,18 +2086,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               OutlinedButton(
                 key: const Key('check_updates_button'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.brandPrimary,
-                  side: const BorderSide(color: AppColors.brandAccentBorder),
+                  foregroundColor: theme.colorScheme.primary,
+                  side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   minimumSize: const Size(80, 32),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: _isCheckingUpdate ? null : _checkForUpdates,
                 child: _isCheckingUpdate
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
                       )
                     : const Text(
                         'Check',
@@ -2068,7 +2112,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _hasNewUpdate ? AppColors.brandAccentSage : AppColors.surfaceContainerLow,
+                color: _hasNewUpdate
+                    ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                    : theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -2078,25 +2124,39 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       _updateStatusMessage!,
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: _hasNewUpdate ? AppColors.brandPrimary : AppColors.textSecondary,
+                        color: _hasNewUpdate
+                            ? theme.colorScheme.primary
+                            : (theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
                       ),
                     ),
                   ),
                   if (_hasNewUpdate && _releaseUrl != null)
-                    TextButton(
+                    TextButton.icon(
+                      key: const Key('release_action_button'),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         minimumSize: const Size(50, 28),
                       ),
                       onPressed: () async {
-                        final uri = Uri.parse(_releaseUrl!);
+                        final targetUrl = _apkDownloadUrl ?? _releaseUrl;
+                        if (targetUrl == null) return;
+                        final uri = Uri.parse(targetUrl);
                         if (await canLaunchUrl(uri)) {
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
                         }
                       },
-                      child: const Text(
-                        'View Release',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brandPrimary),
+                      icon: Icon(
+                        _hasApkAsset ? Icons.download_rounded : Icons.open_in_new_rounded,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      label: Text(
+                        _hasApkAsset ? 'Download APK' : 'View Release',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                 ],
