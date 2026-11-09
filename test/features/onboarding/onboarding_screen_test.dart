@@ -58,6 +58,9 @@ void main() {
       expect(find.text('100% on-device encryption'), findsOneWidget);
       expect(find.text('Zero cloud tracking'), findsOneWidget);
 
+      // Accept Terms & Conditions checkbox
+      await tapVisible(tester, find.byKey(const Key('terms_acceptance_checkbox')));
+
       // Tap Get Started -> Step 1
       await tapVisible(tester, find.text('Get Started'));
 
@@ -123,6 +126,9 @@ void main() {
       await tester.pumpWidget(buildTestableOnboarding());
       await tester.pumpAndSettle();
 
+      // Accept Terms & Conditions checkbox
+      await tapVisible(tester, find.byKey(const Key('terms_acceptance_checkbox')));
+
       await tapVisible(tester, find.text('I already have a backup'));
 
       // BackupSheet opened
@@ -143,6 +149,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Step 0 -> Step 1
+      await tapVisible(tester, find.byKey(const Key('terms_acceptance_checkbox')));
       await tapVisible(tester, find.text('Get Started'));
       expect(find.text('STEP 1 OF 4'), findsOneWidget);
 

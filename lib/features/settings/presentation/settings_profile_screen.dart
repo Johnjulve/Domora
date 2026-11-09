@@ -14,10 +14,12 @@ import '../../../core/services/app_preferences.dart';
 import '../../../core/services/google_auth_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/under_construction_dialog.dart';
 import '../../backup/presentation/backup_sheet.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
+import '../../onboarding/presentation/widgets/terms_and_privacy_sheet.dart';
 import 'widgets/connect_google_drive_sheet.dart';
 import 'widgets/emergency_info_sheet.dart';
 
@@ -146,10 +148,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cache cleared successfully'),
-          backgroundColor: AppColors.brandPrimary,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('Cache cleared successfully'),
+          backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -255,15 +257,15 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
+        backgroundColor: ctx.surfaceCard,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.borderSubtle),
+          side: BorderSide(color: ctx.borderSubtle),
         ),
         title: Text(
           'Edit Profile',
-          style: AppTypography.cardTitle.copyWith(fontSize: 18),
+          style: AppTypography.cardTitle.copyWith(fontSize: 18, color: ctx.textPrimary),
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -272,20 +274,52 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               TextField(
                 key: const Key('edit_household_name_field'),
                 controller: nameController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: ctx.textPrimary),
+                decoration: InputDecoration(
                   labelText: 'Household Name',
+                  labelStyle: TextStyle(color: ctx.textSecondary),
                   hintText: 'e.g. Elena Miller',
-                  border: OutlineInputBorder(),
+                  hintStyle: TextStyle(color: ctx.textTertiary),
+                  filled: true,
+                  fillColor: ctx.surfaceContainerLow,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: ctx.borderSubtle),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: ctx.borderSubtle),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: ctx.brandAccent, width: 1.5),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 key: const Key('edit_household_address_field'),
                 controller: addressController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: ctx.textPrimary),
+                decoration: InputDecoration(
                   labelText: 'Address',
+                  labelStyle: TextStyle(color: ctx.textSecondary),
                   hintText: 'e.g. 428 Elmwood',
-                  border: OutlineInputBorder(),
+                  hintStyle: TextStyle(color: ctx.textTertiary),
+                  filled: true,
+                  fillColor: ctx.surfaceContainerLow,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: ctx.borderSubtle),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: ctx.borderSubtle),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: ctx.brandAccent, width: 1.5),
+                  ),
                 ),
               ),
             ],
@@ -294,12 +328,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: ctx.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandPrimary,
-              foregroundColor: Colors.white,
+              backgroundColor: ctx.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+              foregroundColor: AppColors.brandOnPrimary,
             ),
             onPressed: () async {
               final newName = nameController.text.trim();
@@ -334,7 +368,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surfaceCard,
+      backgroundColor: Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -349,10 +383,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Text(
                   'Select Auto-Lock Duration',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 17),
+                  style: AppTypography.cardTitle.copyWith(fontSize: 17, color: ctx.textPrimary),
                 ),
               ),
-              const Divider(color: AppColors.borderSubtle),
+              Divider(color: ctx.borderSubtle),
               ...options.map((opt) {
                 final isSelected = prefs.autoLockDuration == opt;
                 return ListTile(
@@ -360,11 +394,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     opt,
                     style: TextStyle(
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color: isSelected ? AppColors.brandPrimary : AppColors.textPrimary,
+                      color: isSelected ? ctx.brandAccent : ctx.textPrimary,
                     ),
                   ),
                   trailing: isSelected
-                      ? const Icon(Icons.check_rounded, color: AppColors.brandPrimary)
+                      ? Icon(Icons.check_rounded, color: ctx.brandAccent)
                       : null,
                   onTap: () async {
                     await prefs.setAutoLockDuration(opt);
@@ -384,38 +418,40 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
+        backgroundColor: ctx.surfaceCard,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.borderSubtle),
+          side: BorderSide(color: ctx.borderSubtle),
         ),
         icon: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.brandAccentSage,
+            color: ctx.isDarkMode
+                ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                : AppColors.brandAccentSage,
             borderRadius: BorderRadius.circular(50),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.key_rounded,
-            color: AppColors.brandPrimary,
+            color: ctx.brandAccent,
             size: 28,
           ),
         ),
         title: Text(
           'Sanctuary Recovery Key',
-          style: AppTypography.cardTitle.copyWith(fontSize: 18),
+          style: AppTypography.cardTitle.copyWith(fontSize: 18, color: ctx.textPrimary),
           textAlign: TextAlign.center,
         ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'These 12 sanctuary words are your sole master key. Keep them private and secure to restore your records on another device.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary,
+                  color: ctx.textSecondary,
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -424,9 +460,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
+                  color: ctx.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: ctx.borderSubtle),
                 ),
                 child: Wrap(
                   spacing: 8,
@@ -436,16 +472,16 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceCard,
+                          color: ctx.surfaceCard,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.borderSubtle),
+                          border: Border.all(color: ctx.borderSubtle),
                         ),
                         child: Text(
                           '${i + 1}. ${_sanctuaryRecoveryWords[i]}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
+                            color: ctx.textPrimary,
                           ),
                         ),
                       ),
@@ -463,21 +499,21 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   key: const Key('copy_recovery_key_dialog_button'),
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: const BorderSide(color: AppColors.borderSubtle),
+                    side: BorderSide(color: ctx.borderSubtle),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.brandPrimary),
-                  label: const Text(
+                  icon: Icon(Icons.copy_rounded, size: 16, color: ctx.brandAccent),
+                  label: Text(
                     'Copy Key',
-                    style: TextStyle(color: AppColors.brandPrimary, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: ctx.brandAccent, fontWeight: FontWeight.w600),
                   ),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: _sanctuaryRecoveryWords.join(' ')));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Recovery key copied to clipboard!'),
-                        backgroundColor: AppColors.brandPrimary,
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: const Text('Recovery key copied to clipboard!'),
+                        backgroundColor: ctx.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                     Navigator.of(ctx).pop();
@@ -489,8 +525,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 child: ElevatedButton(
                   key: const Key('close_recovery_key_dialog_button'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.brandPrimary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: ctx.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                    foregroundColor: AppColors.brandOnPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -509,27 +545,29 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
+        backgroundColor: ctx.surfaceCard,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.borderSubtle),
+          side: BorderSide(color: ctx.borderSubtle),
         ),
         icon: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.brandAccentSage,
+            color: ctx.isDarkMode
+                ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                : AppColors.brandAccentSage,
             borderRadius: BorderRadius.circular(50),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.lock_rounded,
-            color: AppColors.brandPrimary,
+            color: ctx.brandAccent,
             size: 28,
           ),
         ),
         title: Text(
           'How Your Data Is Protected',
-          style: AppTypography.cardTitle.copyWith(fontSize: 18),
+          style: AppTypography.cardTitle.copyWith(fontSize: 18, color: ctx.textPrimary),
           textAlign: TextAlign.center,
         ),
         content: SingleChildScrollView(
@@ -538,6 +576,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildProtectionPoint(
+                ctx,
                 icon: Icons.offline_pin_outlined,
                 title: 'Zero Remote Dependencies',
                 description:
@@ -545,6 +584,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ),
               const SizedBox(height: 12),
               _buildProtectionPoint(
+                ctx,
                 icon: Icons.shield_outlined,
                 title: 'Local Database Integrity',
                 description:
@@ -552,6 +592,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ),
               const SizedBox(height: 12),
               _buildProtectionPoint(
+                ctx,
                 icon: Icons.fingerprint_rounded,
                 title: 'On-Device Biometric Lock',
                 description:
@@ -559,6 +600,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ),
               const SizedBox(height: 12),
               _buildProtectionPoint(
+                ctx,
                 icon: Icons.file_download_outlined,
                 title: 'Self-Sovereign Backups',
                 description:
@@ -570,8 +612,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandPrimary,
-              foregroundColor: Colors.white,
+              backgroundColor: ctx.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+              foregroundColor: AppColors.brandOnPrimary,
               minimumSize: const Size(double.infinity, 44),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -583,7 +625,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     );
   }
 
-  Widget _buildProtectionPoint({
+  Widget _buildProtectionPoint(
+    BuildContext ctx, {
     required IconData icon,
     required String title,
     required String description,
@@ -591,7 +634,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: AppColors.brandPrimary),
+        Icon(icon, size: 20, color: ctx.brandAccent),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -599,19 +642,19 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: ctx.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 description,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   height: 1.4,
-                  color: AppColors.textSecondary,
+                  color: ctx.textSecondary,
                 ),
               ),
             ],
@@ -626,19 +669,6 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: now,
-      builder: (ctx, child) {
-        return Theme(
-          data: Theme.of(ctx).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.brandPrimary,
-              onPrimary: Colors.white,
-              surface: AppColors.surfaceCard,
-              onSurface: AppColors.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -670,11 +700,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           final isEraseConfirmed = inputController.text.trim().toUpperCase() == 'ERASE';
 
           return AlertDialog(
-            backgroundColor: AppColors.surfaceCard,
+            backgroundColor: dialogCtx.surfaceCard,
             surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: AppColors.borderSubtle),
+              side: BorderSide(color: dialogCtx.borderSubtle),
             ),
             icon: Container(
               width: 44,
@@ -693,7 +723,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               'Erase All Data?',
               style: AppTypography.cardTitle.copyWith(
                 fontSize: 18,
-                color: AppColors.textPrimary,
+                color: dialogCtx.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -702,22 +732,22 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'This will permanently delete all records, documents, and encryption keys from this device.',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.45,
-                      color: AppColors.textSecondary,
+                      color: dialogCtx.textSecondary,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Type ERASE to confirm:',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                      color: dialogCtx.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -726,15 +756,20 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     controller: inputController,
                     autofocus: true,
                     textCapitalization: TextCapitalization.characters,
+                    style: TextStyle(color: dialogCtx.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'ERASE',
-                      hintStyle: TextStyle(color: AppColors.textTertiary.withValues(alpha: 0.6)),
+                      hintStyle: TextStyle(color: dialogCtx.textTertiary.withValues(alpha: 0.6)),
                       filled: true,
-                      fillColor: AppColors.surfaceContainerLow,
+                      fillColor: dialogCtx.surfaceContainerLow,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: AppColors.borderSubtle),
+                        borderSide: BorderSide(color: dialogCtx.borderSubtle),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: dialogCtx.borderSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -755,13 +790,13 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: const BorderSide(color: AppColors.borderSubtle),
+                        side: BorderSide(color: dialogCtx.borderSubtle),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: () => Navigator.of(dialogCtx).pop(),
-                      child: const Text(
+                      child: Text(
                         'Cancel',
-                        style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: dialogCtx.textSecondary, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ),
@@ -868,7 +903,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               child: Icon(
                 Icons.lock_outline_rounded,
                 size: 16,
-                color: AppColors.textSecondary.withValues(alpha: 0.8),
+                color: context.textSecondary.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -877,7 +912,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
-            color: AppColors.borderSubtle.withValues(alpha: 0.6),
+            color: context.borderSubtle.withValues(alpha: 0.6),
             height: 1,
           ),
         ),
@@ -938,7 +973,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     'Domora ${AppConstants.displayVersion}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textTertiary.withValues(alpha: 0.8),
+                      color: context.textTertiary.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -960,7 +995,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.8,
-          color: isDanger ? AppColors.statusDangerText : AppColors.textSecondary,
+          color: isDanger ? AppColors.statusDangerText : context.textSecondary,
         ),
       ),
     );
@@ -973,9 +1008,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -993,9 +1028,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: AppColors.brandPrimary,
+                  color: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.borderSubtle.withValues(alpha: 0.6)),
+                  border: Border.all(color: context.borderSubtle.withValues(alpha: 0.6)),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -1015,20 +1050,20 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   children: [
                     Text(
                       householdName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.2,
-                        color: AppColors.textPrimary,
+                        color: context.textPrimary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       householdAddress,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: context.textSecondary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1038,8 +1073,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               TextButton(
                 key: const Key('edit_profile_button'),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.brandPrimary,
-                  backgroundColor: AppColors.brandAccentSage.withValues(alpha: 0.5),
+                  foregroundColor: context.brandAccent,
+                  backgroundColor: context.isDarkMode
+                      ? AppTheme.darkBrandSecondary.withValues(alpha: 0.15)
+                      : AppColors.brandAccentSage.withValues(alpha: 0.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   minimumSize: const Size(48, 32),
@@ -1053,7 +1090,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.borderSubtle),
+          Divider(height: 1, color: context.borderSubtle),
           const SizedBox(height: 4),
           InkWell(
             key: const Key('manage_household_members_button'),
@@ -1069,22 +1106,22 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.group_outlined, size: 20, color: AppColors.textSecondary),
+                  Icon(Icons.group_outlined, size: 20, color: context.textSecondary),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Manage household members',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: context.textPrimary,
                       ),
                     ),
                   ),
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 20,
-                    color: AppColors.textSecondary.withValues(alpha: 0.6),
+                    color: context.textSecondary.withValues(alpha: 0.6),
                   ),
                 ],
               ),
@@ -1098,9 +1135,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   Widget _buildPrivacyCard(AppPreferences prefs) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -1116,22 +1153,22 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                const Icon(Icons.face_rounded, size: 22, color: AppColors.brandPrimary),
+                Icon(Icons.face_rounded, size: 22, color: context.brandAccent),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'App Lock',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: context.textPrimary,
                     ),
                   ),
                 ),
                 Switch(
                   key: const Key('app_lock_switch'),
                   value: prefs.isBiometricsEnabled,
-                  activeTrackColor: AppColors.brandPrimary,
+                  activeTrackColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
                   onChanged: (val) async {
                     await prefs.setBiometricsEnabled(val);
                     if (mounted) setState(() {});
@@ -1140,40 +1177,83 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
           // Row 2: Auto-lock
           InkWell(
             key: const Key('auto_lock_row'),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
             onTap: () => _openAutoLockDurationPicker(prefs),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  const Icon(Icons.timer_outlined, size: 22, color: AppColors.textSecondary),
+                  Icon(Icons.timer_outlined, size: 22, color: context.textSecondary),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Auto-lock',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: context.textPrimary,
                       ),
                     ),
                   ),
                   Text(
                     prefs.autoLockDuration,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: AppColors.textSecondary.withValues(alpha: 0.6),
+                    color: context.textSecondary.withValues(alpha: 0.6),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
+          // Row 3: Terms & Privacy Policy
+          InkWell(
+            key: const Key('terms_and_privacy_tile'),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            onTap: () => TermsAndPrivacySheet.show(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.policy_outlined, size: 22, color: context.brandAccent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Terms & Privacy Policy',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: context.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Offline-first commitments & sanctuary terms',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: context.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: context.textSecondary.withValues(alpha: 0.6),
                   ),
                 ],
               ),
@@ -1190,25 +1270,25 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lock_rounded, size: 16, color: AppColors.brandPrimary),
+          Icon(Icons.lock_rounded, size: 16, color: context.brandAccent),
           const SizedBox(width: 6),
           Expanded(
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Text(
+                Text(
                   'Your data is encrypted and stays on this device. ',
-                  style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12.5, color: context.textSecondary),
                 ),
                 InkWell(
                   key: const Key('how_data_protected_link'),
                   onTap: _openDataProtectionModal,
-                  child: const Text(
+                  child: Text(
                     'How your data is protected →',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.brandPrimary,
+                      color: context.brandAccent,
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -1233,9 +1313,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.download_rounded, size: 22, color: AppColors.brandPrimary),
+          Icon(Icons.download_rounded, size: 22, color: context.brandAccent),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1244,15 +1324,15 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    color: context.textPrimary,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'Save a private offline copy',
                   style: TextStyle(
                     fontSize: 12.5,
-                    color: AppColors.textSecondary,
+                    color: context.textSecondary,
                   ),
                 ),
               ],
@@ -1261,14 +1341,14 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           ElevatedButton.icon(
             key: const Key('export_data_button'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.surfaceContainerLow,
-              foregroundColor: AppColors.textPrimary,
+              backgroundColor: context.surfaceContainerLow,
+              foregroundColor: context.textPrimary,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: const Size(80, 34),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
+            icon: Icon(Icons.file_download_outlined, size: 16, color: context.textSecondary),
             label: const Text('Export', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             onPressed: () {
               showModalBottomSheet<void>(
@@ -1295,12 +1375,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           builder: (_) => const EmergencyInfoSheet(),
         );
       },
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(Icons.print_outlined, size: 22, color: AppColors.textSecondary),
-            SizedBox(width: 12),
+            Icon(Icons.print_outlined, size: 22, color: context.textSecondary),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1310,15 +1390,15 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: context.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     'Physical summary for family or executors',
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                 ],
@@ -1327,7 +1407,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: AppColors.textSecondary,
+              color: context.textSecondary,
             ),
           ],
         ),
@@ -1347,12 +1427,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           builder: (_) => const BackupSheet(),
         );
       },
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(Icons.cloud_sync_outlined, size: 22, color: AppColors.textSecondary),
-            SizedBox(width: 12),
+            Icon(Icons.cloud_sync_outlined, size: 22, color: context.textSecondary),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1362,15 +1442,15 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: context.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     'Verify payloads or import snapshot',
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                 ],
@@ -1379,7 +1459,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: AppColors.textSecondary,
+              color: context.textSecondary,
             ),
           ],
         ),
@@ -1394,9 +1474,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -1416,11 +1496,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLow,
+                    color: context.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderSubtle),
+                    border: Border.all(color: context.borderSubtle),
                   ),
-                  child: const Icon(Icons.add_to_drive_rounded, color: AppColors.brandPrimary, size: 24),
+                  child: Icon(Icons.add_to_drive_rounded, color: context.brandAccent, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1432,21 +1512,29 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                         spacing: 8,
                         runSpacing: 4,
                         children: [
-                          const Text(
+                          Text(
                             'Google Drive',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                              color: context.textPrimary,
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isEnabled ? AppColors.brandAccentSage : AppColors.surfaceContainerLow,
+                              color: isEnabled
+                                  ? (context.isDarkMode
+                                      ? AppTheme.darkBrandSecondary.withValues(alpha: 0.15)
+                                      : AppColors.brandAccentSage)
+                                  : context.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: isEnabled ? AppColors.brandAccentBorder : AppColors.borderSubtle,
+                                color: isEnabled
+                                    ? (context.isDarkMode
+                                        ? AppTheme.darkBrandSecondary.withValues(alpha: 0.3)
+                                        : AppColors.brandAccentBorder)
+                                    : context.borderSubtle,
                               ),
                             ),
                             child: Text(
@@ -1454,7 +1542,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: isEnabled ? AppColors.brandPrimary : AppColors.textSecondary,
+                                color: isEnabled ? context.brandAccent : context.textSecondary,
                               ),
                             ),
                           ),
@@ -1463,9 +1551,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       const SizedBox(height: 2),
                       Text(
                         email,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: context.textSecondary,
                         ),
                       ),
                     ],
@@ -1474,7 +1562,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 Switch(
                   key: const Key('google_drive_master_switch'),
                   value: isEnabled,
-                  activeTrackColor: AppColors.brandPrimary,
+                  activeTrackColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
                   onChanged: (val) async {
                     await prefs.setGoogleDriveBackupEnabled(val);
                     if (mounted) setState(() {});
@@ -1483,29 +1571,29 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 16, endIndent: 16, color: context.borderSubtle),
 
           // Row 2: "Back up on Wi-Fi only" toggle switch
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                const Icon(Icons.wifi_rounded, size: 22, color: AppColors.brandPrimary),
+                Icon(Icons.wifi_rounded, size: 22, color: context.brandAccent),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Back up on Wi-Fi only',
                     style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: context.textPrimary,
                     ),
                   ),
                 ),
                 Switch(
                   key: const Key('wifi_only_backup_switch'),
                   value: prefs.isBackupWifiOnly,
-                  activeTrackColor: AppColors.brandPrimary,
+                  activeTrackColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
                   onChanged: (val) async {
                     await prefs.setBackupWifiOnly(val);
                     if (mounted) setState(() {});
@@ -1514,33 +1602,33 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 3: "Back up now" trigger row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.cloud_upload_outlined, size: 22, color: AppColors.textSecondary),
+                Icon(Icons.cloud_upload_outlined, size: 22, color: context.textSecondary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Back up now',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
+                          color: context.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Last backup: $lastBackup',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: AppColors.textSecondary,
+                          color: context.textSecondary,
                         ),
                       ),
                     ],
@@ -1549,14 +1637,14 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 ElevatedButton(
                   key: const Key('back_up_now_button'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surfaceContainerLow,
-                    foregroundColor: AppColors.brandPrimary,
+                    backgroundColor: context.surfaceContainerLow,
+                    foregroundColor: context.brandAccent,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     minimumSize: const Size(80, 34),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: AppColors.borderSubtle),
+                      side: BorderSide(color: context.borderSubtle),
                     ),
                   ),
                   onPressed: () async {
@@ -1564,10 +1652,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     if (mounted) {
                       setState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Encrypted snapshot synchronized to Google Drive'),
-                          backgroundColor: AppColors.brandPrimary,
-                          duration: Duration(seconds: 2),
+                        SnackBar(
+                          content: const Text('Encrypted snapshot synchronized to Google Drive'),
+                          backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     }
@@ -1580,18 +1668,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 4: Recovery Key row
           InkWell(
             key: const Key('recovery_key_row'),
             onTap: _openRecoveryKeyDialog,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(Icons.key_rounded, size: 22, color: AppColors.textSecondary),
-                  SizedBox(width: 12),
+                  Icon(Icons.key_rounded, size: 22, color: context.textSecondary),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1601,15 +1689,15 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            color: context.textPrimary,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'View 12-word master passphrase',
                           style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.textSecondary,
+                            color: context.textSecondary,
                           ),
                         ),
                       ],
@@ -1618,61 +1706,67 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: AppColors.textSecondary,
+                    color: context.textSecondary,
                   ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 5: Export My Data
           _buildExportDataRow(),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 6: Print Emergency Info Sheet
           _buildPrintEmergencySheetRow(),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 7: Sanctuary Backup & Restore
           _buildSanctuaryRestoreRow(),
-          const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 16, endIndent: 16, color: context.borderSubtle),
 
-          // Row 8: Sign out of Google
-          InkWell(
-            key: const Key('sign_out_google_button'),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-            onTap: () async {
-              await ref.read(googleAuthServiceProvider).signOut();
-              await prefs.setGoogleDriveBackupEnabled(false);
-              await prefs.setGoogleAccountEmail(null);
-              if (mounted) {
-                setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Disconnected from Google Drive'),
-                    backgroundColor: AppColors.brandPrimary,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.logout_rounded, size: 18, color: AppColors.statusDangerText),
-                  SizedBox(width: 8),
-                  Text(
-                    'Sign out of Google',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.statusDangerText,
+          // Row 8: Sign out of Google container
+          Container(
+            decoration: BoxDecoration(
+              color: context.surfaceContainerLow,
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            ),
+            child: InkWell(
+              key: const Key('sign_out_google_button'),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+              onTap: () async {
+                await ref.read(googleAuthServiceProvider).signOut();
+                await prefs.setGoogleDriveBackupEnabled(false);
+                await prefs.setGoogleAccountEmail(null);
+                if (mounted) {
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Disconnected from Google Drive'),
+                      backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                      duration: const Duration(seconds: 2),
                     ),
-                  ),
-                ],
+                  );
+                }
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.logout_rounded, size: 18, color: AppColors.statusDangerText),
+                    SizedBox(width: 8),
+                    Text(
+                      'Sign out of Google',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.statusDangerText,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1684,9 +1778,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   Widget _buildGoogleDriveInactiveBackupCard(AppPreferences prefs) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -1716,7 +1810,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.cloud_sync_outlined, size: 22, color: AppColors.brandPrimary),
+                  Icon(Icons.cloud_sync_outlined, size: 22, color: context.brandAccent),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1727,61 +1821,61 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                           spacing: 8,
                           runSpacing: 4,
                           children: [
-                            const Text(
+                            Text(
                               'Google Drive Cloud Backup',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
+                                color: context.textPrimary,
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
                               decoration: BoxDecoration(
-                                color: AppColors.surfaceContainerLow,
+                                color: context.surfaceContainerLow,
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: AppColors.borderSubtle),
+                                border: Border.all(color: context.borderSubtle),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Inactive',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
+                                  color: context.textSecondary,
                                 ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 2),
-                        const Text(
+                        Text(
                           'Encrypted offsite redundancy',
                           style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.textSecondary,
+                            color: context.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: AppColors.textSecondary,
+                    color: context.textSecondary,
                   ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 2: Export My Data
           _buildExportDataRow(),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 3: Print Emergency Info Sheet
           _buildPrintEmergencySheetRow(),
-          const Divider(height: 1, indent: 48, color: AppColors.borderSubtle),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
 
           // Row 4: Sanctuary Backup & Restore
           _buildSanctuaryRestoreRow(),
@@ -1791,12 +1885,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildPreferencesCard(AppPreferences prefs) {
-    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? theme.colorScheme.surface,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -1816,7 +1909,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Icon(Icons.wb_sunny_outlined, size: 22, color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
+                  Icon(Icons.wb_sunny_outlined, size: 22, color: context.textSecondary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1827,7 +1920,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurface,
+                            color: context.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1835,7 +1928,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                           'Household morning digest',
                           style: TextStyle(
                             fontSize: 12.5,
-                            color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary,
+                            color: context.textSecondary,
                           ),
                         ),
                       ],
@@ -1845,26 +1938,26 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     prefs.reminderTime,
                     style: TextStyle(
                       fontSize: 14,
-                      color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: (theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary).withValues(alpha: 0.6),
+                    color: context.textSecondary.withValues(alpha: 0.6),
                   ),
                 ],
               ),
             ),
           ),
-          Divider(height: 1, indent: 48, color: theme.colorScheme.outline),
+          Divider(height: 1, indent: 48, color: context.borderSubtle),
           // Row 2: Appearance
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                Icon(Icons.palette_outlined, size: 22, color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
+                Icon(Icons.palette_outlined, size: 22, color: context.textSecondary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -1872,7 +1965,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: theme.colorScheme.onSurface,
+                      color: context.textPrimary,
                     ),
                   ),
                 ),
@@ -1886,7 +1979,6 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildAppearanceSegment() {
-    final theme = Theme.of(context);
     final themeMode = ref.watch(themeModeProvider);
     final String activeMode = switch (themeMode) {
       ThemeMode.light => 'light',
@@ -1896,7 +1988,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
+        color: context.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: const EdgeInsets.all(2),
@@ -1942,13 +2034,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final theme = Theme.of(context);
     return GestureDetector(
       key: key,
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? (theme.cardTheme.color ?? theme.colorScheme.surface) : Colors.transparent,
+          color: isSelected ? context.surfaceCard : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           boxShadow: isSelected
               ? [
@@ -1967,8 +2058,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             color: isSelected
-                ? theme.colorScheme.onSurface
-                : (theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
+                ? context.textPrimary
+                : context.textSecondary,
           ),
         ),
       ),
@@ -1978,9 +2069,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   Widget _buildStorageCard() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -1992,24 +2083,24 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.storage_outlined, size: 22, color: AppColors.textSecondary),
+          Icon(Icons.storage_outlined, size: 22, color: context.textSecondary),
           const SizedBox(width: 12),
           Expanded(
             child: Text.rich(
               TextSpan(
                 text: _isLoadingStorage ? 'Calculating...' : _formatStorage(_storageBytes),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
-                children: const [
+                children: [
                   TextSpan(
                     text: ' used',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondary,
+                      color: context.textSecondary,
                     ),
                   ),
                 ],
@@ -2020,8 +2111,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
           OutlinedButton(
             key: const Key('clear_cache_button'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textSecondary,
-              side: const BorderSide(color: AppColors.borderSubtle),
+              foregroundColor: context.textSecondary,
+              side: BorderSide(color: context.borderSubtle),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               minimumSize: const Size(80, 32),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2038,12 +2129,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildUpdateCard() {
-    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? theme.colorScheme.surface,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline),
+        border: Border.all(color: context.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -2058,7 +2148,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.system_update_alt_rounded, size: 22, color: theme.colorScheme.primary),
+              Icon(Icons.system_update_alt_rounded, size: 22, color: context.brandAccent),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -2069,7 +2159,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface,
+                        color: context.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -2077,7 +2167,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       'Build 12 • Offline Sanctuary (${AppConstants.appReleaseChannel})',
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary,
+                        color: context.textSecondary,
                       ),
                     ),
                   ],
@@ -2086,8 +2176,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               OutlinedButton(
                 key: const Key('check_updates_button'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.primary,
-                  side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+                  foregroundColor: context.brandAccent,
+                  side: BorderSide(color: context.brandAccent.withValues(alpha: 0.4)),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   minimumSize: const Size(80, 32),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2097,7 +2187,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     ? SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: context.brandAccent),
                       )
                     : const Text(
                         'Check',
@@ -2113,8 +2203,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: _hasNewUpdate
-                    ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                    : theme.colorScheme.surfaceContainerHighest,
+                    ? context.brandAccent.withValues(alpha: 0.15)
+                    : context.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -2125,8 +2215,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       style: TextStyle(
                         fontSize: 12.5,
                         color: _hasNewUpdate
-                            ? theme.colorScheme.primary
-                            : (theme.textTheme.bodyMedium?.color ?? AppColors.textSecondary),
+                            ? context.brandAccent
+                            : context.textSecondary,
                       ),
                     ),
                   ),
@@ -2148,14 +2238,14 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       icon: Icon(
                         _hasApkAsset ? Icons.download_rounded : Icons.open_in_new_rounded,
                         size: 14,
-                        color: theme.colorScheme.primary,
+                        color: context.brandAccent,
                       ),
                       label: Text(
                         _hasApkAsset ? 'Download APK' : 'View Release',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.primary,
+                          color: context.brandAccent,
                         ),
                       ),
                     ),
@@ -2171,7 +2261,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   Widget _buildDangerZoneCard(AppPreferences prefs) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.statusDangerStroke.withValues(alpha: 0.3)),
         boxShadow: [

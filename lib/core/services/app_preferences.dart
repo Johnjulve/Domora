@@ -39,6 +39,13 @@ class AppPreferences {
     await _save();
   }
 
+  bool get hasAcceptedTerms => _data['has_accepted_terms'] == true;
+
+  Future<void> setAcceptedTerms(bool value) async {
+    _data['has_accepted_terms'] = value;
+    await _save();
+  }
+
   String get storageMode => _data['storage_mode'] as String? ?? 'offline';
 
   Future<void> setStorageMode(String mode) async {
