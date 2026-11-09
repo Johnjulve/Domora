@@ -5,7 +5,8 @@ class AppConstants {
   /// Product name and active release version
   static const String appName = 'Domora';
   static const String appVersion = '0.1.0';
-  static const String appReleaseChannel = 'alpha.11';
+  static const String appReleaseChannel = 'alpha.12';
+  static const String displayVersion = 'v$appVersion';
   static const String fullVersionTag = 'v$appVersion-$appReleaseChannel';
 
   /// SQLite schema version for Drift (v6: Household Utilities & Recurring Bills Engine)

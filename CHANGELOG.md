@@ -5,6 +5,21 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.12] - 2026-11-09
+
+### Added
+- Emergency Household Dossier & Export Engine (Stage 11):
+  - `EmergencyInfoSheet` Sanctuary-styled modal bottom sheet compiling critical household information for family or executors.
+  - Reactive extraction of household identity (name & address from `AppPreferences`), essential property & vehicles with VIN/plate and serials, utility obligations & account numbers, and vital documents/policies with registration metadata.
+  - Unfiltered Cross-Feature Stream Binding: Wired to `dashboardBillsStreamProvider` and `dashboardDocumentsStreamProvider` to guarantee transient UI tab filters do not inadvertently mask utility accounts or legal deeds in the dossier.
+  - 1-Tap "Copy Dossier" Action: Formats an organized markdown/plain-text emergency dossier with timestamps and writes directly to system clipboard (`Clipboard.setData`) with visual SnackBar feedback.
+  - Robust UI Protections: Fully tokenized with Sanctuary design tokens (`AppColors`, `AppTypography`), layout overflow protection for long addresses, and solid `AppColors.surfaceCard` with `AppTheme.sheetRadius` (24px).
+  - Integrated into `SettingsProfileScreen` replacing legacy under-construction notice on the 'Print Emergency Info Sheet' row.
+- UI Versioning Standardization:
+  - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
+  - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
+- 7 new automated unit and widget tests covering emergency dossier rendering, address overflow resilience, empty states, and clipboard export (113 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.11] - 2026-11-09
 
 ### Added

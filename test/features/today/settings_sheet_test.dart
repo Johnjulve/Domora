@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:domora/core/constants/app_constants.dart';
 import 'package:domora/features/today/presentation/settings_sheet.dart';
 
 void main() {
@@ -21,7 +22,7 @@ void main() {
 
     // App identity
     expect(find.text('Settings & Preferences'), findsOneWidget);
-    expect(find.textContaining('Domora v0.1.0-alpha.11'), findsOneWidget);
+    expect(find.textContaining('Domora ${AppConstants.fullVersionTag}'), findsOneWidget);
     expect(find.text('Personal & Household Sanctuary OS'), findsOneWidget);
 
     // Architecture rows
