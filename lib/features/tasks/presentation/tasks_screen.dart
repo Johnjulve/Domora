@@ -69,8 +69,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                 Container(
                   width: 6,
                   height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppColors.brandPrimary,
+                  decoration: BoxDecoration(
+                    color: context.brandAccent,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -78,7 +78,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                 Text(
                   'Domestic cadence active • Local vault',
                   style: AppTypography.caption.copyWith(
-                    color: AppColors.textTertiary,
+                    color: context.textTertiary,
                     fontSize: 11,
                   ),
                 ),
@@ -88,7 +88,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_task, color: AppColors.brandPrimary),
+            icon: Icon(Icons.add_task, color: context.brandAccent),
             tooltip: 'Add Task',
             onPressed: () => _openAddTaskModal(context),
           ),
@@ -126,8 +126,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           // Tasks Content
           Expanded(
             child: tasksAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.brandPrimary),
+              loading: () => Center(
+                child: CircularProgressIndicator(color: context.brandAccent),
               ),
               error: (err, _) => Center(
                 child: Padding(
@@ -150,6 +150,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
                       child: Card(
+                        color: context.surfaceCard,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                          side: BorderSide(color: context.borderSubtle),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Column(
@@ -157,36 +162,46 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(16),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.brandAccentSage,
+                                decoration: BoxDecoration(
+                                  color: context.isDarkMode
+                                      ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                                      : AppColors.brandAccentSage,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.check_circle_outline, color: AppColors.brandPrimary, size: 36),
+                                child: Icon(Icons.check_circle_outline, color: context.brandAccent, size: 36),
                               ),
                               const SizedBox(height: 20),
                               Text(
                                 selectedFilter == 'completed'
                                     ? 'No Completed Tasks'
                                     : 'All Caught Up',
-                                style: AppTypography.cardTitle,
+                                style: AppTypography.cardTitle.copyWith(color: context.textPrimary),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 selectedFilter == 'completed'
                                     ? 'Completed tasks will show up here once checked off.'
                                     : 'Keep your domestic maintenance, filter replacements, and household bills on schedule.',
-                                style: AppTypography.bodySecondary,
+                                style: AppTypography.bodySecondary.copyWith(color: context.textSecondary),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 24),
                               if (selectedFilter != 'completed')
                                 ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                                    foregroundColor: AppColors.brandOnPrimary,
+                                  ),
                                   onPressed: () => _openAddTaskModal(context),
                                   icon: const Icon(Icons.add),
                                   label: const Text('Add First Task'),
                                 )
                                else
                                 OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: context.textPrimary,
+                                    side: BorderSide(color: context.borderSubtle),
+                                  ),
                                   onPressed: () => ref.read(selectedTaskFilterProvider.notifier).setFilter('pending'),
                                   child: const Text('View Pending Tasks'),
                                 ),
@@ -257,8 +272,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                 if (todayTasks.isNotEmpty) ...[
           _SectionHeader(
             icon: Icons.today,
-            iconColor: AppColors.brandPrimary,
-            iconBgColor: AppColors.brandAccentSage,
+            iconColor: context.brandAccent,
+            iconBgColor: context.isDarkMode
+                ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                : AppColors.brandAccentSage,
             title: 'Today (${todayTasks.length} remaining)',
           ),
           const SizedBox(height: 8),
@@ -274,10 +291,12 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         ],
 
                 if (upcomingRoutines.isNotEmpty) ...[
-          const _SectionHeader(
+          _SectionHeader(
             icon: Icons.autorenew,
-            iconColor: AppColors.brandPrimary,
-            iconBgColor: AppColors.brandAccentSage,
+            iconColor: context.brandAccent,
+            iconBgColor: context.isDarkMode
+                ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                : AppColors.brandAccentSage,
             title: 'Upcoming & Routines',
           ),
           const SizedBox(height: 8),
@@ -316,10 +335,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.brandPrimary : AppColors.surfaceCard,
+              color: isSelected
+                  ? (context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary)
+                  : context.surfaceCard,
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+                color: isSelected
+                    ? (context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary)
+                    : context.borderSubtle,
                 width: 1,
               ),
             ),
@@ -327,7 +350,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               label,
               style: AppTypography.caption.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? AppColors.brandOnPrimary : AppColors.textPrimary,
+                color: isSelected ? AppColors.brandOnPrimary : context.textPrimary,
               ),
             ),
           ),
@@ -364,9 +387,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).bottomSheetTheme.backgroundColor ?? ctx.surfaceCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+          border: Border(
+            top: BorderSide(color: ctx.borderSubtle),
+            left: BorderSide(color: ctx.borderSubtle),
+            right: BorderSide(color: ctx.borderSubtle),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -375,15 +403,15 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.snooze, color: AppColors.brandPrimary),
-                    SizedBox(width: 8),
-                    Text('Snooze Overdue Task', style: AppTypography.cardTitle),
+                    Icon(Icons.snooze, color: ctx.brandAccent),
+                    const SizedBox(width: 8),
+                    Text('Snooze Overdue Task', style: AppTypography.cardTitle.copyWith(color: ctx.textPrimary)),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: ctx.textPrimary),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
               ],
@@ -391,12 +419,12 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             const SizedBox(height: 8),
             Text(
               item.record.title,
-              style: AppTypography.bodySecondary.copyWith(fontWeight: FontWeight.w600),
+              style: AppTypography.bodySecondary.copyWith(fontWeight: FontWeight.w600, color: ctx.textSecondary),
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: const Icon(Icons.today, color: AppColors.brandPrimary),
-              title: const Text('Tomorrow (+1 Day)'),
+              leading: Icon(Icons.today, color: ctx.brandAccent),
+              title: Text('Tomorrow (+1 Day)', style: TextStyle(color: ctx.textPrimary)),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.of(ctx).pop();
@@ -418,8 +446,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.date_range, color: AppColors.brandPrimary),
-              title: const Text('In 3 Days (+3 Days)'),
+              leading: Icon(Icons.date_range, color: ctx.brandAccent),
+              title: Text('In 3 Days (+3 Days)', style: TextStyle(color: ctx.textPrimary)),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.of(ctx).pop();
@@ -441,8 +469,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.next_week, color: AppColors.brandPrimary),
-              title: const Text('Next Week (+7 Days)'),
+              leading: Icon(Icons.next_week, color: ctx.brandAccent),
+              title: Text('Next Week (+7 Days)', style: TextStyle(color: ctx.textPrimary)),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.of(ctx).pop();
@@ -490,16 +518,16 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
 class _SectionHeader extends StatelessWidget {
   final IconData icon;
-  final Color iconColor;
-  final Color iconBgColor;
+  final Color? iconColor;
+  final Color? iconBgColor;
   final String title;
   final String? badgeText;
   final Color? badgeColor;
 
   const _SectionHeader({
     required this.icon,
-    required this.iconColor,
-    required this.iconBgColor,
+    this.iconColor,
+    this.iconBgColor,
     required this.title,
     this.badgeText,
     this.badgeColor,
@@ -507,6 +535,12 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveIconColor = iconColor ?? context.brandAccent;
+    final effectiveIconBgColor = iconBgColor ??
+        (context.isDarkMode
+            ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+            : AppColors.brandAccentSage);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -516,15 +550,15 @@ class _SectionHeader extends StatelessWidget {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: iconBgColor,
+                color: effectiveIconBgColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 14, color: iconColor),
+              child: Icon(icon, size: 14, color: effectiveIconColor),
             ),
             const SizedBox(width: 8),
             Text(
               title,
-              style: AppTypography.cardTitle.copyWith(fontSize: 16),
+              style: AppTypography.cardTitle.copyWith(fontSize: 16, color: context.textPrimary),
             ),
           ],
         ),
@@ -581,6 +615,11 @@ class _OverdueTaskCard extends StatelessWidget {
     }
 
     return Card(
+      color: context.surfaceCard,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: context.borderSubtle),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
@@ -598,7 +637,7 @@ class _OverdueTaskCard extends StatelessWidget {
                     tooltip: isCompleted ? 'Mark as pending' : 'Mark as completed',
                     icon: Icon(
                       isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: isCompleted ? AppColors.brandPrimary : AppColors.statusDangerStroke,
+                      color: isCompleted ? context.brandAccent : AppColors.statusDangerStroke,
                       size: 26,
                     ),
                     onPressed: onToggleCompletion,
@@ -612,14 +651,14 @@ class _OverdueTaskCard extends StatelessWidget {
                           record.title,
                           style: AppTypography.cardTitle.copyWith(
                             decoration: isCompleted ? TextDecoration.lineThrough : null,
-                            color: isCompleted ? AppColors.textTertiary : AppColors.textPrimary,
+                            color: isCompleted ? context.textTertiary : context.textPrimary,
                           ),
                         ),
                         if (record.description != null && record.description!.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
                             record.description!,
-                            style: AppTypography.bodySecondary,
+                            style: AppTypography.bodySecondary.copyWith(color: context.textSecondary),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -650,11 +689,11 @@ class _OverdueTaskCard extends StatelessWidget {
                   if (item.linkedAssetTitle != null)
                     Row(
                       children: [
-                        const Icon(Icons.link, size: 13, color: AppColors.textSecondary),
+                        Icon(Icons.link, size: 13, color: context.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           item.linkedAssetTitle!,
-                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                          style: AppTypography.caption.copyWith(color: context.textSecondary),
                         ),
                       ],
                     )
@@ -665,8 +704,8 @@ class _OverdueTaskCard extends StatelessWidget {
                       TextButton.icon(
                         style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                         onPressed: onSnooze,
-                        icon: const Icon(Icons.snooze, size: 15, color: AppColors.textSecondary),
-                        label: Text('Snooze', style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                        icon: Icon(Icons.snooze, size: 15, color: context.textSecondary),
+                        label: Text('Snooze', style: AppTypography.caption.copyWith(color: context.textSecondary)),
                       ),
                       const SizedBox(width: 4),
                       FilledButton.tonal(
@@ -706,6 +745,11 @@ class _TaskCard extends StatelessWidget {
     final isDueToday = task.isDueToday();
 
     return Card(
+      color: context.surfaceCard,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: context.borderSubtle),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
@@ -720,7 +764,7 @@ class _TaskCard extends StatelessWidget {
                 tooltip: isCompleted ? 'Mark as pending' : 'Mark as completed',
                 icon: Icon(
                   isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: isCompleted ? AppColors.brandPrimary : AppColors.textSecondary,
+                  color: isCompleted ? context.brandAccent : context.textSecondary,
                   size: 26,
                 ),
                 onPressed: onToggleCompletion,
@@ -735,14 +779,14 @@ class _TaskCard extends StatelessWidget {
                       record.title,
                       style: AppTypography.cardTitle.copyWith(
                         decoration: isCompleted ? TextDecoration.lineThrough : null,
-                        color: isCompleted ? AppColors.textTertiary : AppColors.textPrimary,
+                        color: isCompleted ? context.textTertiary : context.textPrimary,
                       ),
                     ),
                     if (record.description != null && record.description!.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         record.description!,
-                        style: AppTypography.bodySecondary,
+                        style: AppTypography.bodySecondary.copyWith(color: context.textSecondary),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -753,24 +797,24 @@ class _TaskCard extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        _buildPriorityBadge(task.priority),
+                        _buildPriorityBadge(context, task.priority),
 
                         if (task.recurrenceRule != null && task.recurrenceRule != 'none')
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLow,
+                              color: context.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.borderSubtle),
+                              border: Border.all(color: context.borderSubtle),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.autorenew, size: 12, color: AppColors.brandPrimary),
+                                Icon(Icons.autorenew, size: 12, color: context.brandAccent),
                                 const SizedBox(width: 4),
                                 Text(
                                   _formatRecurrenceLabel(task.recurrenceRule!),
-                                  style: AppTypography.badge.copyWith(color: AppColors.brandPrimary),
+                                  style: AppTypography.badge.copyWith(color: context.brandAccent),
                                 ),
                               ],
                             ),
@@ -780,20 +824,20 @@ class _TaskCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceContainerLow,
+                              color: context.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.borderSubtle),
+                              border: Border.all(color: context.borderSubtle),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.link, size: 12, color: AppColors.textSecondary),
+                                Icon(Icons.link, size: 12, color: context.textSecondary),
                                 const SizedBox(width: 4),
                                 ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 160),
                                   child: Text(
                                     item.linkedAssetTitle!,
-                                    style: AppTypography.badge.copyWith(color: AppColors.textSecondary),
+                                    style: AppTypography.badge.copyWith(color: context.textSecondary),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -808,12 +852,12 @@ class _TaskCard extends StatelessWidget {
                             style: AppTypography.caption.copyWith(
                               fontWeight: FontWeight.w600,
                               color: isCompleted
-                                  ? AppColors.textTertiary
+                                  ? context.textTertiary
                                   : isDueToday
                                       ? AppColors.statusWarningText
                                       : isOverdue
                                           ? AppColors.statusDangerText
-                                          : AppColors.textSecondary,
+                                          : context.textSecondary,
                             ),
                           ),
                       ],
@@ -828,7 +872,7 @@ class _TaskCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPriorityBadge(String priority) {
+  Widget _buildPriorityBadge(BuildContext context, String priority) {
     Color bg;
     Color fg;
 
@@ -842,13 +886,15 @@ class _TaskCard extends StatelessWidget {
         fg = AppColors.statusWarningText;
         break;
       case 'low':
-        bg = AppColors.surfaceContainerLow;
-        fg = AppColors.textSecondary;
+        bg = context.surfaceContainerLow;
+        fg = context.textSecondary;
         break;
       case 'medium':
       default:
-        bg = AppColors.brandAccentSage;
-        fg = AppColors.brandPrimary;
+        bg = context.isDarkMode
+            ? AppTheme.darkBrandSecondary.withValues(alpha: 0.15)
+            : AppColors.brandAccentSage;
+        fg = context.brandAccent;
         break;
     }
 
@@ -881,20 +927,22 @@ class _MindfulHomePaceBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
+        color: context.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: AppColors.brandAccentSage,
+            decoration: BoxDecoration(
+              color: context.isDarkMode
+                  ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                  : AppColors.brandAccentSage,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.spa_outlined, size: 18, color: AppColors.brandPrimary),
+            child: Icon(Icons.spa_outlined, size: 18, color: context.brandAccent),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -903,12 +951,12 @@ class _MindfulHomePaceBanner extends StatelessWidget {
               children: [
                 Text(
                   'Mindful Home Pace',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                  style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Focus on today’s domestic rhythms. Recurring seasonal routines stay queued until their active cycle.',
-                  style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
+                  style: AppTypography.caption.copyWith(color: context.textTertiary),
                 ),
               ],
             ),
@@ -1005,9 +1053,14 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+        border: Border(
+          top: BorderSide(color: context.borderSubtle),
+          left: BorderSide(color: context.borderSubtle),
+          right: BorderSide(color: context.borderSubtle),
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -1026,9 +1079,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('New Task / Responsibility', style: AppTypography.sectionTitle),
+                  Text('New Task / Responsibility', style: AppTypography.sectionTitle.copyWith(color: context.textPrimary)),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close, color: context.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -1036,9 +1089,12 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: context.textPrimary),
+                decoration: InputDecoration(
                   labelText: 'Task Title *',
                   hintText: 'e.g. Replace AC Air Filter',
+                  filled: true,
+                  fillColor: context.surfaceContainerLow,
                 ),
                 autofocus: true,
                 validator: (val) {
@@ -1051,9 +1107,12 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: context.textPrimary),
+                decoration: InputDecoration(
                   labelText: 'Notes / Specifications',
                   hintText: 'e.g. Use 20x25x1 MERV 11 filter',
+                  filled: true,
+                  fillColor: context.surfaceContainerLow,
                 ),
                 maxLines: 2,
               ),
@@ -1062,13 +1121,19 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      dropdownColor: context.surfaceCard,
+                      style: TextStyle(color: context.textPrimary),
                       initialValue: _priority,
-                      decoration: const InputDecoration(labelText: 'Priority'),
-                      items: const [
-                        DropdownMenuItem(value: 'low', child: Text('Low')),
-                        DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                        DropdownMenuItem(value: 'high', child: Text('High')),
-                        DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+                      decoration: InputDecoration(
+                        labelText: 'Priority',
+                        filled: true,
+                        fillColor: context.surfaceContainerLow,
+                      ),
+                      items: [
+                        DropdownMenuItem(value: 'low', child: Text('Low', style: TextStyle(color: context.textPrimary))),
+                        DropdownMenuItem(value: 'medium', child: Text('Medium', style: TextStyle(color: context.textPrimary))),
+                        DropdownMenuItem(value: 'high', child: Text('High', style: TextStyle(color: context.textPrimary))),
+                        DropdownMenuItem(value: 'urgent', child: Text('Urgent', style: TextStyle(color: context.textPrimary))),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => _priority = val);
@@ -1080,17 +1145,19 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                     child: InkWell(
                       onTap: _pickDueDate,
                       child: InputDecorator(
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Due Date',
-                          suffixIcon: Icon(Icons.calendar_today, size: 18),
+                          suffixIcon: Icon(Icons.calendar_today, size: 18, color: context.textSecondary),
+                          filled: true,
+                          fillColor: context.surfaceContainerLow,
                         ),
                         child: Text(
                           _selectedDueDate != null
                               ? _formatShortDate(_selectedDueDate!)
                               : 'Select date',
                           style: _selectedDueDate != null
-                              ? AppTypography.bodyPrimary
-                              : AppTypography.bodySecondary,
+                              ? AppTypography.bodyPrimary.copyWith(color: context.textPrimary)
+                              : AppTypography.bodySecondary.copyWith(color: context.textSecondary),
                         ),
                       ),
                     ),
@@ -1101,19 +1168,23 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
               // Cadence / Recurrence selector
               DropdownButtonFormField<String>(
+                dropdownColor: context.surfaceCard,
+                style: TextStyle(color: context.textPrimary),
                 initialValue: _recurrenceRule,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Cadence / Routine',
-                  prefixIcon: Icon(Icons.autorenew, size: 20),
+                  prefixIcon: Icon(Icons.autorenew, size: 20, color: context.brandAccent),
+                  filled: true,
+                  fillColor: context.surfaceContainerLow,
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'none', child: Text('None (One-time Task)')),
-                  DropdownMenuItem(value: 'daily', child: Text('Daily Cadence')),
-                  DropdownMenuItem(value: 'weekly', child: Text('Weekly Cadence')),
-                  DropdownMenuItem(value: 'monthly', child: Text('Monthly Cadence')),
-                  DropdownMenuItem(value: 'quarterly', child: Text('Every 3 Months (Quarterly)')),
-                  DropdownMenuItem(value: 'semi_annual', child: Text('Every 6 Months (Biannual)')),
-                  DropdownMenuItem(value: 'yearly', child: Text('Every 1 Year (Annual)')),
+                items: [
+                  DropdownMenuItem(value: 'none', child: Text('None (One-time Task)', style: TextStyle(color: context.textPrimary))),
+                  DropdownMenuItem(value: 'daily', child: Text('Daily Cadence', style: TextStyle(color: context.textPrimary))),
+                  DropdownMenuItem(value: 'weekly', child: Text('Weekly Cadence', style: TextStyle(color: context.textPrimary))),
+                  DropdownMenuItem(value: 'monthly', child: Text('Monthly Cadence', style: TextStyle(color: context.textPrimary))),
+                  DropdownMenuItem(value: 'quarterly', child: Text('Every 3 Months (Quarterly)', style: TextStyle(color: context.textPrimary))),
+                  DropdownMenuItem(value: 'semi_annual', child: Text('Every 6 Months (Biannual)', style: TextStyle(color: context.textPrimary))),
+                  DropdownMenuItem(value: 'yearly', child: Text('Every 1 Year (Annual)', style: TextStyle(color: context.textPrimary))),
                 ],
                 onChanged: (val) {
                   if (val != null) setState(() => _recurrenceRule = val);
@@ -1130,6 +1201,10 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
               const SizedBox(height: 20),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                  foregroundColor: AppColors.brandOnPrimary,
+                ),
                 onPressed: _isSubmitting ? null : _submit,
                 child: _isSubmitting
                     ? const SizedBox(
@@ -1160,9 +1235,14 @@ class TaskDetailSheet extends ConsumerWidget {
     final isCompleted = task.isCompleted;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+        border: Border(
+          top: BorderSide(color: context.borderSubtle),
+          left: BorderSide(color: context.borderSubtle),
+          right: BorderSide(color: context.borderSubtle),
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -1182,43 +1262,48 @@ class TaskDetailSheet extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     record.title,
-                    style: AppTypography.pageHeader.copyWith(fontSize: 22),
+                    style: AppTypography.pageHeader.copyWith(fontSize: 22, color: context.textPrimary),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: context.textPrimary),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Card(
+              color: context.surfaceCard,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                side: BorderSide(color: context.borderSubtle),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    _buildDetailRow('Status', task.status.toUpperCase()),
-                    const Divider(),
-                    _buildDetailRow('Priority', task.priority.toUpperCase()),
+                    _buildDetailRow(context, 'Status', task.status.toUpperCase()),
+                    Divider(color: context.borderSubtle),
+                    _buildDetailRow(context, 'Priority', task.priority.toUpperCase()),
                     if (task.dueDate != null) ...[
-                      const Divider(),
-                      _buildDetailRow('Due Date', _formatFullDate(task.dueDate!)),
+                      Divider(color: context.borderSubtle),
+                      _buildDetailRow(context, 'Due Date', _formatFullDate(task.dueDate!)),
                     ],
                     if (task.recurrenceRule != null && task.recurrenceRule != 'none') ...[
-                      const Divider(),
-                      _buildDetailRow('Cadence', _formatRecurrenceLabel(task.recurrenceRule!)),
+                      Divider(color: context.borderSubtle),
+                      _buildDetailRow(context, 'Cadence', _formatRecurrenceLabel(task.recurrenceRule!)),
                     ],
                     if (task.completedAt != null) ...[
-                      const Divider(),
-                      _buildDetailRow('Completed At', _formatFullDate(task.completedAt!)),
+                      Divider(color: context.borderSubtle),
+                      _buildDetailRow(context, 'Completed At', _formatFullDate(task.completedAt!)),
                     ],
                     if (item.linkedAssetTitle != null) ...[
-                      const Divider(),
-                      _buildDetailRow('Linked Asset', item.linkedAssetTitle!),
+                      Divider(color: context.borderSubtle),
+                      _buildDetailRow(context, 'Linked Asset', item.linkedAssetTitle!),
                     ],
                     if (record.description != null && record.description!.isNotEmpty) ...[
-                      const Divider(),
-                      _buildDetailRow('Notes', record.description!),
+                      Divider(color: context.borderSubtle),
+                      _buildDetailRow(context, 'Notes', record.description!),
                     ],
                   ],
                 ),
@@ -1265,18 +1350,18 @@ class TaskDetailSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.bodySecondary),
+          Text(label, style: AppTypography.bodySecondary.copyWith(color: context.textSecondary)),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               value,
-              style: AppTypography.cardTitle,
+              style: AppTypography.cardTitle.copyWith(color: context.textPrimary),
               textAlign: TextAlign.end,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1290,20 +1375,20 @@ class TaskDetailSheet extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
+        backgroundColor: ctx.surfaceCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
-          side: const BorderSide(color: AppColors.borderSubtle),
+          side: BorderSide(color: ctx.borderSubtle),
         ),
-        title: const Text('Move to Trash?', style: AppTypography.cardTitle),
+        title: Text('Move to Trash?', style: AppTypography.cardTitle.copyWith(color: ctx.textPrimary)),
         content: Text(
           'Are you sure you want to move "$taskTitle" to trash?',
-          style: AppTypography.bodyPrimary,
+          style: AppTypography.bodyPrimary.copyWith(color: ctx.textPrimary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: ctx.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

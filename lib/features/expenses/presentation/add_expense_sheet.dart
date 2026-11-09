@@ -149,22 +149,31 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
       final shouldSchedule = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Schedule Next PMS?'),
+          backgroundColor: ctx.surfaceCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            side: BorderSide(color: ctx.borderSubtle),
+          ),
+          title: Text(
+            'Schedule Next PMS?',
+            style: AppTypography.cardTitle.copyWith(color: ctx.textPrimary),
+          ),
           content: Text(
             'Maintenance logged at $parsedOdometer km.\n\n'
             'Based on configured limits ($intervalKm km / $intervalMonths mos), the next recommended PMS milestone is:\n\n'
             '• Target Odometer: $nextTargetMileage km\n'
             '• Target Due Date: $nextDateStr\n\n'
             'Would you like to auto-create the next PMS reminder task?',
+            style: AppTypography.bodyPrimary.copyWith(color: ctx.textPrimary),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Not Now'),
+              child: Text('Not Now', style: TextStyle(color: ctx.textSecondary)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brandPrimary,
+                backgroundColor: ctx.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
                 foregroundColor: AppColors.brandOnPrimary,
               ),
               onPressed: () => Navigator.of(ctx).pop(true),
@@ -239,9 +248,14 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
         : activeAssets.where((a) => a.record.id == _selectedAssetRecordId).firstOrNull;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+        border: Border(
+          top: BorderSide(color: context.borderSubtle),
+          left: BorderSide(color: context.borderSubtle),
+          right: BorderSide(color: context.borderSubtle),
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.only(
@@ -260,9 +274,12 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Log Expense / Maintenance', style: AppTypography.sectionTitle),
+                    Text(
+                      'Log Expense / Maintenance',
+                      style: AppTypography.sectionTitle.copyWith(color: context.textPrimary),
+                    ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close, color: context.textPrimary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -270,9 +287,12 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: context.textPrimary),
+                  decoration: InputDecoration(
                     labelText: 'Expense Title *',
                     hintText: 'e.g. Engine Oil & Filter Change',
+                    filled: true,
+                    fillColor: context.surfaceContainerLow,
                   ),
                   autofocus: true,
                   validator: (val) {
@@ -290,10 +310,13 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                       flex: 3,
                       child: TextFormField(
                         controller: _amountController,
+                        style: TextStyle(color: context.textPrimary),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
                           labelText: 'Amount (${AppConstants.defaultCurrency}) *',
                           hintText: 'e.g. 1250.00',
+                          filled: true,
+                          fillColor: context.surfaceContainerLow,
                         ),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
@@ -314,10 +337,14 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                         onTap: () => _pickDate(context),
                         borderRadius: BorderRadius.circular(12),
                         child: InputDecorator(
-                          decoration: const InputDecoration(labelText: 'Date'),
+                          decoration: InputDecoration(
+                            labelText: 'Date',
+                            filled: true,
+                            fillColor: context.surfaceContainerLow,
+                          ),
                           child: Text(
                             '${_transactionDate.year}-${_transactionDate.month.toString().padLeft(2, '0')}-${_transactionDate.day.toString().padLeft(2, '0')}',
-                            style: AppTypography.bodyPrimary,
+                            style: AppTypography.bodyPrimary.copyWith(color: context.textPrimary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -331,12 +358,21 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         isExpanded: true,
+                        dropdownColor: context.surfaceCard,
                         initialValue: _expenseCategory,
-                        decoration: const InputDecoration(labelText: 'Category'),
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          filled: true,
+                          fillColor: context.surfaceContainerLow,
+                        ),
                         items: ExpenseCategory.values.map((cat) {
                           return DropdownMenuItem(
                             value: cat.value,
-                            child: Text(cat.label, overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              cat.label,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: context.textPrimary),
+                            ),
                           );
                         }).toList(),
                         onChanged: (val) {
@@ -348,14 +384,19 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         isExpanded: true,
+                        dropdownColor: context.surfaceCard,
                         initialValue: _paymentMethod,
-                        decoration: const InputDecoration(labelText: 'Payment Method'),
-                        items: const [
-                          DropdownMenuItem(value: 'card', child: Text('Credit/Debit Card')),
-                          DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                          DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer')),
-                          DropdownMenuItem(value: 'e_wallet', child: Text('E-Wallet')),
-                          DropdownMenuItem(value: 'other', child: Text('Other')),
+                        decoration: InputDecoration(
+                          labelText: 'Payment Method',
+                          filled: true,
+                          fillColor: context.surfaceContainerLow,
+                        ),
+                        items: [
+                          DropdownMenuItem(value: 'card', child: Text('Credit/Debit Card', style: TextStyle(color: context.textPrimary))),
+                          DropdownMenuItem(value: 'cash', child: Text('Cash', style: TextStyle(color: context.textPrimary))),
+                          DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer', style: TextStyle(color: context.textPrimary))),
+                          DropdownMenuItem(value: 'e_wallet', child: Text('E-Wallet', style: TextStyle(color: context.textPrimary))),
+                          DropdownMenuItem(value: 'other', child: Text('Other', style: TextStyle(color: context.textPrimary))),
                         ],
                         onChanged: (val) => setState(() => _paymentMethod = val),
                       ),
@@ -377,13 +418,16 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: TextFormField(
                       controller: _odometerController,
+                      style: TextStyle(color: context.textPrimary),
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Odometer at Service (km)',
                         hintText: selectedAsset?.asset?.odometerReading != null
                             ? 'Last recorded: ${selectedAsset!.asset!.odometerReading} km'
                             : 'e.g. 15200',
-                        prefixIcon: const Icon(Icons.speed, size: 20, color: AppColors.brandPrimary),
+                        prefixIcon: Icon(Icons.speed, size: 20, color: context.brandAccent),
+                        filled: true,
+                        fillColor: context.surfaceContainerLow,
                       ),
                     ),
                   ),
@@ -391,14 +435,21 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
 
                 TextFormField(
                   controller: _notesController,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: context.textPrimary),
+                  decoration: InputDecoration(
                     labelText: 'Notes / Description (Optional)',
                     hintText: 'Warranty status, technician details, invoice notes...',
+                    filled: true,
+                    fillColor: context.surfaceContainerLow,
                   ),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+                    foregroundColor: AppColors.brandOnPrimary,
+                  ),
                   onPressed: _isSubmitting ? null : () => _submit(activeAssets),
                   child: _isSubmitting
                       ? const SizedBox(

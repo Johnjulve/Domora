@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_typography.dart';
 import 'onboarding_shared_widgets.dart';
 
@@ -38,15 +39,15 @@ class SecurityStep extends ConsumerWidget {
             child: OnboardingCategoryPill(icon: Icons.verified_user_outlined, label: 'On-Device Vault'),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Protect your records',
-            style: AppTypography.pageHeader,
+            style: AppTypography.pageHeader.copyWith(color: context.textPrimary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Add biometric security so only you can unlock Domora.',
-            style: AppTypography.bodySecondary,
+            style: AppTypography.bodySecondary.copyWith(color: context.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -74,15 +75,19 @@ class SecurityStep extends ConsumerWidget {
                 height: 170,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.brandAccentSage.withValues(alpha: 0.6),
+                  color: context.isDarkMode
+                      ? AppTheme.darkBrandSecondary.withValues(alpha: 0.1)
+                      : AppColors.brandAccentSage.withValues(alpha: 0.6),
                 ),
                 child: Center(
                   child: Container(
                     width: 130,
                     height: 130,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.brandAccentSage,
+                      color: context.isDarkMode
+                          ? AppTheme.darkBrandSecondary.withValues(alpha: 0.2)
+                          : AppColors.brandAccentSage,
                     ),
                     child: Center(
                       child: Container(
@@ -90,10 +95,12 @@ class SecurityStep extends ConsumerWidget {
                         height: 90,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: biometricsEnabled ? AppColors.brandPrimary : AppColors.surfaceCard,
+                          color: biometricsEnabled
+                              ? (context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary)
+                              : context.surfaceCard,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.textPrimary.withValues(alpha: 0.08),
+                              color: context.textPrimary.withValues(alpha: 0.08),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -102,7 +109,9 @@ class SecurityStep extends ConsumerWidget {
                         child: Icon(
                           biometricsEnabled ? Icons.check_circle : Icons.fingerprint,
                           size: 44,
-                          color: biometricsEnabled ? AppColors.brandOnPrimary : AppColors.brandPrimary,
+                          color: biometricsEnabled
+                              ? AppColors.brandOnPrimary
+                              : context.brandAccent,
                         ),
                       ),
                     ),
@@ -115,17 +124,24 @@ class SecurityStep extends ConsumerWidget {
 
           // Security Features Card
           Card(
+            color: context.surfaceCard,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              side: BorderSide(color: context.borderSubtle),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
                   _buildSecurityRow(
+                    context: context,
                     icon: Icons.timer_off_outlined,
                     title: 'Instant app lock',
                     description: 'Locks immediately when you switch apps or close your screen.',
                   ),
-                  const Divider(height: 24),
+                  Divider(height: 24, color: context.borderSubtle),
                   _buildSecurityRow(
+                    context: context,
                     icon: Icons.shield_outlined,
                     title: 'Hardware protected',
                     description: "Biometrics stay strictly inside your phone's Secure Enclave.",
@@ -140,23 +156,27 @@ class SecurityStep extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow,
+              color: context.surfaceContainerLow,
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.borderSubtle),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.folder_special_outlined, size: 20, color: AppColors.brandPrimary),
-                    SizedBox(width: 8),
-                    Text('Vault Encryption Ready', style: AppTypography.cardTitle),
+                    Icon(Icons.folder_special_outlined, size: 20, color: context.brandAccent),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Vault Encryption Ready',
+                      style: AppTypography.cardTitle.copyWith(color: context.textPrimary),
+                    ),
                   ],
                 ),
                 Text(
                   'AES-256',
                   style: AppTypography.badge.copyWith(
-                    color: AppColors.textSecondary,
+                    color: context.textSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -166,6 +186,10 @@ class SecurityStep extends ConsumerWidget {
           const SizedBox(height: 24),
 
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
+              foregroundColor: AppColors.brandOnPrimary,
+            ),
             onPressed: () {
               ref.read(onboardingBiometricsEnabledProvider.notifier).setEnabled(true);
               onContinue();
@@ -188,7 +212,7 @@ class SecurityStep extends ConsumerWidget {
             child: Text(
               'Skip for now',
               style: AppTypography.bodySecondary.copyWith(
-                color: AppColors.textSecondary,
+                color: context.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -199,6 +223,7 @@ class SecurityStep extends ConsumerWidget {
   }
 
   Widget _buildSecurityRow({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String description,
@@ -210,19 +235,26 @@ class SecurityStep extends ConsumerWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLow,
+            color: context.surfaceContainerLow,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: context.borderSubtle),
           ),
-          child: Icon(icon, color: AppColors.brandPrimary, size: 20),
+          child: Icon(icon, color: context.brandAccent, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppTypography.cardTitle),
+              Text(
+                title,
+                style: AppTypography.cardTitle.copyWith(color: context.textPrimary),
+              ),
               const SizedBox(height: 2),
-              Text(description, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+              Text(
+                description,
+                style: AppTypography.caption.copyWith(color: context.textSecondary),
+              ),
             ],
           ),
         ),
