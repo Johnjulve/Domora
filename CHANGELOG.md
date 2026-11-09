@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha.12] - 2026-11-09
 
 ### Added
+- Native Biometric Hardware Enclave Authentication & App Lock Engine (Stage 11):
+  - Integrated `local_auth` cross-platform biometric framework and updated Android `MainActivity` to `FlutterFragmentActivity` to support hardware enclave biometric dialogs.
+  - `BiometricService`: Safe platform wrapper providing `isDeviceSupported`, `canCheckBiometrics`, and `authenticate` with defensive fallback on unsupported platforms and unit test harnesses.
+  - `AppLockScreen` (Screen 4): Sanctuary-designed lock screen with warm canvas, concentric sage circle branding, fingerprint glyph, and primary "Unlock with Biometrics" trigger plus "Quick Unlock (Alpha Fallback)".
+  - Lifecycle Auto-Lock Observer: `WidgetsBindingObserver` in `main.dart` monitoring backgrounding elapsed time against configured `autoLockDuration` ('Immediately', 'After 1 minute', 'After 5 minutes', 'After 15 minutes') to automatically re-lock the vault.
+  - Navigator Leak Protection: Implemented global lock overlay via `MaterialApp.builder` and `Offstage`, ensuring all backgrounded routes, dialogs, and sheets are completely concealed while locked and restored intact upon authentication.
+  - Onboarding Security Step Integration: Removed under-construction notice on `SecurityStep` biometric shield, allowing direct toggle and live visual feedback.
 - Google Drive Cloud Redundancy UI & Zero-Knowledge Confirmation Sheet (Design Screens 11 & 12):
   - `ConnectGoogleDriveConfirmationSheet` (Screen 12): Sanctuary modal bottom sheet with Google Drive branding, Zero-Knowledge badge (`verified_user`), and 3 explicit privacy promises (*Encrypted before upload*, *Only you can read it*, *Stored in a private app folder*).
   - Settings Backup & Restore Active State (Screen 11): Interactive Google Drive Backup card displaying active/paused status, connected email badge, master synchronization switch, "Back up on Wi-Fi only" toggle, and "Back up now" manual trigger with honest timestamp tracking.
@@ -25,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI Versioning Standardization:
   - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
   - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
-- 15 new automated unit and widget tests covering emergency dossier rendering and Google Drive redundancy flows (121 total passing tests, 0 analysis issues).
+- 28 new automated unit and widget tests covering emergency dossier rendering, Google Drive redundancy flows, and native biometric lock enforcement (134 total passing tests, 0 analysis issues).
 
 ## [0.1.0-alpha.11] - 2026-11-09
 
