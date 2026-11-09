@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/under_construction_dialog.dart';
 import 'onboarding_shared_widgets.dart';
 
 final onboardingBiometricsEnabledProvider = NotifierProvider<OnboardingBiometricsNotifier, bool>(
@@ -57,10 +56,17 @@ class SecurityStep extends ConsumerWidget {
             child: GestureDetector(
               onTap: () {
                 ref.read(onboardingBiometricsEnabledProvider.notifier).toggle();
-                showUnderConstructionNotice(
-                  context,
-                  featureName: 'Biometric Hardware Enclave Lock',
-                  scheduledPhase: 'v0.2.0',
+                final enabled = ref.read(onboardingBiometricsEnabledProvider);
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      enabled
+                          ? 'Biometric vault protection enabled'
+                          : 'Biometric vault protection disabled',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
                 );
               },
               child: Container(
@@ -175,7 +181,10 @@ class SecurityStep extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           TextButton(
-            onPressed: onContinue,
+            onPressed: () {
+              ref.read(onboardingBiometricsEnabledProvider.notifier).setEnabled(false);
+              onContinue();
+            },
             child: Text(
               'Skip for now',
               style: AppTypography.bodySecondary.copyWith(
