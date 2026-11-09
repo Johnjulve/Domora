@@ -12,8 +12,18 @@ class AppTheme {
   static const double inputRadius = 14.0;
   static const double sheetRadius = 24.0;
 
-  static ThemeData get lightTheme {
+  // Sanctuary Archival Dark Palette Tokens
+  static const Color darkSurfaceCanvas = Color(0xFF121614);
+  static const Color darkSurfaceCard = Color(0xFF1A201C);
+  static const Color darkSurfaceContainerLow = Color(0xFF222925);
+  static const Color darkBorderSubtle = Color(0xFF2B342F);
+  static const Color darkBrandPrimary = Color(0xFF3E8563);
+  static const Color darkBrandSecondary = Color(0xFF86CCA4);
+  static const Color darkTextPrimary = Color(0xFFF4F5F4);
+  static const Color darkTextSecondary = Color(0xFFA1ACA4);
+  static const Color darkTextTertiary = Color(0xFF748078);
 
+  static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       fontFamily: 'Plus Jakarta Sans',
@@ -141,6 +151,141 @@ class AppTheme {
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.surfaceContainerSubtle,
+        thickness: 1,
+        space: 1,
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      fontFamily: 'Plus Jakarta Sans',
+      fontFamilyFallback: const [
+        '-apple-system',
+        'BlinkMacSystemFont',
+        'Segoe UI',
+        'Roboto',
+        'sans-serif',
+      ],
+      scaffoldBackgroundColor: darkSurfaceCanvas,
+      colorScheme: const ColorScheme(
+        brightness: Brightness.dark,
+        primary: darkBrandPrimary,
+        onPrimary: Colors.white,
+        secondary: darkBrandSecondary,
+        onSecondary: darkSurfaceCanvas,
+        surface: darkSurfaceCard,
+        onSurface: darkTextPrimary,
+        error: AppColors.statusDangerStroke,
+        onError: Colors.white,
+        outline: darkBorderSubtle,
+        surfaceContainerHighest: darkSurfaceContainerLow,
+      ),
+      textTheme: TextTheme(
+        displayLarge: AppTypography.displayHero.copyWith(color: darkTextPrimary),
+        headlineMedium: AppTypography.pageHeader.copyWith(color: darkTextPrimary),
+        titleLarge: AppTypography.sectionTitle.copyWith(color: darkTextPrimary),
+        titleMedium: AppTypography.cardTitle.copyWith(color: darkTextPrimary),
+        bodyLarge: AppTypography.bodyPrimary.copyWith(color: darkTextPrimary),
+        bodyMedium: AppTypography.bodySecondary.copyWith(color: darkTextSecondary),
+        bodySmall: AppTypography.caption.copyWith(color: darkTextTertiary),
+        labelSmall: AppTypography.badge.copyWith(color: darkBrandSecondary),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: darkSurfaceCard,
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: darkSurfaceCard,
+        modalBarrierColor: AppColors.scrimOverlay,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(sheetRadius)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: darkSurfaceCard,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+          side: const BorderSide(color: darkBorderSubtle, width: 1),
+        ),
+        titleTextStyle: AppTypography.cardTitle.copyWith(color: darkTextPrimary),
+        contentTextStyle: AppTypography.bodyPrimary.copyWith(color: darkTextPrimary),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: darkSurfaceCanvas,
+        foregroundColor: darkTextPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: AppTypography.pageHeader.copyWith(color: darkTextPrimary),
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurfaceCard,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+          side: const BorderSide(color: darkBorderSubtle, width: 1),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: darkBrandPrimary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(buttonHeight),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: darkTextPrimary,
+          minimumSize: const Size.fromHeight(buttonHeight),
+          side: const BorderSide(color: darkBorderSubtle, width: 1.5),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkSurfaceContainerLow,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: const BorderSide(color: darkBorderSubtle),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: const BorderSide(color: darkBorderSubtle),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: const BorderSide(color: darkBrandPrimary, width: 1.5),
+        ),
+        hintStyle: AppTypography.bodySecondary.copyWith(color: darkTextSecondary),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: darkSurfaceCard,
+        selectedItemColor: darkBrandSecondary,
+        unselectedItemColor: darkTextTertiary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 4,
+        selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: darkBorderSubtle,
         thickness: 1,
         space: 1,
       ),

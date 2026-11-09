@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -133,3 +134,40 @@ class AppPreferences {
 final appPreferencesProvider = Provider<AppPreferences>((ref) {
   return AppPreferences._(File(''), {});
 });
+
+/// Reactive notifier managing [ThemeMode] persisted to [AppPreferences].
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    try {
+      final prefs = ref.watch(appPreferencesProvider);
+      return _parseThemeMode(prefs.themeMode);
+    } catch (_) {
+      return ThemeMode.system;
+    }
+  }
+
+  static ThemeMode _parseThemeMode(String mode) {
+    switch (mode.toLowerCase()) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  Future<void> setThemeMode(String modeString) async {
+    final newMode = _parseThemeMode(modeString);
+    state = newMode;
+    try {
+      final prefs = ref.read(appPreferencesProvider);
+      await prefs.setThemeMode(modeString.toLowerCase());
+    } catch (_) {}
+  }
+}
+
+/// Riverpod provider exposing reactive [ThemeMode].
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);

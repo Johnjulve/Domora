@@ -124,6 +124,7 @@ class DomoraAppState extends ConsumerState<DomoraApp> with WidgetsBindingObserve
     final isFirstRun = widget.showOnboarding ?? !completed;
     final prefs = ref.watch(appPreferencesProvider);
     final bool isLocked = widget.appLockedOverride ?? ref.watch(appLockedProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     final Widget home = isFirstRun
         ? OnboardingScreen(
@@ -137,6 +138,8 @@ class DomoraAppState extends ConsumerState<DomoraApp> with WidgetsBindingObserve
       title: 'Domora',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       home: home,
       builder: (context, child) {
         if (!isFirstRun && prefs.isBiometricsEnabled && isLocked) {
