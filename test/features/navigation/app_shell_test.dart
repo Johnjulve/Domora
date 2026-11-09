@@ -63,8 +63,9 @@ void main() {
       // Tap Today tab
       await tester.tap(find.text('Today'));
       await tester.pumpAndSettle();
-      expect(find.text('Quick Actions'), findsOneWidget);
-      expect(find.text("Today's Focus & Deadlines"), findsOneWidget);
+      expect(find.text('Quick add'), findsOneWidget);
+      expect(find.text('Next 30 days'), findsOneWidget);
+      expect(find.text('On-device'), findsOneWidget);
 
       // Tap Vault tab
       await tester.tap(find.text('Vault'));
@@ -388,12 +389,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Metrics are rendered with live data
-      expect(find.text('Pending Tasks'), findsOneWidget);
+      expect(find.text('Tasks today'), findsOneWidget);
       expect(find.text('Overdue'), findsOneWidget);
-      expect(find.text('Total Assets'), findsOneWidget);
+      expect(find.text('Assets tracked'), findsOneWidget);
 
       // Verify Overdue task is displayed under Today Focus
-      expect(find.text("Today's Focus & Deadlines"), findsOneWidget);
+      expect(find.text('Next 30 days'), findsOneWidget);
       expect(find.text('Pay Electricity Bill'), findsWidgets);
       expect(find.text('OVERDUE'), findsOneWidget);
 
@@ -408,9 +409,9 @@ void main() {
       expect(find.text("You're all caught up"), findsOneWidget);
 
       // Test Quick Action: tap "Add Asset" button
-      await tester.ensureVisible(find.text('Add Asset'));
+      await tester.ensureVisible(find.text('Asset'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add Asset'));
+      await tester.tap(find.text('Asset'));
       await tester.pumpAndSettle();
 
       // Modal bottom sheet opens
@@ -495,8 +496,8 @@ void main() {
       await tester.tap(find.text('Today'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Pending Tasks'), findsOneWidget);
-      expect(find.text('Total Assets'), findsOneWidget);
+      expect(find.text('Tasks today'), findsOneWidget);
+      expect(find.text('Assets tracked'), findsOneWidget);
       expect(find.text('Oil Change'), findsWidgets);
       expect(find.text('OVERDUE'), findsOneWidget);
 
@@ -661,7 +662,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify dashboard metrics reflect the recorded expense
-      expect(find.text('Recorded Expenses'), findsOneWidget);
+      expect(find.textContaining('Spent in'), findsOneWidget);
       expect(find.text('PHP 1250.00'), findsOneWidget);
 
       // Verify Recent Records Activity shows the expense
@@ -681,8 +682,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap Sanctuary badge
-      expect(find.text('Sanctuary'), findsOneWidget);
-      await tester.tap(find.text('Sanctuary'));
+      expect(find.text('On-device'), findsOneWidget);
+      await tester.tap(find.text('On-device'));
       await tester.pumpAndSettle();
 
       // Sanctuary Archival bottom sheet is displayed
@@ -752,7 +753,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Upcoming & Overdue Bills section displays the bill
-      expect(find.text('Upcoming & Overdue Bills'), findsOneWidget);
+      expect(find.text('Next 30 days'), findsOneWidget);
+      expect(find.text('Bills & renewals'), findsOneWidget);
       expect(find.text('Meralco Electric Bill'), findsWidgets);
       expect(find.text('PHP 3450.50'), findsWidgets);
       expect(find.text('DUE SOON'), findsWidgets);
@@ -782,7 +784,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // In TodayScreen, verify Recorded Expenses now includes the PHP 3450.50 utility expense
-      expect(find.text('Recorded Expenses'), findsOneWidget);
+      expect(find.textContaining('Spent in'), findsOneWidget);
       expect(find.text('PHP 3450.50'), findsWidgets);
 
       await tester.pumpWidget(const SizedBox.shrink());

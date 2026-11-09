@@ -915,6 +915,7 @@ void main() {
           upcomingBillsStreamProvider.overrideWith((ref) => Stream.value([])),
           dashboardBillsStreamProvider.overrideWith((ref) => Stream.value([])),
           dashboardExpensesStreamProvider.overrideWith((ref) => Stream.value([])),
+          dashboardDocumentsStreamProvider.overrideWith((ref) => Stream.value([])),
         ],
       );
       addTearDown(container.dispose);
@@ -936,48 +937,45 @@ void main() {
       final pendingValue = tester.widget<Text>(find.text('0').first);
       expect(pendingValue.style?.color, AppTheme.darkTextPrimary);
 
-      // Add Task button in QuickActionBar (should be darkBrandSecondary)
-      final addTaskIcon = tester.widget<Icon>(find.byIcon(Icons.add_task));
-      expect(addTaskIcon.color, AppTheme.darkBrandSecondary);
+      // Task quick add tile in _QuickAddSection (should be darkBrandSecondary)
+      final taskIcon = tester.widget<Icon>(find.byIcon(Icons.checklist_outlined).first);
+      expect(taskIcon.color, AppTheme.darkBrandSecondary);
 
-      final addTaskText = tester.widget<Text>(find.text('Add Task'));
-      expect(addTaskText.style?.color, AppTheme.darkBrandSecondary);
+      final taskText = tester.widget<Text>(find.text('Task'));
+      expect(taskText.style?.color, AppTheme.darkTextPrimary);
 
-      final addTaskButton = tester.widget<OutlinedButton>(find.ancestor(
-        of: find.text('Add Task'),
-        matching: find.byType(OutlinedButton),
-      ));
-      expect(addTaskButton.style?.side?.resolve({})?.color, AppTheme.darkBrandSecondary);
-
-      // Settings icon in AppBar (should be darkBrandSecondary)
+      // Settings icon (should be darkBrandSecondary)
       final settingsIcon = tester.widget<Icon>(find.byIcon(Icons.settings_outlined));
       expect(settingsIcon.color, AppTheme.darkBrandSecondary);
 
-      // Sanctuary badge in AppBar
+      // Sanctuary badge ('On-device')
       final sanctuaryIcon = tester.widget<Icon>(find.byIcon(Icons.shield_outlined));
       expect(sanctuaryIcon.color, AppTheme.darkBrandSecondary);
 
-      final sanctuaryText = tester.widget<Text>(find.text('Sanctuary'));
+      final sanctuaryText = tester.widget<Text>(find.text('On-device'));
       expect(sanctuaryText.style?.color, AppTheme.darkBrandSecondary);
 
       final sanctuaryContainer = tester.widget<Container>(find.ancestor(
-        of: find.text('Sanctuary'),
+        of: find.text('On-device'),
         matching: find.byType(Container),
       ).first);
       final sanctuaryDec = sanctuaryContainer.decoration as BoxDecoration;
-      expect(sanctuaryDec.color, AppTheme.darkSurfaceContainerLow);
+      expect(sanctuaryDec.color, AppTheme.darkSurfaceCard);
       expect((sanctuaryDec.border as Border).top.color, AppTheme.darkBorderSubtle);
 
-      // All caught up card
-      final allCaughtUpIcon = tester.widget<Icon>(find.byIcon(Icons.done_all));
+      // Hero reassurance card
+      final allCaughtUpIcon = tester.widget<Icon>(find.byIcon(Icons.check_circle_outline));
       expect(allCaughtUpIcon.color, AppTheme.darkBrandSecondary);
 
       final caughtUpCircle = tester.widget<Container>(find.ancestor(
-        of: find.byIcon(Icons.done_all),
+        of: find.byIcon(Icons.check_circle_outline),
         matching: find.byType(Container),
       ).first);
       final caughtUpDec = caughtUpCircle.decoration as BoxDecoration;
       expect(caughtUpDec.color, AppTheme.darkSurfaceContainerLow);
+
+      final caughtUpTitle = tester.widget<Text>(find.text("You're all caught up"));
+      expect(caughtUpTitle.style?.color, AppTheme.darkTextPrimary);
     });
 
     testWidgets('AddBillSheet and BillDetailSheet render with dark theme tokens, responsive inputs, and high contrast in Dark Mode',
