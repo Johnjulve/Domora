@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha.12] - 2026-11-09
 
 ### Added
+- Visual Contrast & Dark Mode Collision Remediations:
+  - Base Typography Dynamic Color Inheritance: Removed hardcoded `color` properties across all `AppTypography` base styles (`displayHero`, `pageHeader`, `sectionTitle`, `cardTitle`, `bodyPrimary`, `bodySecondary`, `caption`), allowing widgets to inherit the ambient text color from `DefaultTextStyle.of(context)`. Explicitly configured `lightTheme.textTheme` with light tokens and `darkTheme.textTheme` with calibrated dark tokens.
+  - Zero-Boilerplate Theme Extension: Added `SanctuaryThemeContext` on `BuildContext` (`context.isDarkMode`, `context.surfaceCanvas`, `context.surfaceCard`, `context.textPrimary`, `context.textSecondary`, `context.textTertiary`, `context.borderSubtle`, `context.surfaceContainerLow`, `context.brandAccent`).
+  - Onboarding Flow Dark Mode Harmonization: Removed hardcoded canvas backgrounds from `OnboardingScreen` `Scaffold` and `AppBar`. Converted option cards in `StorageChoiceStep` and recovery containers in `RecoveryKeyStep` to `context.surfaceCard`, eliminating white-on-white text collision on Dark Mode canvas. Themed `OnboardingProgressIndicator` active/inactive steps with high contrast tokens.
+  - Records Screen Sheet & Metric Contrast: Updated `AddAssetSheet` and `AssetDetailSheet` container backgrounds to resolve `Theme.of(context).bottomSheetTheme.backgroundColor ?? Theme.of(context).cardColor`, eliminating stark white sheet clash with dark input fields. Replaced `AppColors.brandPrimary` on asset value, maintenance cost, and odometer metrics with `context.brandAccent` (`darkBrandSecondary` `#86CCA4`, achieving 8.9:1 WCAG AAA contrast against `darkSurfaceCard`).
 - Sanctuary Archival Dark Theme Engine:
   - Centralized Semantic Dark Tokens on `AppTheme`: Added 9 dark design constants (`darkSurfaceCanvas`, `darkSurfaceCard`, `darkSurfaceContainerLow`, `darkBorderSubtle`, `darkBrandPrimary`, `darkBrandSecondary`, `darkTextPrimary`, `darkTextSecondary`, `darkTextTertiary`).
   - Material 3 Dark `ThemeData`: Configured dark canvas (`#121614`), elevated slate cards (`#1A201C`), inputs (`#222925`), and borders (`#2B342F`) matching Sanctuary Archival geometry.
@@ -44,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI Versioning Standardization:
   - Standardized consumer-facing UI surfaces (e.g. Settings footer and headers) to display clean `Domora v0.1.0` (`AppConstants.displayVersion`), removing pre-release channel noise from primary user touchpoints.
   - Preserved full technical versioning (`Build 12 • Offline Sanctuary (alpha.12)`) in the technical "App Version & Updates" diagnostic tile for GitHub releases tracking.
-- 41 new automated unit and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, native biometric lock enforcement, dark theme switching, and direct APK asset download resolution (147 total passing tests, 0 analysis issues).
+- 47 new automated unit and widget tests covering emergency dossier rendering, Google Drive live redundancy flows, native biometric lock enforcement, dark theme switching, and visual contrast collision verification (153 total passing tests, 0 analysis issues).
 
 ## [0.1.0-alpha.11] - 2026-11-09
 

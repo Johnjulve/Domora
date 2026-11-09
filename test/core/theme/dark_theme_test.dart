@@ -1,3 +1,4 @@
+import 'package:domora/core/constants/app_constants.dart';
 import 'package:domora/core/database/app_database.dart';
 import 'package:domora/core/providers/database_providers.dart';
 import 'package:domora/core/services/app_preferences.dart';
@@ -7,7 +8,9 @@ import 'package:domora/core/theme/app_theme.dart';
 import 'package:domora/core/theme/app_typography.dart';
 import 'package:domora/features/categories/data/category_repository_impl.dart';
 import 'package:domora/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:domora/features/onboarding/presentation/widgets/storage_choice_step.dart';
 import 'package:domora/features/records/data/record_repository_impl.dart';
+import 'package:domora/features/records/domain/record.dart';
 import 'package:domora/features/records/presentation/records_screen.dart';
 import 'package:domora/features/settings/presentation/settings_profile_screen.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
@@ -409,6 +412,7 @@ void main() {
       expect(lightContext.textTertiary, AppColors.textTertiary);
       expect(lightContext.borderSubtle, AppColors.borderSubtle);
       expect(lightContext.surfaceContainerLow, AppColors.surfaceContainerLow);
+      expect(lightContext.brandAccent, AppColors.brandPrimary);
       expect(DefaultTextStyle.of(lightContext).style.color, AppColors.textSecondary);
 
       // Verify effective style inherits from DefaultTextStyle without color override
@@ -447,6 +451,7 @@ void main() {
       expect(darkContext.textTertiary, AppTheme.darkTextTertiary);
       expect(darkContext.borderSubtle, AppTheme.darkBorderSubtle);
       expect(darkContext.surfaceContainerLow, AppTheme.darkSurfaceContainerLow);
+      expect(darkContext.brandAccent, AppTheme.darkBrandSecondary);
       expect(DefaultTextStyle.of(darkContext).style.color, AppTheme.darkTextSecondary);
 
       // Verify dark effective style inherits dark text color without override
@@ -525,6 +530,91 @@ void main() {
       final decoration = containerWidget.decoration as BoxDecoration;
       expect(decoration.color, AppTheme.darkSurfaceCard);
       expect(decoration.borderRadius, const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)));
+    });
+
+    testWidgets('RecordsScreen metrics render with darkBrandSecondary under AppTheme.darkTheme',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      await WorkspaceRepositoryImpl(db).getOrCreateDefaultWorkspace();
+      final recordRepo = RecordRepositoryImpl(db);
+      final now = DateTime.now().toUtc();
+      await recordRepo.createAssetRecord(
+        record: Record(
+          id: 'test-record-1',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'asset',
+          title: 'MacBook Pro M3',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        asset: const Asset(
+          recordId: 'test-record-1',
+          purchaseAmountMinor: 14500000,
+          purchaseCurrency: 'PHP',
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          recordRepositoryProvider.overrideWithValue(recordRepo),
+          categoryRepositoryProvider.overrideWithValue(CategoryRepositoryImpl(db)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const RecordsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final valueText = tester.widget<Text>(find.textContaining('Value: PHP'));
+      expect(valueText.style?.color, AppTheme.darkBrandSecondary);
+    });
+
+    testWidgets('StorageChoiceStep cards render with darkSurfaceCard and darkTextPrimary under AppTheme.darkTheme',
+        (WidgetTester tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: Scaffold(
+              body: StorageChoiceStep(onContinue: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final cardContainers = tester.widgetList<Container>(find.descendant(
+        of: find.byType(InkWell),
+        matching: find.byType(Container),
+      ));
+
+      final firstCard = cardContainers.first;
+      final decoration = firstCard.decoration as BoxDecoration;
+      expect(decoration.color, AppTheme.darkSurfaceCard);
+
+      final context = tester.element(find.text('Continue without an account'));
+      expect(DefaultTextStyle.of(context).style.color, AppTheme.darkTextSecondary);
+      expect(context.textPrimary, AppTheme.darkTextPrimary);
+      expect(context.surfaceCard, AppTheme.darkSurfaceCard);
     });
   });
 }
