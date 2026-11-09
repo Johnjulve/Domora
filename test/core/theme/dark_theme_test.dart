@@ -13,6 +13,11 @@ import 'package:domora/features/records/data/record_repository_impl.dart';
 import 'package:domora/features/records/domain/record.dart';
 import 'package:domora/features/records/presentation/records_screen.dart';
 import 'package:domora/features/settings/presentation/settings_profile_screen.dart';
+import 'package:domora/features/records/presentation/widgets/asset_picker_sheet.dart';
+import 'package:domora/features/settings/presentation/widgets/emergency_info_sheet.dart';
+import 'package:domora/features/today/presentation/today_screen.dart';
+import 'package:domora/features/vault/data/document_repository_impl.dart';
+import 'package:domora/features/vault/presentation/vault_screen.dart';
 import 'package:domora/features/workspaces/data/workspace_repository_impl.dart';
 import 'package:domora/main.dart';
 import 'package:drift/native.dart';
@@ -615,6 +620,360 @@ void main() {
       expect(DefaultTextStyle.of(context).style.color, AppTheme.darkTextSecondary);
       expect(context.textPrimary, AppTheme.darkTextPrimary);
       expect(context.surfaceCard, AppTheme.darkSurfaceCard);
+    });
+
+    testWidgets('VaultScreen filter chips and empty state render with dark theme tokens in Dark Mode',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          documentRepositoryProvider.overrideWithValue(DocumentRepositoryImpl(db)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const VaultScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the 'Warranty' chip container (unselected)
+      final unselectedChipContainer = tester.widget<Container>(find.ancestor(
+        of: find.text('Warranty'),
+        matching: find.byType(Container),
+      ).first);
+
+      final unselectedDec = unselectedChipContainer.decoration as BoxDecoration;
+      expect(unselectedDec.color, AppTheme.darkSurfaceCard);
+      expect((unselectedDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+      expect(unselectedDec.borderRadius, BorderRadius.circular(999));
+
+      final unselectedText = tester.widget<Text>(find.text('Warranty'));
+      expect(unselectedText.style?.color, AppTheme.darkTextPrimary);
+      expect(unselectedText.style?.fontWeight, FontWeight.w500);
+
+      // Find the 'All' chip container (selected)
+      final selectedChipContainer = tester.widget<Container>(find.ancestor(
+        of: find.text('All'),
+        matching: find.byType(Container),
+      ).first);
+
+      final selectedDec = selectedChipContainer.decoration as BoxDecoration;
+      expect(selectedDec.color, AppColors.brandPrimary);
+      expect((selectedDec.border as Border).top.color, AppColors.brandPrimary);
+      expect(selectedDec.borderRadius, BorderRadius.circular(999));
+
+      final selectedText = tester.widget<Text>(find.text('All'));
+      expect(selectedText.style?.color, AppColors.brandOnPrimary);
+      expect(selectedText.style?.fontWeight, FontWeight.w600);
+
+      // Empty state lock icon circle in dark mode
+      final lockIcon = find.byIcon(Icons.lock_outline);
+      expect(lockIcon, findsOneWidget);
+      final lockWidget = tester.widget<Icon>(lockIcon);
+      expect(lockWidget.color, AppTheme.darkBrandSecondary);
+
+      final lockCircle = tester.widget<Container>(find.ancestor(
+        of: lockIcon,
+        matching: find.byType(Container),
+      ).first);
+      final lockDec = lockCircle.decoration as BoxDecoration;
+      expect(lockDec.color, AppTheme.darkSurfaceContainerLow);
+    });
+
+    testWidgets('AddDocumentSheet renders with dark surfaceCard and dark surfaceContainerLow in Dark Mode',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          documentRepositoryProvider.overrideWithValue(DocumentRepositoryImpl(db)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const Scaffold(
+              body: AddDocumentSheet(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Root sheet container
+      final rootContainer = tester.widget<Container>(find.descendant(
+        of: find.byType(AddDocumentSheet),
+        matching: find.byType(Container),
+      ).first);
+      final rootDec = rootContainer.decoration as BoxDecoration;
+      expect(rootDec.color, AppTheme.darkSurfaceCard);
+      expect(rootDec.borderRadius, const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)));
+
+      // File upload card container
+      final uploadCard = tester.widget<Container>(find.descendant(
+        of: find.byType(InkWell),
+        matching: find.byType(Container),
+      ).first);
+      final uploadDec = uploadCard.decoration as BoxDecoration;
+      expect(uploadDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((uploadDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      // Upload icon
+      final uploadIcon = tester.widget<Icon>(find.byIcon(Icons.upload_file_outlined));
+      expect(uploadIcon.color, AppTheme.darkBrandSecondary);
+    });
+
+    testWidgets('AssetPickerTile and showAssetPickerModal render with dark theme tokens in Dark Mode',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final now = DateTime.now().toUtc();
+      final record = Record(
+        id: 'asset-test-1',
+        workspaceId: AppConstants.defaultWorkspaceId,
+        recordType: 'asset',
+        title: 'Toyota Fortuner',
+        categoryId: 'cat-vehicles',
+        createdAt: now,
+        updatedAt: now,
+      );
+      final testAsset = RecordWithAsset(
+        record: record,
+        asset: const Asset(recordId: 'asset-test-1', brand: 'Toyota', model: 'Fortuner', odometerReading: 45000),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          activeAssetsStreamProvider.overrideWith((ref) => Stream.value([testAsset])),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: Scaffold(
+              body: AssetPickerTile(
+                selectedAssetRecordId: null,
+                onAssetChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify AssetPickerTile surface tokens
+      final tileContainer = tester.widget<Container>(find.descendant(
+        of: find.byType(AssetPickerTile),
+        matching: find.byType(Container),
+      ).first);
+      final tileDec = tileContainer.decoration as BoxDecoration;
+      expect(tileDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((tileDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      final linkIcon = tester.widget<Icon>(find.byIcon(Icons.link));
+      expect(linkIcon.color, AppTheme.darkBrandSecondary);
+
+      // Tap to open showAssetPickerModal
+      await tester.tap(find.byType(AssetPickerTile));
+      await tester.pumpAndSettle();
+
+      // Modal Material surface should have darkSurfaceCard
+      final modalMaterial = tester.widget<Material>(find.ancestor(
+        of: find.text('Select Associated Asset'),
+        matching: find.byType(Material),
+      ).first);
+      expect(modalMaterial.color, AppTheme.darkSurfaceCard);
+
+      // Leading car icon has darkBrandSecondary
+      final carIcon = tester.widget<Icon>(find.byIcon(Icons.directions_car_outlined));
+      expect(carIcon.color, AppTheme.darkBrandSecondary);
+    });
+
+    testWidgets('EmergencyInfoSheet renders with high-contrast dark theme tokens and legible text in Dark Mode',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final prefs = AppPreferences.forTesting({
+        'household_name': 'Sanctuary Manor',
+        'household_address': '124 Lotus Avenue',
+        'theme_mode': 'dark',
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          appPreferencesProvider.overrideWithValue(prefs),
+          activeAssetsStreamProvider.overrideWith((ref) => Stream.value([])),
+          dashboardBillsStreamProvider.overrideWith((ref) => Stream.value([])),
+          dashboardDocumentsStreamProvider.overrideWith((ref) => Stream.value([])),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const Scaffold(
+              body: EmergencyInfoSheet(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Root bottom sheet container
+      final sheetContainer = tester.widget<Container>(find.byKey(const Key('emergency_info_sheet')));
+      final sheetDec = sheetContainer.decoration as BoxDecoration;
+      expect(sheetDec.color, AppTheme.darkSurfaceCard);
+      expect((sheetDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      // Header shield icon and container
+      final shieldIcon = tester.widget<Icon>(find.byIcon(Icons.shield_outlined));
+      expect(shieldIcon.color, AppTheme.darkBrandSecondary);
+
+      final shieldContainer = tester.widget<Container>(find.ancestor(
+        of: find.byIcon(Icons.shield_outlined),
+        matching: find.byType(Container),
+      ).first);
+      final shieldDec = shieldContainer.decoration as BoxDecoration;
+      expect(shieldDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((shieldDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      // Title & Subtitle text colors
+      final titleText = tester.widget<Text>(find.text('Emergency Household Dossier'));
+      expect(titleText.style?.color, AppTheme.darkTextPrimary);
+
+      final subtitleText = tester.widget<Text>(find.text('Sanctuary Manor • 124 Lotus Avenue'));
+      expect(subtitleText.style?.color, AppTheme.darkTextSecondary);
+
+      // Household & Primary Identity card container
+      final identityCard = tester.widget<Container>(find.ancestor(
+        of: find.text('Household & Primary Identity'),
+        matching: find.byType(Container),
+      ).first);
+      final identityDec = identityCard.decoration as BoxDecoration;
+      expect(identityDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((identityDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      final homeIcon = tester.widget<Icon>(find.byIcon(Icons.home_outlined));
+      expect(homeIcon.color, AppTheme.darkBrandSecondary);
+
+      // Close OutlinedButton in Action Bar
+      final closeButton = tester.widget<OutlinedButton>(find.byKey(const Key('close_dossier_button')));
+      final closeStyle = closeButton.style;
+      expect(closeStyle?.side?.resolve({})?.color, AppTheme.darkBorderSubtle);
+      expect(closeStyle?.foregroundColor?.resolve({}), AppTheme.darkTextPrimary);
+    });
+
+    testWidgets('TodayScreen metrics and quick action buttons render with high-contrast dark theme tokens in Dark Mode',
+        (WidgetTester tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          dashboardTasksStreamProvider.overrideWith((ref) => Stream.value([])),
+          dashboardRecordsStreamProvider.overrideWith((ref) => Stream.value([])),
+          workspaceTotalExpensesProvider.overrideWith((ref) => Stream.value(0)),
+          upcomingBillsStreamProvider.overrideWith((ref) => Stream.value([])),
+          dashboardBillsStreamProvider.overrideWith((ref) => Stream.value([])),
+          dashboardExpensesStreamProvider.overrideWith((ref) => Stream.value([])),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark,
+            home: const TodayScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Metric Card text colors (should be darkTextPrimary, not black or invisible)
+      final pendingValue = tester.widget<Text>(find.text('0').first);
+      expect(pendingValue.style?.color, AppTheme.darkTextPrimary);
+
+      // Add Task button in QuickActionBar (should be darkBrandSecondary)
+      final addTaskIcon = tester.widget<Icon>(find.byIcon(Icons.add_task));
+      expect(addTaskIcon.color, AppTheme.darkBrandSecondary);
+
+      final addTaskText = tester.widget<Text>(find.text('Add Task'));
+      expect(addTaskText.style?.color, AppTheme.darkBrandSecondary);
+
+      final addTaskButton = tester.widget<OutlinedButton>(find.ancestor(
+        of: find.text('Add Task'),
+        matching: find.byType(OutlinedButton),
+      ));
+      expect(addTaskButton.style?.side?.resolve({})?.color, AppTheme.darkBrandSecondary);
+
+      // Settings icon in AppBar (should be darkBrandSecondary)
+      final settingsIcon = tester.widget<Icon>(find.byIcon(Icons.settings_outlined));
+      expect(settingsIcon.color, AppTheme.darkBrandSecondary);
+
+      // Sanctuary badge in AppBar
+      final sanctuaryIcon = tester.widget<Icon>(find.byIcon(Icons.shield_outlined));
+      expect(sanctuaryIcon.color, AppTheme.darkBrandSecondary);
+
+      final sanctuaryText = tester.widget<Text>(find.text('Sanctuary'));
+      expect(sanctuaryText.style?.color, AppTheme.darkBrandSecondary);
+
+      final sanctuaryContainer = tester.widget<Container>(find.ancestor(
+        of: find.text('Sanctuary'),
+        matching: find.byType(Container),
+      ).first);
+      final sanctuaryDec = sanctuaryContainer.decoration as BoxDecoration;
+      expect(sanctuaryDec.color, AppTheme.darkSurfaceContainerLow);
+      expect((sanctuaryDec.border as Border).top.color, AppTheme.darkBorderSubtle);
+
+      // All caught up card
+      final allCaughtUpIcon = tester.widget<Icon>(find.byIcon(Icons.done_all));
+      expect(allCaughtUpIcon.color, AppTheme.darkBrandSecondary);
+
+      final caughtUpCircle = tester.widget<Container>(find.ancestor(
+        of: find.byIcon(Icons.done_all),
+        matching: find.byType(Container),
+      ).first);
+      final caughtUpDec = caughtUpCircle.decoration as BoxDecoration;
+      expect(caughtUpDec.color, AppTheme.darkSurfaceContainerLow);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../backup/presentation/backup_sheet.dart';
 import '../../settings/presentation/settings_profile_screen.dart';
@@ -50,7 +51,7 @@ class TodayScreen extends ConsumerWidget {
         actions: [
           const _SanctuaryBadge(),
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.brandPrimary),
+            icon: Icon(Icons.settings_outlined, color: context.brandAccent),
             tooltip: 'Settings & Updates',
             onPressed: () {
               Navigator.push(
@@ -144,20 +145,22 @@ class _SanctuaryBadge extends StatelessWidget {
           margin: const EdgeInsets.only(right: 16),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.brandAccentSage,
+            color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.brandAccentBorder),
+            border: Border.all(
+              color: context.isDarkMode ? context.borderSubtle : AppColors.brandAccentBorder,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.shield_outlined, size: 14, color: AppColors.brandPrimary),
+              Icon(Icons.shield_outlined, size: 14, color: context.brandAccent),
               const SizedBox(width: 4),
               Text(
                 'Sanctuary',
                 style: AppTypography.caption.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppColors.brandPrimary,
+                  color: context.brandAccent,
                 ),
               ),
             ],
@@ -205,10 +208,10 @@ class _TodayMetricsSection extends ConsumerWidget {
 
     // Guard: Loading state
     if (tasksAsync.isLoading || recordsAsync.isLoading) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(color: AppColors.brandPrimary),
+          padding: const EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(color: context.brandAccent),
         ),
       );
     }
@@ -273,7 +276,7 @@ class _TodayMetricsSection extends ConsumerWidget {
                 icon: Icons.alarm_outlined,
                 valueColor: overdueTasks > 0
                     ? AppColors.statusDangerText
-                    : AppColors.textPrimary,
+                    : context.textPrimary,
               ),
             ),
           ],
@@ -325,7 +328,7 @@ class _MetricCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: AppColors.textSecondary),
+            Icon(icon, size: 20, color: context.textSecondary),
             const SizedBox(height: 10),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -334,14 +337,14 @@ class _MetricCard extends StatelessWidget {
                 value,
                 style: AppTypography.pageHeader.copyWith(
                   fontSize: 22,
-                  color: valueColor ?? AppColors.textPrimary,
+                  color: valueColor ?? context.textPrimary,
                 ),
               ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: AppTypography.caption,
+              style: AppTypography.caption.copyWith(color: context.textSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -368,14 +371,14 @@ class _QuickActionBar extends StatelessWidget {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-                  side: const BorderSide(color: AppColors.brandPrimary),
+                  side: BorderSide(color: context.brandAccent),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => _openAddTask(context),
-                icon: const Icon(Icons.add_task, color: AppColors.brandPrimary, size: 18),
-                label: const Text(
+                icon: Icon(Icons.add_task, color: context.brandAccent, size: 18),
+                label: Text(
                   'Add Task',
-                  style: TextStyle(color: AppColors.brandPrimary, fontSize: 13),
+                  style: TextStyle(color: context.brandAccent, fontSize: 13),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -422,6 +425,7 @@ class _QuickActionBar extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => const AddTaskSheet(),
     );
   }
@@ -430,6 +434,7 @@ class _QuickActionBar extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => const AddAssetSheet(),
     );
   }
@@ -438,6 +443,7 @@ class _QuickActionBar extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => const AddExpenseSheet(),
     );
   }
@@ -513,11 +519,11 @@ class _AllCaughtUpCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: AppColors.brandAccentSage,
+              decoration: BoxDecoration(
+                color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.done_all, color: AppColors.brandPrimary, size: 24),
+              child: Icon(Icons.done_all, color: context.brandAccent, size: 24),
             ),
             const SizedBox(width: 16),
             const Expanded(
@@ -560,6 +566,7 @@ class _FocusTaskTile extends ConsumerWidget {
           showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
+            backgroundColor: Colors.transparent,
             builder: (_) => TaskDetailSheet(item: item),
           );
         },
@@ -662,7 +669,6 @@ class _FocusTaskTile extends ConsumerWidget {
   }
 }
 
-
 class _TodayBillsSection extends ConsumerWidget {
   final DateTime now;
 
@@ -692,10 +698,10 @@ class _TodayBillsSection extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         upcomingBillsAsync.when(
-          loading: () => const Center(
+          loading: () => Center(
             child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(color: AppColors.brandPrimary),
+              padding: const EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(color: context.brandAccent),
             ),
           ),
           error: (err, _) => Padding(
@@ -714,11 +720,11 @@ class _TodayBillsSection extends ConsumerWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: AppColors.brandAccentSage,
+                        decoration: BoxDecoration(
+                          color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.check_circle_outline, color: AppColors.brandPrimary, size: 24),
+                        child: Icon(Icons.check_circle_outline, color: context.brandAccent, size: 24),
                       ),
                       const SizedBox(width: 16),
                       const Expanded(
@@ -797,15 +803,19 @@ class _BillFocusTile extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isOverdue ? AppColors.statusDangerFill : AppColors.brandAccentSage,
+                  color: isOverdue
+                      ? AppColors.statusDangerFill
+                      : (context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isOverdue ? AppColors.statusDangerStroke : AppColors.brandAccentBorder,
+                    color: isOverdue
+                        ? AppColors.statusDangerStroke
+                        : (context.isDarkMode ? context.borderSubtle : AppColors.brandAccentBorder),
                   ),
                 ),
                 child: Icon(
                   bill.utilityTypeEnum.icon,
-                  color: isOverdue ? AppColors.statusDangerText : AppColors.brandPrimary,
+                  color: isOverdue ? AppColors.statusDangerText : context.brandAccent,
                   size: 22,
                 ),
               ),
@@ -865,10 +875,10 @@ class _BillFocusTile extends ConsumerWidget {
                 children: [
                   Text(
                     bill.formattedAmountDue,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.brandPrimary,
+                      color: context.brandAccent,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -960,6 +970,7 @@ class _RecentActivitySection extends ConsumerWidget {
               showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
+                backgroundColor: Colors.transparent,
                 builder: (_) => AssetDetailSheet(item: r),
               );
             },
@@ -978,6 +989,7 @@ class _RecentActivitySection extends ConsumerWidget {
             showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
+              backgroundColor: Colors.transparent,
               builder: (_) => TaskDetailSheet(item: t),
             );
           },
@@ -995,6 +1007,7 @@ class _RecentActivitySection extends ConsumerWidget {
             showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
+              backgroundColor: Colors.transparent,
               builder: (_) => ExpenseDetailSheet(item: e),
             );
           },
@@ -1053,20 +1066,20 @@ class _RecentActivitySection extends ConsumerWidget {
               final IconData iconData;
 
               if (isBill) {
-                badgeBg = AppColors.brandAccentSage;
-                iconColor = AppColors.brandPrimary;
+                badgeBg = ctx.isDarkMode ? ctx.surfaceContainerLow : AppColors.brandAccentSage;
+                iconColor = ctx.brandAccent;
                 iconData = Icons.receipt_long;
               } else if (isAsset) {
-                badgeBg = AppColors.brandAccentSage;
-                iconColor = AppColors.brandPrimary;
+                badgeBg = ctx.isDarkMode ? ctx.surfaceContainerLow : AppColors.brandAccentSage;
+                iconColor = ctx.brandAccent;
                 iconData = Icons.inventory_2_outlined;
               } else if (isExpense) {
                 badgeBg = AppColors.statusWarningFill;
                 iconColor = AppColors.statusWarningText;
                 iconData = Icons.receipt_long_outlined;
               } else {
-                badgeBg = AppColors.surfaceContainerLow;
-                iconColor = AppColors.textSecondary;
+                badgeBg = ctx.surfaceContainerLow;
+                iconColor = ctx.textSecondary;
                 iconData = Icons.checklist_outlined;
               }
 
@@ -1094,11 +1107,14 @@ class _RecentActivitySection extends ConsumerWidget {
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceContainerLow,
+                      color: ctx.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.borderSubtle),
+                      border: Border.all(color: ctx.borderSubtle),
                     ),
-                    child: Text(item.type, style: AppTypography.badge),
+                    child: Text(
+                      item.type,
+                      style: AppTypography.badge.copyWith(color: ctx.textSecondary),
+                    ),
                   ),
                 ),
               );

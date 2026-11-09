@@ -167,19 +167,20 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
     final documents = documentsAsync.value ?? const <RecordWithDocument>[];
 
     final mediaQuery = MediaQuery.of(context);
+    final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
 
     return Container(
       key: const Key('emergency_info_sheet'),
       constraints: BoxConstraints(
         maxHeight: mediaQuery.size.height * 0.90,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      decoration: BoxDecoration(
+        color: sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
         border: Border(
-          top: BorderSide(color: AppColors.borderSubtle),
-          left: BorderSide(color: AppColors.borderSubtle),
-          right: BorderSide(color: AppColors.borderSubtle),
+          top: BorderSide(color: context.borderSubtle),
+          left: BorderSide(color: context.borderSubtle),
+          right: BorderSide(color: context.borderSubtle),
         ),
       ),
       padding: EdgeInsets.only(
@@ -199,7 +200,7 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
               height: 4,
               margin: const EdgeInsets.only(top: 8, bottom: 12),
               decoration: BoxDecoration(
-                color: AppColors.borderSubtle,
+                color: context.borderSubtle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -208,7 +209,7 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
           // Sanctuary Header
           _buildHeader(context, householdName, householdAddress),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.borderSubtle),
+          Divider(height: 1, color: context.borderSubtle),
           const SizedBox(height: 12),
 
           // Scrollable Sections
@@ -218,19 +219,19 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Card 1: Household & Primary Identity
-                  _buildIdentityCard(householdName, householdAddress),
+                  _buildIdentityCard(context, householdName, householdAddress),
                   const SizedBox(height: 16),
 
                   // Card 2: Essential Property & Vehicles
-                  _buildPropertySection(assetsAsync),
+                  _buildPropertySection(context, assetsAsync),
                   const SizedBox(height: 16),
 
                   // Card 3: Utility Obligations & Providers
-                  _buildUtilitiesSection(billsAsync),
+                  _buildUtilitiesSection(context, billsAsync),
                   const SizedBox(height: 16),
 
                   // Card 4: Important Documents & Policies
-                  _buildDocumentsSection(documentsAsync),
+                  _buildDocumentsSection(context, documentsAsync),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -238,7 +239,7 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
           ),
 
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.borderSubtle),
+          Divider(height: 1, color: context.borderSubtle),
           const SizedBox(height: 12),
 
           // Action Bar
@@ -261,13 +262,15 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.brandAccentSage,
+            color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.brandAccentBorder),
+            border: Border.all(
+              color: context.isDarkMode ? context.borderSubtle : AppColors.brandAccentBorder,
+            ),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.shield_outlined,
-            color: AppColors.brandPrimary,
+            color: context.brandAccent,
             size: 24,
           ),
         ),
@@ -276,21 +279,21 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Emergency Household Dossier',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                   letterSpacing: -0.2,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 '$householdName • $householdAddress',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
-                  color: AppColors.textSecondary,
+                  color: context.textSecondary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -299,7 +302,7 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+          icon: Icon(Icons.close_rounded, color: context.textSecondary),
           tooltip: 'Close',
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -307,12 +310,12 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
     );
   }
 
-  Widget _buildIdentityCard(String householdName, String householdAddress) {
+  Widget _buildIdentityCard(BuildContext context, String householdName, String householdAddress) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
+        color: context.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
       ),
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -320,34 +323,35 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
         children: [
           Row(
             children: [
-              const Icon(Icons.home_outlined, size: 18, color: AppColors.brandPrimary),
+              Icon(Icons.home_outlined, size: 18, color: context.brandAccent),
               const SizedBox(width: 8),
               Text(
                 'Household & Primary Identity',
-                style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          _buildInfoRow('Household Name', householdName),
+          _buildInfoRow(context, 'Household Name', householdName),
           const SizedBox(height: 6),
-          _buildInfoRow('Physical Address', householdAddress),
+          _buildInfoRow(context, 'Physical Address', householdAddress),
           const SizedBox(height: 6),
-          _buildInfoRow('Sanctuary Workspace', AppConstants.defaultWorkspaceName),
+          _buildInfoRow(context, 'Sanctuary Workspace', AppConstants.defaultWorkspaceName),
         ],
       ),
     );
   }
 
-  Widget _buildPropertySection(AsyncValue<List<RecordWithAsset>> assetsAsync) {
+  Widget _buildPropertySection(BuildContext context, AsyncValue<List<RecordWithAsset>> assetsAsync) {
     return _buildSectionContainer(
+      context: context,
       icon: Icons.directions_car_outlined,
       title: 'Essential Property & Vehicles',
       child: assetsAsync.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: Padding(
-            padding: EdgeInsets.all(12),
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+            padding: const EdgeInsets.all(12),
+            child: CircularProgressIndicator(strokeWidth: 2, color: context.brandAccent),
           ),
         ),
         error: (err, _) => Padding(
@@ -356,11 +360,11 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
         ),
         data: (assets) {
           if (assets.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'No property or vehicle records recorded yet.',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 13, color: context.textSecondary),
               ),
             );
           }
@@ -381,9 +385,9 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceCanvas,
+                  color: context.surfaceCard,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: context.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,10 +398,10 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                         Expanded(
                           child: Text(
                             item.record.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                              color: context.textPrimary,
                             ),
                           ),
                         ),
@@ -405,9 +409,9 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                           const SizedBox(width: 8),
                           Text(
                             modelSubtitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: context.textSecondary,
                             ),
                           ),
                         ],
@@ -420,10 +424,10 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                           Expanded(
                             child: Text(
                               'Serial/VIN: ${asset.serialNumber}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.brandPrimary,
+                                color: context.brandAccent,
                               ),
                             ),
                           ),
@@ -433,9 +437,9 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                             child: Text(
                               'Loc: ${asset.locationDescription}',
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textTertiary,
+                                color: context.textTertiary,
                               ),
                             ),
                           ),
@@ -452,15 +456,16 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
     );
   }
 
-  Widget _buildUtilitiesSection(AsyncValue<List<RecordWithBill>> billsAsync) {
+  Widget _buildUtilitiesSection(BuildContext context, AsyncValue<List<RecordWithBill>> billsAsync) {
     return _buildSectionContainer(
+      context: context,
       icon: Icons.bolt_outlined,
       title: 'Utility Obligations & Providers',
       child: billsAsync.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: Padding(
-            padding: EdgeInsets.all(12),
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+            padding: const EdgeInsets.all(12),
+            child: CircularProgressIndicator(strokeWidth: 2, color: context.brandAccent),
           ),
         ),
         error: (err, _) => Padding(
@@ -469,11 +474,11 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
         ),
         data: (bills) {
           if (bills.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'No utility accounts recorded yet.',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 13, color: context.textSecondary),
               ),
             );
           }
@@ -492,9 +497,9 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceCanvas,
+                  color: context.surfaceCard,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: context.borderSubtle),
                 ),
                 child: Row(
                   children: [
@@ -504,18 +509,18 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                         children: [
                           Text(
                             providerTitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                              color: context.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Account: $accountSubtitle',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: context.textSecondary,
                             ),
                           ),
                         ],
@@ -525,15 +530,15 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.brandAccentSage,
+                        color: context.isDarkMode ? context.surfaceContainerLow : AppColors.brandAccentSage,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         bill.utilityType.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.brandPrimary,
+                          color: context.brandAccent,
                         ),
                       ),
                     ),
@@ -547,15 +552,16 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
     );
   }
 
-  Widget _buildDocumentsSection(AsyncValue<List<RecordWithDocument>> documentsAsync) {
+  Widget _buildDocumentsSection(BuildContext context, AsyncValue<List<RecordWithDocument>> documentsAsync) {
     return _buildSectionContainer(
+      context: context,
       icon: Icons.description_outlined,
       title: 'Important Documents & Policies',
       child: documentsAsync.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: Padding(
-            padding: EdgeInsets.all(12),
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandPrimary),
+            padding: const EdgeInsets.all(12),
+            child: CircularProgressIndicator(strokeWidth: 2, color: context.brandAccent),
           ),
         ),
         error: (err, _) => Padding(
@@ -564,11 +570,11 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
         ),
         data: (documents) {
           if (documents.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'No vault documents recorded yet.',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 13, color: context.textSecondary),
               ),
             );
           }
@@ -580,9 +586,9 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceCanvas,
+                  color: context.surfaceCard,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: context.borderSubtle),
                 ),
                 child: Row(
                   children: [
@@ -592,19 +598,19 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                         children: [
                           Text(
                             item.record.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                              color: context.textPrimary,
                             ),
                           ),
                           if (item.linkedAssetTitle != null && item.linkedAssetTitle!.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               'Linked Asset: ${item.linkedAssetTitle}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                color: context.textSecondary,
                               ),
                             ),
                           ],
@@ -615,16 +621,16 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLow,
+                        color: context.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.borderSubtle),
+                        border: Border.all(color: context.borderSubtle),
                       ),
                       child: Text(
                         doc.documentType.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
+                          color: context.textSecondary,
                         ),
                       ),
                     ),
@@ -639,15 +645,16 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
   }
 
   Widget _buildSectionContainer({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required Widget child,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.borderSubtle),
       ),
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -655,11 +662,11 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.brandPrimary),
+              Icon(icon, size: 18, color: context.brandAccent),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: AppTypography.cardTitle.copyWith(fontSize: 14),
+                style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
               ),
             ],
           ),
@@ -670,15 +677,15 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: AppColors.textSecondary,
+            color: context.textSecondary,
           ),
         ),
         const SizedBox(width: 8),
@@ -687,10 +694,10 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
             value,
             textAlign: TextAlign.end,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
           ),
         ),
@@ -713,8 +720,8 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
           child: ElevatedButton.icon(
             key: const Key('copy_dossier_button'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandPrimary,
-              foregroundColor: AppColors.brandOnPrimary,
+              backgroundColor: context.brandAccent,
+              foregroundColor: context.isDarkMode ? AppColors.surfaceCanvas : Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -742,8 +749,8 @@ class _EmergencyInfoSheetState extends ConsumerState<EmergencyInfoSheet> {
           child: OutlinedButton(
             key: const Key('close_dossier_button'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
-              side: const BorderSide(color: AppColors.borderSubtle),
+              foregroundColor: context.textPrimary,
+              side: BorderSide(color: context.borderSubtle),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
