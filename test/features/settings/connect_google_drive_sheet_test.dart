@@ -65,15 +65,20 @@ class FakeGoogleAuthService extends GoogleAuthService {
   FakeGoogleAuthService({
     this.fakeAccount,
     this.shouldThrow = false,
+    this.fakeLastError,
   });
 
   final GoogleSignInAccount? fakeAccount;
   final bool shouldThrow;
+  final String? fakeLastError;
   bool signOutCalled = false;
   int signInCallCount = 0;
 
   @override
   GoogleSignInAccount? get currentUser => fakeAccount;
+
+  @override
+  String? get lastError => fakeLastError;
 
   @override
   Future<GoogleSignInAccount?> signIn() async {
@@ -384,6 +389,29 @@ void main() {
 
       expect(modalResult, isFalse);
       expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
+    });
+
+    testWidgets('Displays authService.lastError in SnackBar when signIn fails with error',
+        (WidgetTester tester) async {
+      const errorMessage =
+          'Google sign-in failed (clientConfigurationError): Missing serverClientId';
+      final errorAuthService = FakeGoogleAuthService(
+        fakeAccount: null,
+        fakeLastError: errorMessage,
+      );
+
+      await tester.pumpWidget(buildTestableSheet(testAuthService: errorAuthService));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('connect_google_account_button')));
+      await tester.pumpAndSettle();
+
+      expect(prefs.isGoogleDriveBackupEnabled, false);
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsOneWidget);
+      expect(find.text(errorMessage), findsOneWidget);
     });
 
     testWidgets('Tapping "Not now" dismisses sheet without modifying preferences and returns false',

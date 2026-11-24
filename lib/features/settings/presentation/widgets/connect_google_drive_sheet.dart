@@ -67,9 +67,11 @@ class _ConnectGoogleDriveConfirmationSheetState
 
   Future<void> _handleConnectGoogleAccount() async {
     setState(() => _isLoading = true);
+    final authService = ref.read(googleAuthServiceProvider);
+    String? errorMessage;
 
     try {
-      final account = await ref.read(googleAuthServiceProvider).signIn();
+      final account = await authService.signIn();
       if (account != null) {
         final prefs = ref.read(appPreferencesProvider);
         await prefs.setGoogleAccountEmail(account.email);
@@ -79,17 +81,20 @@ class _ConnectGoogleDriveConfirmationSheetState
         }
         return;
       }
-    } catch (_) {
-      // Handled by user feedback below
+      errorMessage = authService.lastError;
+    } catch (e) {
+      errorMessage = 'Failed to save Google account settings: $e';
     }
 
     if (mounted) {
       setState(() => _isLoading = false);
+      final message =
+          errorMessage ?? 'Google sign-in cancelled or unavailable';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google sign-in cancelled or unavailable'),
+        SnackBar(
+          content: Text(message),
           backgroundColor: AppColors.brandPrimary,
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: errorMessage != null ? 4 : 2),
         ),
       );
     }
