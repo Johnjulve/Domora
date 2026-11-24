@@ -2164,7 +2164,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Build 12 • Offline Sanctuary (${AppConstants.appReleaseChannel})',
+                      'Build ${AppConstants.appBuildNumber} • Offline Sanctuary (${AppConstants.appReleaseChannel})',
                       style: TextStyle(
                         fontSize: 12.5,
                         color: context.textSecondary,

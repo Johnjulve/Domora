@@ -5,7 +5,8 @@ class AppConstants {
   /// Product name and active release version
   static const String appName = 'Domora';
   static const String appVersion = '0.1.0';
-  static const String appReleaseChannel = 'alpha.12';
+  static const String appReleaseChannel = 'alpha.13';
+  static const int appBuildNumber = 13;
   static const String displayVersion = 'v$appVersion';
   static const String fullVersionTag = 'v$appVersion-$appReleaseChannel';
 

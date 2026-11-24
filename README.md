@@ -1,8 +1,8 @@
 # Domora — Personal Life OS
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Version](https://img.shields.io/badge/Version-0.1.0--alpha.12-emerald.svg)](CHANGELOG.md)
-[![Automated Tests](https://img.shields.io/badge/Tests-181%20Passing-success.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.1.0--alpha.13-emerald.svg)](CHANGELOG.md)
+[![Automated Tests](https://img.shields.io/badge/Tests-191%20Passing-success.svg)](CHANGELOG.md)
 [![Aesthetic](https://img.shields.io/badge/Design-Sanctuary%20Archival-1E4B38.svg)](docs/design/Design/domora_design.md)
 
 > **Know what you have, what needs attention, what it costs, and what you need to do next.**
@@ -30,7 +30,7 @@ Domora is an offline-first, local-ownership personal and household management pl
 - **State Management**: [Riverpod 3.x](https://riverpod.dev/) (reactive `StreamProvider` bindings)
 - **Navigation**: [GoRouter](https://pub.dev/packages/go_router) with offstage route concealing
 - **Hardware Enclave Security**: [`local_auth`](https://pub.dev/packages/local_auth) running on `FlutterFragmentActivity`
-- **Cloud Redundancy**: [`google_sign_in`](https://pub.dev/packages/google_sign_in) with restricted `drive.appdata` scope
+- **Cloud Redundancy**: [`google_sign_in`](https://pub.dev/packages/google_sign_in) & [`google_sign_in_web`](https://pub.dev/packages/google_sign_in_web) with restricted `drive.appdata` scope
 - **Local Reminders**: [`flutter_local_notifications`](https://pub.dev/packages/flutter_local_notifications) with timezone-aware scheduling
 
 ---
@@ -76,7 +76,7 @@ cd Domora
 # Install dependencies
 flutter pub get
 
-# Run test suite (181 tests)
+# Run test suite (191 tests)
 flutter test
 
 # Run on connected device or emulator

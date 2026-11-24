@@ -65,15 +65,20 @@ class FakeGoogleAuthService extends GoogleAuthService {
   FakeGoogleAuthService({
     this.fakeAccount,
     this.shouldThrow = false,
+    this.fakeLastError,
   });
 
   final GoogleSignInAccount? fakeAccount;
   final bool shouldThrow;
+  final String? fakeLastError;
   bool signOutCalled = false;
   int signInCallCount = 0;
 
   @override
   GoogleSignInAccount? get currentUser => fakeAccount;
+
+  @override
+  String? get lastError => fakeLastError;
 
   @override
   Future<GoogleSignInAccount?> signIn() async {
@@ -96,6 +101,38 @@ class DelayGoogleAuthService extends GoogleAuthService {
 
   @override
   Future<GoogleSignInAccount?> signIn() => future;
+}
+
+class FakeWebGoogleAuthService extends GoogleAuthService {
+  FakeWebGoogleAuthService({this.initializeError});
+
+  final Object? initializeError;
+  final StreamController<GoogleSignInAuthenticationEvent> eventsController =
+      StreamController<GoogleSignInAuthenticationEvent>.broadcast();
+  int initializeCallCount = 0;
+  GoogleSignInAccount? recordedAccount;
+
+  @override
+  bool get usesWebSignInButton => true;
+
+  @override
+  Stream<GoogleSignInAuthenticationEvent> get authenticationEvents =>
+      eventsController.stream;
+
+  @override
+  Future<void> initialize() async {
+    initializeCallCount++;
+    if (initializeError != null) {
+      throw initializeError!;
+    }
+  }
+
+  @override
+  void recordSignedInAccount(GoogleSignInAccount account) {
+    recordedAccount = account;
+  }
+
+  Future<void> dispose() => eventsController.close();
 }
 
 void main() {
@@ -370,12 +407,19 @@ void main() {
       await tester.tap(find.byKey(const Key('connect_google_account_button')));
       await tester.pumpAndSettle();
 
-      // Sheet remains open, backup not enabled, notice displayed
+      // Sheet remains open, backup not enabled, inline banner notice displayed
       expect(modalResult, isNull);
       expect(prefs.isGoogleDriveBackupEnabled, false);
       expect(prefs.googleAccountEmail, isNull);
       expect(cancelledAuthService.signInCallCount, 1);
       expect(find.byKey(const Key('connect_google_drive_sheet')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('connect_google_drive_sheet')),
+          matching: find.byKey(const Key('google_sign_in_status_banner')),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Google sign-in cancelled or unavailable'), findsOneWidget);
 
       // Tap Not now to dismiss
@@ -384,6 +428,146 @@ void main() {
 
       expect(modalResult, isFalse);
       expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
+    });
+
+    testWidgets('Displays authService.lastError in inline status banner when signIn fails with error',
+        (WidgetTester tester) async {
+      const errorMessage =
+          'Google sign-in failed (clientConfigurationError): Missing serverClientId';
+      final errorAuthService = FakeGoogleAuthService(
+        fakeAccount: null,
+        fakeLastError: errorMessage,
+      );
+
+      await tester.pumpWidget(buildTestableSheet(testAuthService: errorAuthService));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('connect_google_account_button')));
+      await tester.pumpAndSettle();
+
+      expect(prefs.isGoogleDriveBackupEnabled, false);
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('connect_google_drive_sheet')),
+          matching: find.byKey(const Key('google_sign_in_status_banner')),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(errorMessage), findsOneWidget);
+    });
+
+    testWidgets('Web flow renders web sign-in button and completes on authenticationEvents sign-in',
+        (WidgetTester tester) async {
+      final webAuthService = FakeWebGoogleAuthService();
+      addTearDown(webAuthService.dispose);
+      bool? modalResult;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(webAuthService),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async {
+                    modalResult = await showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => ConnectGoogleDriveConfirmationSheet(
+                        webSignInButtonBuilder: (_) => const Text('Web Google Button'),
+                      ),
+                    );
+                  },
+                  child: const Text('Open Sheet'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      expect(webAuthService.initializeCallCount, 1);
+      expect(find.byKey(const Key('google_web_sign_in_button')), findsOneWidget);
+      expect(find.text('Web Google Button'), findsOneWidget);
+      expect(find.byKey(const Key('connect_google_account_button')), findsNothing);
+
+      webAuthService.eventsController.add(
+        GoogleSignInAuthenticationEventSignIn(user: defaultFakeAccount),
+      );
+      await tester.pumpAndSettle();
+
+      expect(modalResult, isTrue);
+      expect(webAuthService.recordedAccount, same(defaultFakeAccount));
+      expect(prefs.isGoogleDriveBackupEnabled, isTrue);
+      expect(prefs.googleAccountEmail, 'test.user@example.com');
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsNothing);
+    });
+
+    testWidgets('Web flow displays stream errors in inline status banner',
+        (WidgetTester tester) async {
+      final webAuthService = FakeWebGoogleAuthService();
+      addTearDown(webAuthService.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appPreferencesProvider.overrideWithValue(prefs),
+            googleAuthServiceProvider.overrideWithValue(webAuthService),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => ConnectGoogleDriveConfirmationSheet(
+                        webSignInButtonBuilder: (_) => const Text('Web Google Button'),
+                      ),
+                    );
+                  },
+                  child: const Text('Open Sheet'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Sheet'));
+      await tester.pumpAndSettle();
+
+      webAuthService.eventsController.addError(
+        const GoogleSignInException(
+          code: GoogleSignInExceptionCode.interrupted,
+          description: 'Popup blocked',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('connect_google_drive_sheet')), findsOneWidget);
+      expect(find.byKey(const Key('google_sign_in_status_banner')), findsOneWidget);
+      expect(
+        find.text('Google sign-in failed (interrupted): Popup blocked'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Tapping "Not now" dismisses sheet without modifying preferences and returns false',

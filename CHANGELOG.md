@@ -5,6 +5,15 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.13] - 2026-11-24
+
+### Fixed
+- Android & Web Google Sign-In Flow & Error Visibility:
+  - `GoogleAuthService`: Passed `serverClientId` on non-web platforms (Android) and `clientId` on Web during `GoogleSignIn.initialize`, preventing Android `clientConfigurationError` failures. Added `lastError`, `formatError`, `usesWebSignInButton`, `authenticationEvents`, and `recordSignedInAccount` to distinguish user cancellation from real authentication failures.
+  - Web Google Identity Services Button: Added `google_sign_in_web: ^1.1.3` with conditional web/stub imports (`google_sign_in_web_button_web.dart` / `google_sign_in_web_button_stub.dart`) to render the official GIS button and listen to `authenticationEvents` on Web.
+  - `ConnectGoogleDriveConfirmationSheet`: Replaced SnackBar error reporting with an inline Sanctuary-themed status/error banner (`google_sign_in_status_banner`) inside a scrollable sheet (`SingleChildScrollView`), guarding against duplicate sign-in completions and preserving dark/light contrast.
+  - Automated Tests: Added 10 unit and widget tests in `google_auth_service_test.dart` and `connect_google_drive_sheet_test.dart` covering Android/Web initialization, error formatting, inline status banners, and Web event-driven sign-in completion (191 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.12] - 2026-11-09
 
 ### Added
