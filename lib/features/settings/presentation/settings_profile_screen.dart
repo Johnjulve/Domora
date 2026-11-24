@@ -6,11 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/database_providers.dart';
 import '../../../core/services/app_preferences.dart';
+import '../../../core/services/external_url_launcher.dart';
 import '../../../core/services/google_auth_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -69,7 +69,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
   // GitHub Update Checker state
   bool _isCheckingUpdate = false;
+  bool _isLaunchingRelease = false;
   String? _updateStatusMessage;
+  String? _launchErrorMessage;
   String? _releaseUrl;
   bool _hasNewUpdate = false;
   bool _hasApkAsset = false;
@@ -180,6 +182,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     setState(() {
       _isCheckingUpdate = true;
       _updateStatusMessage = 'Connecting to GitHub Releases...';
+      _launchErrorMessage = null;
+      _releaseUrl = null;
       _hasNewUpdate = false;
       _hasApkAsset = false;
       _apkDownloadUrl = null;
@@ -239,6 +243,30 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     } finally {
       if (mounted) {
         setState(() => _isCheckingUpdate = false);
+      }
+    }
+  }
+
+  Future<void> _launchReleaseUrl() async {
+    final targetUrl = _apkDownloadUrl ?? _releaseUrl;
+    if (targetUrl == null || _isLaunchingRelease) return;
+
+    setState(() {
+      _isLaunchingRelease = true;
+      _launchErrorMessage = null;
+    });
+
+    try {
+      final error = await ref.read(externalUrlLauncherProvider).openHttpUrl(targetUrl);
+      if (!mounted || (_apkDownloadUrl ?? _releaseUrl) != targetUrl || _isCheckingUpdate) {
+        return;
+      }
+      if (error != null) {
+        setState(() => _launchErrorMessage = error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLaunchingRelease = false);
       }
     }
   }
@@ -2129,6 +2157,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   Widget _buildUpdateCard() {
+    final hasLaunchError = _launchErrorMessage != null;
+    final statusMessage = _launchErrorMessage ?? _updateStatusMessage;
+
     return Container(
       decoration: BoxDecoration(
         color: context.surfaceCard,
@@ -2196,27 +2227,34 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               ),
             ],
           ),
-          if (_updateStatusMessage != null) ...[
+          if (statusMessage != null) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _hasNewUpdate
-                    ? context.brandAccent.withValues(alpha: 0.15)
-                    : context.surfaceContainerLow,
+                color: hasLaunchError
+                    ? AppColors.statusDangerFill
+                    : _hasNewUpdate
+                        ? context.brandAccent.withValues(alpha: 0.15)
+                        : context.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(8),
+                border: hasLaunchError
+                    ? Border.all(color: AppColors.statusDangerStroke)
+                    : null,
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
-                      _updateStatusMessage!,
+                      statusMessage,
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: _hasNewUpdate
-                            ? context.brandAccent
-                            : context.textSecondary,
+                        color: hasLaunchError
+                            ? AppColors.statusDangerText
+                            : _hasNewUpdate
+                                ? context.brandAccent
+                                : context.textSecondary,
                       ),
                     ),
                   ),
@@ -2227,14 +2265,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         minimumSize: const Size(50, 28),
                       ),
-                      onPressed: () async {
-                        final targetUrl = _apkDownloadUrl ?? _releaseUrl;
-                        if (targetUrl == null) return;
-                        final uri = Uri.parse(targetUrl);
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
+                      onPressed: _isLaunchingRelease ? null : _launchReleaseUrl,
                       icon: Icon(
                         _hasApkAsset ? Icons.download_rounded : Icons.open_in_new_rounded,
                         size: 14,
