@@ -64,6 +64,13 @@ class _FakeGoogleSignIn implements GoogleSignIn {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _WebGoogleAuthService extends GoogleAuthService {
+  _WebGoogleAuthService({required super.googleSignIn});
+
+  @override
+  bool get usesWebSignInButton => true;
+}
+
 void main() {
   group('GoogleAuthService', () {
     test('passes serverClientId and null clientId to initialize on non-web', () async {
@@ -137,6 +144,44 @@ void main() {
       final successResult = await service.signIn();
       expect(successResult, same(account));
       expect(service.lastError, isNull);
+    });
+
+    test('initialize() delegates to GoogleSignIn.initialize once', () async {
+      final fakeSignIn = _FakeGoogleSignIn();
+      final service = GoogleAuthService(googleSignIn: fakeSignIn);
+
+      await service.initialize();
+      await service.initialize();
+
+      expect(fakeSignIn.initializeCalls, 1);
+      expect(fakeSignIn.capturedServerClientId, GoogleAuthService.clientId);
+    });
+
+    test('recordSignedInAccount sets currentUser and clears lastError', () async {
+      final account = _FakeGoogleSignInAccount(email: 'web@example.com');
+      final fakeSignIn = _FakeGoogleSignIn(
+        authenticateError: StateError('prior error'),
+      );
+      final service = GoogleAuthService(googleSignIn: fakeSignIn);
+
+      await service.signIn();
+      expect(service.lastError, isNotNull);
+
+      service.recordSignedInAccount(account);
+      expect(service.currentUser, same(account));
+      expect(service.lastError, isNull);
+    });
+
+    test('signIn() returns null with guidance when usesWebSignInButton is true', () async {
+      final fakeSignIn = _FakeGoogleSignIn();
+      final service = _WebGoogleAuthService(googleSignIn: fakeSignIn);
+
+      final result = await service.signIn();
+
+      expect(result, isNull);
+      expect(service.lastError, 'Use the Google Sign-In button to continue on Web.');
+      expect(fakeSignIn.initializeCalls, 0);
+      expect(fakeSignIn.authenticateCalls, 0);
     });
   });
 }

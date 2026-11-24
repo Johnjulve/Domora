@@ -29,6 +29,23 @@ class GoogleAuthService {
   /// the attempt succeeded, was cancelled by the user, or has not run.
   String? get lastError => _lastError;
 
+  /// Whether the current platform requires the Web `renderButton` +
+  /// [authenticationEvents] flow instead of `authenticate()`.
+  bool get usesWebSignInButton => kIsWeb;
+
+  /// Stream of authentication events emitted by [GoogleSignIn].
+  Stream<GoogleSignInAuthenticationEvent> get authenticationEvents =>
+      _googleSignIn.authenticationEvents;
+
+  /// Initializes [GoogleSignIn] with the platform-appropriate client ID.
+  Future<void> initialize() => _ensureInitialized();
+
+  /// Records a signed-in account obtained from [authenticationEvents].
+  void recordSignedInAccount(GoogleSignInAccount account) {
+    _currentUser = account;
+    _lastError = null;
+  }
+
   /// Ensures GoogleSignIn is initialized with the platform-appropriate client ID.
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
@@ -39,12 +56,27 @@ class GoogleAuthService {
     _isInitialized = true;
   }
 
+  /// Formats an authentication error into a concise user-facing message.
+  static String formatError(Object error) {
+    if (error is GoogleSignInException) {
+      final description = error.description?.trim();
+      return description != null && description.isNotEmpty
+          ? 'Google sign-in failed (${error.code.name}): $description'
+          : 'Google sign-in failed (${error.code.name})';
+    }
+    return 'Google sign-in failed: $error';
+  }
+
   /// Triggers the interactive Google sign-in flow.
   ///
   /// Returns the authenticated [GoogleSignInAccount] on success,
   /// or null if the user cancels or an error occurs.
   Future<GoogleSignInAccount?> signIn() async {
     _lastError = null;
+    if (usesWebSignInButton) {
+      _lastError = 'Use the Google Sign-In button to continue on Web.';
+      return null;
+    }
     try {
       await _ensureInitialized();
       final account = await _googleSignIn.authenticate(scopeHint: scopes);
@@ -53,15 +85,12 @@ class GoogleAuthService {
     } on GoogleSignInException catch (e, stack) {
       debugPrint('GoogleAuthService.signIn failed: $e\n$stack');
       if (e.code != GoogleSignInExceptionCode.canceled) {
-        final description = e.description?.trim();
-        _lastError = description != null && description.isNotEmpty
-            ? 'Google sign-in failed (${e.code.name}): $description'
-            : 'Google sign-in failed (${e.code.name})';
+        _lastError = formatError(e);
       }
       return null;
     } catch (e, stack) {
       debugPrint('GoogleAuthService.signIn failed: $e\n$stack');
-      _lastError = 'Google sign-in failed: $e';
+      _lastError = formatError(e);
       return null;
     }
   }

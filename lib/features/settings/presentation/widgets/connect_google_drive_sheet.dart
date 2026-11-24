@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../../core/services/app_preferences.dart';
 import '../../../../core/services/google_auth_service.dart';
+import '../../../../core/services/google_sign_in_web_button_stub.dart'
+    if (dart.library.js_interop) '../../../../core/services/google_sign_in_web_button_web.dart'
+    as google_web_button;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -12,7 +18,13 @@ import '../../../../core/theme/app_typography.dart';
 /// Assures users of Zero-Knowledge encryption, client-side cryptographic isolation,
 /// and private sandboxed folder storage before enabling automated backups.
 class ConnectGoogleDriveConfirmationSheet extends ConsumerStatefulWidget {
-  const ConnectGoogleDriveConfirmationSheet({super.key});
+  const ConnectGoogleDriveConfirmationSheet({
+    super.key,
+    this.webSignInButtonBuilder,
+  });
+
+  /// Optional builder override for the Web Google Sign-In button (used in tests).
+  final WidgetBuilder? webSignInButtonBuilder;
 
   @override
   ConsumerState<ConnectGoogleDriveConfirmationSheet> createState() =>
@@ -22,6 +34,60 @@ class ConnectGoogleDriveConfirmationSheet extends ConsumerStatefulWidget {
 class _ConnectGoogleDriveConfirmationSheetState
     extends ConsumerState<ConnectGoogleDriveConfirmationSheet> {
   bool _isLoading = false;
+  bool _isWebReady = false;
+  bool _hasCompleted = false;
+  String? _statusMessage;
+  bool _isError = false;
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final authService = ref.read(googleAuthServiceProvider);
+    if (authService.usesWebSignInButton) {
+      _initWebSignIn(authService);
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initWebSignIn(GoogleAuthService authService) async {
+    _authSubscription = authService.authenticationEvents.listen(
+      (event) {
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          _completeSignIn(event.user);
+        }
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        final isCanceled = error is GoogleSignInException &&
+            error.code == GoogleSignInExceptionCode.canceled;
+        setState(() {
+          _isLoading = false;
+          _statusMessage = isCanceled
+              ? 'Google sign-in cancelled or unavailable'
+              : GoogleAuthService.formatError(error);
+          _isError = !isCanceled;
+        });
+      },
+    );
+
+    try {
+      await authService.initialize();
+      if (!mounted) return;
+      setState(() => _isWebReady = true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = GoogleAuthService.formatError(e);
+        _isError = true;
+      });
+    }
+  }
 
   Widget _buildPromiseRow(
     BuildContext context, {
@@ -65,43 +131,171 @@ class _ConnectGoogleDriveConfirmationSheetState
     );
   }
 
-  Future<void> _handleConnectGoogleAccount() async {
-    setState(() => _isLoading = true);
-    final authService = ref.read(googleAuthServiceProvider);
-    String? errorMessage;
+  Future<void> _completeSignIn(GoogleSignInAccount account) async {
+    if (_hasCompleted) return;
+    _hasCompleted = true;
 
     try {
-      final account = await authService.signIn();
-      if (account != null) {
-        final prefs = ref.read(appPreferencesProvider);
-        await prefs.setGoogleAccountEmail(account.email);
-        await prefs.setGoogleDriveBackupEnabled(true);
-        if (mounted) {
-          Navigator.pop(context, true);
-        }
-        return;
+      ref.read(googleAuthServiceProvider).recordSignedInAccount(account);
+      final prefs = ref.read(appPreferencesProvider);
+      await prefs.setGoogleAccountEmail(account.email);
+      await prefs.setGoogleDriveBackupEnabled(true);
+      if (mounted) {
+        Navigator.pop(context, true);
       }
-      errorMessage = authService.lastError;
     } catch (e) {
-      errorMessage = 'Failed to save Google account settings: $e';
+      _hasCompleted = false;
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _statusMessage = 'Failed to save Google account settings: $e';
+          _isError = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleConnectGoogleAccount() async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = null;
+      _isError = false;
+    });
+    final authService = ref.read(googleAuthServiceProvider);
+
+    final account = await authService.signIn();
+    if (account != null) {
+      await _completeSignIn(account);
+      return;
     }
 
     if (mounted) {
-      setState(() => _isLoading = false);
-      final message =
-          errorMessage ?? 'Google sign-in cancelled or unavailable';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppColors.brandPrimary,
-          duration: Duration(seconds: errorMessage != null ? 4 : 2),
-        ),
+      setState(() {
+        _isLoading = false;
+        _statusMessage =
+            authService.lastError ?? 'Google sign-in cancelled or unavailable';
+        _isError = authService.lastError != null;
+      });
+    }
+  }
+
+  Widget _buildStatusBanner(BuildContext context) {
+    final isDark = context.isDarkMode;
+    final Color fillColor;
+    final Color borderColor;
+    final Color iconColor;
+    final Color textColor;
+
+    if (_isError) {
+      fillColor = isDark
+          ? AppColors.statusDangerStroke.withValues(alpha: 0.14)
+          : AppColors.statusDangerFill;
+      borderColor = isDark
+          ? AppColors.statusDangerStroke.withValues(alpha: 0.45)
+          : AppColors.statusDangerStroke;
+      iconColor =
+          isDark ? AppColors.statusDangerStroke : AppColors.statusDangerText;
+      textColor =
+          isDark ? AppColors.statusDangerFill : AppColors.statusDangerText;
+    } else {
+      fillColor = context.surfaceContainerLow;
+      borderColor = context.borderSubtle;
+      iconColor = context.textSecondary;
+      textColor = context.textSecondary;
+    }
+
+    return Container(
+      key: const Key('google_sign_in_status_banner'),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              _isError ? Icons.error_outline_rounded : Icons.info_outline_rounded,
+              size: 18,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _statusMessage!,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: textColor,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryAction(BuildContext context, bool usesWebButton) {
+    if (usesWebButton) {
+      return Container(
+        key: const Key('google_web_sign_in_button'),
+        alignment: Alignment.center,
+        constraints: const BoxConstraints(minHeight: AppTheme.buttonHeight),
+        child: _isWebReady
+            ? (widget.webSignInButtonBuilder?.call(context) ??
+                google_web_button.renderGoogleSignInWebButton())
+            : (_statusMessage == null
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(context.brandAccent),
+                    ),
+                  )
+                : const SizedBox.shrink()),
       );
     }
+
+    return ElevatedButton(
+      key: const Key('connect_google_account_button'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: context.isDarkMode
+            ? AppTheme.darkBrandPrimary
+            : AppColors.brandPrimary,
+        foregroundColor: AppColors.brandOnPrimary,
+        minimumSize: const Size(double.infinity, AppTheme.buttonHeight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+        ),
+      ),
+      onPressed: _isLoading ? null : _handleConnectGoogleAccount,
+      child: _isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(AppColors.brandOnPrimary),
+              ),
+            )
+          : const Text(
+              'Connect Google Account',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final usesWebButton = ref.read(googleAuthServiceProvider).usesWebSignInButton;
     return PopScope(
       canPop: !_isLoading,
       child: Container(
@@ -123,10 +317,11 @@ class _ConnectGoogleDriveConfirmationSheetState
         ),
         child: SafeArea(
           top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // Sanctuary Grab Handle (36x4)
               Center(
                 child: Container(
@@ -245,32 +440,9 @@ class _ConnectGoogleDriveConfirmationSheetState
               ),
               const SizedBox(height: 24),
 
-              // Actions: Connect Google Account (Primary) & Not now (Secondary)
-              ElevatedButton(
-                key: const Key('connect_google_account_button'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
-                  foregroundColor: AppColors.brandOnPrimary,
-                  minimumSize: const Size(double.infinity, AppTheme.buttonHeight),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
-                  ),
-                ),
-                onPressed: _isLoading ? null : _handleConnectGoogleAccount,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandOnPrimary),
-                        ),
-                      )
-                    : const Text(
-                        'Connect Google Account',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-              ),
+              // Status/Error Banner + Actions
+              if (_statusMessage != null) _buildStatusBanner(context),
+              _buildPrimaryAction(context, usesWebButton),
               const SizedBox(height: 8),
               TextButton(
                 key: const Key('not_now_button'),
@@ -285,6 +457,7 @@ class _ConnectGoogleDriveConfirmationSheetState
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
