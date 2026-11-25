@@ -13,6 +13,7 @@ import '../../bills/presentation/add_bill_sheet.dart';
 import '../../bills/presentation/bill_detail_sheet.dart';
 import '../../expenses/presentation/add_expense_sheet.dart';
 import '../../expenses/presentation/expense_detail_sheet.dart';
+import '../../expenses/presentation/spending_breakdown_sheet.dart';
 import '../../navigation/app_shell.dart';
 import '../../records/presentation/records_screen.dart';
 import '../../settings/presentation/settings_profile_screen.dart';
@@ -560,8 +561,9 @@ class _SummaryCardsSection extends ConsumerWidget {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
+                key: const Key('today_spent_summary_card'),
                 borderRadius: BorderRadius.circular(18),
-                onTap: () => _openAddExpense(context),
+                onTap: () => _openSpendingBreakdown(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -620,12 +622,12 @@ class _SummaryCardsSection extends ConsumerWidget {
     );
   }
 
-  void _openAddExpense(BuildContext context) {
+  void _openSpendingBreakdown(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const AddExpenseSheet(),
+      builder: (_) => const SpendingBreakdownSheet(),
     );
   }
 }
