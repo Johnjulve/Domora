@@ -234,6 +234,7 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
 
     // 2. Coordinate optional PMS scheduling loop before closing sheet
     bool scheduledPms = false;
+    String? pmsScheduleError;
     if (mounted &&
         selectedAsset != null &&
         parsedOdometer != null &&
@@ -283,7 +284,6 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
       );
 
       if (shouldSchedule == true && mounted) {
-        scheduledPms = true;
         try {
           final taskRepo = ref.read(taskRepositoryProvider);
           final recordRepo = ref.read(recordRepositoryProvider);
@@ -308,6 +308,11 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
             ),
           );
 
+          await repo.linkTaskToExpense(
+            expenseRecordId: recordId,
+            taskRecordId: taskId,
+          );
+
           if (selectedAsset.asset != null) {
             await recordRepo.updateAsset(
               selectedAsset.asset!.copyWith(
@@ -317,8 +322,10 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
               ),
             );
           }
-        } catch (_) {
-          // Task scheduling failure does not abort already-persisted primary expense
+          scheduledPms = true;
+        } catch (e) {
+          // Primary expense was already persisted; surface the PMS scheduling failure honestly.
+          pmsScheduleError = '$e';
         }
       }
     }
@@ -326,6 +333,18 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
+    if (pmsScheduleError != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Logged expense, but failed to schedule next PMS: $pmsScheduleError',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: AppColors.statusDangerStroke,
+        ),
+      );
+      return;
+    }
     messenger.showSnackBar(
       SnackBar(
         content: Text(
