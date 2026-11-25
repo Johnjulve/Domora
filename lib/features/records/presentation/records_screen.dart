@@ -7,13 +7,20 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../bills/domain/bill_item.dart';
 import '../../bills/presentation/add_bill_sheet.dart';
 import '../../bills/presentation/bill_detail_sheet.dart';
+import '../../categories/data/category_repository_impl.dart';
 import '../../categories/domain/category.dart';
+import '../../expenses/domain/expense_item.dart';
 import '../../expenses/presentation/add_expense_sheet.dart';
 import '../../expenses/presentation/expense_detail_sheet.dart';
+import '../../tasks/domain/task_item.dart';
+import '../../vault/domain/document_item.dart';
 import '../../vault/presentation/vault_screen.dart';
 import '../domain/record.dart';
+import 'widgets/manage_categories_sheet.dart';
+import 'widgets/record_section_card.dart';
 
 class RecordsScreen extends ConsumerStatefulWidget {
   const RecordsScreen({super.key});
@@ -24,6 +31,7 @@ class RecordsScreen extends ConsumerStatefulWidget {
 
 class _RecordsScreenState extends ConsumerState<RecordsScreen> {
   late final TextEditingController _searchController;
+  final Set<String> _collapsedSectionIds = <String>{};
 
   @override
   void initState() {
@@ -37,10 +45,30 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     super.dispose();
   }
 
+  void _toggleSection(String sectionId) {
+    setState(() {
+      if (!_collapsedSectionIds.remove(sectionId)) {
+        _collapsedSectionIds.add(sectionId);
+      }
+    });
+  }
+
+  void _clearFilters() {
+    _searchController.clear();
+    ref.read(recordSearchQueryProvider.notifier).clear();
+    ref.read(selectedCategoryFilterProvider.notifier).selectCategory(null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final recordsAsync = ref.watch(activeRecordsStreamProvider);
+    final activeAssetsAsync = ref.watch(activeAssetsStreamProvider);
     final categoriesAsync = ref.watch(defaultCategoriesStreamProvider);
+    final subCategoriesAsync = ref.watch(billsExpensesSubCategoriesStreamProvider);
+    final billsAsync = ref.watch(dashboardBillsStreamProvider);
+    final expensesAsync = ref.watch(dashboardExpensesStreamProvider);
+    final tasksAsync = ref.watch(dashboardTasksStreamProvider);
+    final docsAsync = ref.watch(dashboardDocumentsStreamProvider);
     final selectedCategoryId = ref.watch(selectedCategoryFilterProvider);
     final searchQuery = ref.watch(recordSearchQueryProvider);
 
@@ -62,215 +90,22 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by title, brand, model, location...',
-                prefixIcon: Icon(Icons.search, color: context.textSecondary),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, color: context.textSecondary),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref.read(recordSearchQueryProvider.notifier).clear();
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              onChanged: (val) => ref.read(recordSearchQueryProvider.notifier).setQuery(val),
-            ),
-          ),
-
-          // Category Filter Chips
-          categoriesAsync.when(
-            loading: () => const SizedBox(height: 44),
-            error: (_, _) => const SizedBox.shrink(),
-            data: (categories) {
-              return SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: [
-                    _buildFilterChip(
-                      label: 'All',
-                      isSelected: selectedCategoryId == null,
-                      onTap: () => ref.read(selectedCategoryFilterProvider.notifier).selectCategory(null),
-                    ),
-                    const SizedBox(width: 8),
-                    ...categories.map(
-                      (cat) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _buildFilterChip(
-                          label: cat.name,
-                          isSelected: selectedCategoryId == cat.id,
-                          onTap: () => ref.read(selectedCategoryFilterProvider.notifier).selectCategory(cat.id),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          _buildSearchBar(context, searchQuery),
+          _buildCategoryChipBar(context, categoriesAsync, selectedCategoryId),
           const SizedBox(height: 8),
-
-          // Records List
           Expanded(
-            child: recordsAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(color: context.brandAccent),
-              ),
-              error: (err, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: AppColors.statusDangerStroke, size: 48),
-                      const SizedBox(height: 12),
-                      const Text('Failed to load records', style: AppTypography.cardTitle),
-                      const SizedBox(height: 8),
-                      Text(err.toString(), style: AppTypography.bodySecondary, textAlign: TextAlign.center),
-                    ],
-                  ),
-                ),
-              ),
-              data: (records) {
-                if (records.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.brandAccentSage,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.inventory_2_outlined, color: context.brandAccent, size: 36),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                searchQuery.isNotEmpty || selectedCategoryId != null
-                                    ? 'No Matching Records'
-                                    : 'No Life Records Yet',
-                                style: AppTypography.cardTitle,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                searchQuery.isNotEmpty || selectedCategoryId != null
-                                    ? 'Try adjusting your search query or selecting a different category.'
-                                    : 'Keep your property, vehicle, appliance warranties, and receipts organized in one place.',
-                                style: AppTypography.bodySecondary,
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 24),
-                              if (searchQuery.isEmpty && selectedCategoryId == null)
-                                ElevatedButton.icon(
-                                  onPressed: () => _openAddAssetModal(context),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Add First Asset'),
-                                )
-                              else
-                                OutlinedButton(
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    ref.read(recordSearchQueryProvider.notifier).clear();
-                                    ref.read(selectedCategoryFilterProvider.notifier).selectCategory(null);
-                                  },
-                                  child: const Text('Clear Filters'),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  itemCount: records.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (ctx, index) {
-                    final item = records[index];
-                    final asset = item.asset;
-
-                    return Card(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => _openRecordDetailModal(context, item),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.record.title,
-                                      style: AppTypography.cardTitle,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.brandAccentSage,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      item.record.recordType.toUpperCase(),
-                                      style: AppTypography.badge,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (asset != null) ...[
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 4,
-                                  runSpacing: 2,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    if (asset.brand != null)
-                                      Text(asset.brand!, style: AppTypography.bodySecondary),
-                                    if (asset.model != null)
-                                      Text('• ${asset.model}', style: AppTypography.bodySecondary),
-                                    if (asset.locationDescription != null)
-                                      Text('• ${asset.locationDescription}', style: AppTypography.bodySecondary),
-                                  ],
-                                ),
-                                if (asset.purchaseAmountMinor != null) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Value: ${asset.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
-                                    style: AppTypography.bodyPrimary.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: context.brandAccent,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+            child: _buildBody(
+              context: context,
+              recordsAsync: recordsAsync,
+              activeAssetsAsync: activeAssetsAsync,
+              categoriesAsync: categoriesAsync,
+              subCategoriesAsync: subCategoriesAsync,
+              billsAsync: billsAsync,
+              expensesAsync: expensesAsync,
+              tasksAsync: tasksAsync,
+              docsAsync: docsAsync,
+              selectedCategoryId: selectedCategoryId,
+              searchQuery: searchQuery,
             ),
           ),
         ],
@@ -278,11 +113,653 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
+  Widget _buildSearchBar(BuildContext context, String searchQuery) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search by title, brand, model, location...',
+          prefixIcon: Icon(Icons.search, color: context.textSecondary),
+          suffixIcon: searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: context.textSecondary),
+                  onPressed: () {
+                    _searchController.clear();
+                    ref.read(recordSearchQueryProvider.notifier).clear();
+                  },
+                )
+              : null,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        onChanged: (val) => ref.read(recordSearchQueryProvider.notifier).setQuery(val),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChipBar(
+    BuildContext context,
+    AsyncValue<List<Category>> categoriesAsync,
+    String? selectedCategoryId,
+  ) {
+    return categoriesAsync.when(
+      loading: () => const SizedBox(height: 44),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (categories) {
+        return SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            children: [
+              _buildFilterChip(
+                label: 'All',
+                isSelected: selectedCategoryId == null,
+                onTap: () => ref.read(selectedCategoryFilterProvider.notifier).selectCategory(null),
+              ),
+              const SizedBox(width: 8),
+              ...categories.map(
+                (cat) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildFilterChip(
+                    label: cat.name,
+                    isSelected: selectedCategoryId == cat.id,
+                    onTap: () =>
+                        ref.read(selectedCategoryFilterProvider.notifier).selectCategory(cat.id),
+                  ),
+                ),
+              ),
+              _buildManageChip(context),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildManageChip(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Manage categories',
+      child: GestureDetector(
+        key: const Key('manage_categories_chip'),
+        onTap: () => _openManageCategoriesModal(context),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: context.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: context.borderSubtle, width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.tune_rounded, size: 15, color: context.brandAccent),
+                const SizedBox(width: 6),
+                Text(
+                  'Manage',
+                  style: AppTypography.bodySecondary.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: context.brandAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody({
+    required BuildContext context,
+    required AsyncValue<List<RecordWithAsset>> recordsAsync,
+    required AsyncValue<List<RecordWithAsset>> activeAssetsAsync,
+    required AsyncValue<List<Category>> categoriesAsync,
+    required AsyncValue<List<Category>> subCategoriesAsync,
+    required AsyncValue<List<RecordWithBill>> billsAsync,
+    required AsyncValue<List<RecordWithExpense>> expensesAsync,
+    required AsyncValue<List<RecordWithTask>> tasksAsync,
+    required AsyncValue<List<RecordWithDocument>> docsAsync,
+    required String? selectedCategoryId,
+    required String searchQuery,
+  }) {
+    final firstError = recordsAsync.error ??
+        activeAssetsAsync.error ??
+        categoriesAsync.error ??
+        billsAsync.error ??
+        expensesAsync.error;
+    if (firstError != null) {
+      return _buildErrorState(firstError);
+    }
+
+    final isInitialLoading = (recordsAsync.isLoading && !recordsAsync.hasValue) ||
+        (activeAssetsAsync.isLoading && !activeAssetsAsync.hasValue) ||
+        (categoriesAsync.isLoading && !categoriesAsync.hasValue) ||
+        (billsAsync.isLoading && !billsAsync.hasValue) ||
+        (expensesAsync.isLoading && !expensesAsync.hasValue);
+    if (isInitialLoading) {
+      return Center(child: CircularProgressIndicator(color: context.brandAccent));
+    }
+
+    final viewData = _RecordsViewData.from(
+      records: recordsAsync.asData?.value ?? const [],
+      activeAssets: activeAssetsAsync.asData?.value ?? const [],
+      categories: categoriesAsync.asData?.value ?? const [],
+      billsSubCategories: subCategoriesAsync.asData?.value ?? const [],
+      bills: billsAsync.asData?.value ?? const [],
+      expenses: expensesAsync.asData?.value ?? const [],
+      tasks: tasksAsync.asData?.value ?? const [],
+      docs: docsAsync.asData?.value ?? const [],
+    );
+
+    final trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.isNotEmpty) {
+      return _buildSearchResults(context, viewData, selectedCategoryId, trimmedQuery);
+    }
+    if (selectedCategoryId != null) {
+      return _buildSingleCategoryView(context, viewData, selectedCategoryId);
+    }
+    return _buildAllSectionsView(context, viewData);
+  }
+
+  Widget _buildSearchResults(
+    BuildContext context,
+    _RecordsViewData data,
+    String? selectedCategoryId,
+    String searchQuery,
+  ) {
+    final tiles = <Widget>[];
+    final seenIds = <String>{};
+    final isBillsFilter = selectedCategoryId == CategoryRepositoryImpl.billsExpensesCategoryId;
+
+    if (selectedCategoryId == null || isBillsFilter) {
+      _appendFinancialSearchMatches(
+        context: context,
+        data: data,
+        needle: searchQuery.toLowerCase(),
+        standaloneOnly: isBillsFilter,
+        seenIds: seenIds,
+        tiles: tiles,
+      );
+    }
+
+    for (final item in data.records) {
+      if (seenIds.contains(item.record.id)) continue;
+      final matchedExpense = data.lookup.expenseById[item.record.id];
+      if (isBillsFilter && matchedExpense != null && !data.isStandaloneExpense(matchedExpense)) {
+        continue;
+      }
+      seenIds.add(item.record.id);
+      tiles.add(
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: _buildSearchTileForRecord(context, data, item),
+        ),
+      );
+    }
+
+    if (tiles.isEmpty) {
+      return _buildEmptyState(context, isFiltered: true);
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      itemCount: tiles.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (_, index) => tiles[index],
+    );
+  }
+
+  void _appendFinancialSearchMatches({
+    required BuildContext context,
+    required _RecordsViewData data,
+    required String needle,
+    required bool standaloneOnly,
+    required Set<String> seenIds,
+    required List<Widget> tiles,
+  }) {
+    for (final bill in data.bills) {
+      if (!_matchesBillQuery(bill, needle)) continue;
+      seenIds.add(bill.record.id);
+      tiles.add(
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: BillRecordTile(
+            item: bill,
+            linkedPaymentCount: data.lookup.linkedPaymentsByBill[bill.record.id] ?? 0,
+            onTap: () => _openBillDetailModal(context, bill),
+          ),
+        ),
+      );
+    }
+
+    for (final exp in data.expenses) {
+      if (standaloneOnly && !data.isStandaloneExpense(exp)) continue;
+      if (!_matchesExpenseQuery(exp, needle)) continue;
+      seenIds.add(exp.record.id);
+      tiles.add(
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: ExpenseRecordTile(
+            item: exp,
+            subCategoryLabel: resolveBillsExpensesSubCategoryLabel(
+              rawType: exp.expense.expenseCategory,
+              categoryId: exp.record.categoryId,
+              billsExpensesSubCategories: data.billsSubCategories,
+            ),
+            onTap: () => _openExpenseDetailModal(context, exp),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildSearchTileForRecord(
+    BuildContext context,
+    _RecordsViewData data,
+    RecordWithAsset item,
+  ) {
+    final bill = data.lookup.billById[item.record.id];
+    if (bill != null) {
+      return BillRecordTile(
+        item: bill,
+        linkedPaymentCount: data.lookup.linkedPaymentsByBill[bill.record.id] ?? 0,
+        onTap: () => _openBillDetailModal(context, bill),
+      );
+    }
+
+    final expense = data.lookup.expenseById[item.record.id];
+    if (expense != null) {
+      return ExpenseRecordTile(
+        item: expense,
+        subCategoryLabel: resolveBillsExpensesSubCategoryLabel(
+          rawType: expense.expense.expenseCategory,
+          categoryId: expense.record.categoryId,
+          billsExpensesSubCategories: data.billsSubCategories,
+        ),
+        onTap: () => _openExpenseDetailModal(context, expense),
+      );
+    }
+
+    return AssetSummaryTile(
+      item: item,
+      linkedExpenseCount: data.lookup.expensesByAsset[item.record.id] ?? 0,
+      linkedDocumentCount: data.lookup.docsByAsset[item.record.id] ?? 0,
+      onTap: () => _openRecordDetailModal(context, item, data.lookup),
+    );
+  }
+
+  Widget _buildSingleCategoryView(
+    BuildContext context,
+    _RecordsViewData data,
+    String selectedCategoryId,
+  ) {
+    if (selectedCategoryId == CategoryRepositoryImpl.billsExpensesCategoryId) {
+      final billsCategory = data.findCategory(selectedCategoryId);
+      final taggedAssets = data.records.where((r) => r.record.recordType == 'asset').toList();
+      final totalCount = data.bills.length + data.standaloneExpenses.length + taggedAssets.length;
+      if (totalCount == 0) {
+        return _buildEmptyState(context, isFiltered: true);
+      }
+      final card = _buildBillsExpensesSectionCard(
+        context: context,
+        data: data,
+        title: billsCategory?.name ?? 'Bills & Expenses',
+        iconKey: billsCategory?.iconKey ?? 'receipt_long',
+        taggedAssets: taggedAssets,
+      );
+      return ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        children: [card],
+      );
+    }
+
+    final assets = data.records.where((r) => r.record.recordType == 'asset').toList();
+    if (assets.isEmpty) {
+      return _buildEmptyState(context, isFiltered: true);
+    }
+
+    final category = data.findCategory(selectedCategoryId);
+    final card = _buildAssetSectionCard(
+      context: context,
+      sectionId: selectedCategoryId,
+      title: category?.name ?? 'Records',
+      icon: categoryIconFromKey(category?.iconKey),
+      items: assets,
+      lookup: data.lookup,
+    );
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      children: [card],
+    );
+  }
+
+  Widget _buildAllSectionsView(BuildContext context, _RecordsViewData data) {
+    final partitioned = _partitionRecordsForAllSections(data);
+    final sectionCards = _buildVisibleSectionCards(context, data, partitioned);
+
+    if (sectionCards.isEmpty) {
+      return _buildEmptyState(context, isFiltered: false);
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      itemCount: sectionCards.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (_, index) => sectionCards[index],
+    );
+  }
+
+  ({
+    Map<String, List<RecordWithAsset>> assetsByCategory,
+    List<RecordWithAsset> otherRecords,
+  }) _partitionRecordsForAllSections(_RecordsViewData data) {
+    final activeCategoryIds = data.categories.map((c) => c.id).toSet();
+    final assetsByCategory = <String, List<RecordWithAsset>>{};
+    final otherRecords = <RecordWithAsset>[];
+
+    for (final item in data.records) {
+      final type = item.record.recordType;
+      if (type == 'asset') {
+        final catId = item.record.categoryId;
+        if (catId != null && activeCategoryIds.contains(catId)) {
+          assetsByCategory.putIfAbsent(catId, () => []).add(item);
+        } else {
+          otherRecords.add(item);
+        }
+        continue;
+      }
+      if (type == 'task' && !data.lookup.linkedTaskIds.contains(item.record.id)) {
+        otherRecords.add(item);
+      }
+    }
+
+    return (assetsByCategory: assetsByCategory, otherRecords: otherRecords);
+  }
+
+  List<Widget> _buildVisibleSectionCards(
+    BuildContext context,
+    _RecordsViewData data,
+    ({
+      Map<String, List<RecordWithAsset>> assetsByCategory,
+      List<RecordWithAsset> otherRecords,
+    }) partitioned,
+  ) {
+    final sectionCards = <Widget>[];
+    var renderedBillsSection = false;
+
+    for (final cat in data.categories) {
+      if (cat.id == CategoryRepositoryImpl.billsExpensesCategoryId) {
+        final taggedAssets = partitioned.assetsByCategory[cat.id] ?? const [];
+        final count = data.bills.length + data.standaloneExpenses.length + taggedAssets.length;
+        if (count == 0 && cat.isSystem) continue;
+        renderedBillsSection = true;
+        sectionCards.add(
+          _buildBillsExpensesSectionCard(
+            context: context,
+            data: data,
+            title: cat.name,
+            iconKey: cat.iconKey,
+            taggedAssets: taggedAssets,
+          ),
+        );
+        continue;
+      }
+
+      final items = partitioned.assetsByCategory[cat.id] ?? const [];
+      if (items.isEmpty && cat.isSystem) continue;
+      sectionCards.add(
+        _buildAssetSectionCard(
+          context: context,
+          sectionId: cat.id,
+          title: cat.name,
+          icon: categoryIconFromKey(cat.iconKey),
+          items: items,
+          lookup: data.lookup,
+        ),
+      );
+    }
+
+    if (!renderedBillsSection && (data.bills.isNotEmpty || data.standaloneExpenses.isNotEmpty)) {
+      sectionCards.add(
+        _buildBillsExpensesSectionCard(
+          context: context,
+          data: data,
+          title: 'Bills & Expenses',
+          iconKey: 'receipt_long',
+          taggedAssets: const [],
+        ),
+      );
+    }
+
+    if (partitioned.otherRecords.isNotEmpty) {
+      sectionCards.add(
+        _buildAssetSectionCard(
+          context: context,
+          sectionId: 'other-records',
+          title: 'Other Records',
+          icon: Icons.inventory_2_outlined,
+          items: partitioned.otherRecords,
+          lookup: data.lookup,
+        ),
+      );
+    }
+
+    return sectionCards;
+  }
+
+  RecordSectionCard _buildAssetSectionCard({
+    required BuildContext context,
+    required String sectionId,
+    required String title,
+    required IconData icon,
+    required List<RecordWithAsset> items,
+    required _RecordsLookup lookup,
+  }) {
+    return RecordSectionCard(
+      sectionId: sectionId,
+      title: title,
+      icon: icon,
+      itemCount: items.length,
+      isExpanded: !_collapsedSectionIds.contains(sectionId),
+      onToggle: () => _toggleSection(sectionId),
+      children: items
+          .map(
+            (item) => AssetSummaryTile(
+              item: item,
+              linkedExpenseCount: lookup.expensesByAsset[item.record.id] ?? 0,
+              linkedDocumentCount: lookup.docsByAsset[item.record.id] ?? 0,
+              onTap: () => _openRecordDetailModal(context, item, lookup),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  RecordSectionCard _buildBillsExpensesSectionCard({
+    required BuildContext context,
+    required _RecordsViewData data,
+    required String title,
+    required String? iconKey,
+    required List<RecordWithAsset> taggedAssets,
+  }) {
+    const sectionId = CategoryRepositoryImpl.billsExpensesCategoryId;
+    final children = _groupBillsExpensesWidgets(context, data, taggedAssets);
+
+    return RecordSectionCard(
+      sectionId: sectionId,
+      title: title,
+      icon: categoryIconFromKey(iconKey),
+      itemCount: data.bills.length + data.standaloneExpenses.length + taggedAssets.length,
+      isExpanded: !_collapsedSectionIds.contains(sectionId),
+      onToggle: () => _toggleSection(sectionId),
+      children: children,
+    );
+  }
+
+  List<Widget> _groupBillsExpensesWidgets(
+    BuildContext context,
+    _RecordsViewData data,
+    List<RecordWithAsset> taggedAssets,
+  ) {
+    final grouped = <String, List<Widget>>{};
+
+    for (final bill in data.bills) {
+      final label = resolveBillsExpensesSubCategoryLabel(
+        rawType: bill.bill.utilityType,
+        categoryId: bill.record.categoryId,
+        billsExpensesSubCategories: data.billsSubCategories,
+      );
+      grouped.putIfAbsent(label, () => []).add(
+            BillRecordTile(
+              item: bill,
+              linkedPaymentCount: data.lookup.linkedPaymentsByBill[bill.record.id] ?? 0,
+              onTap: () => _openBillDetailModal(context, bill),
+            ),
+          );
+    }
+
+    for (final exp in data.standaloneExpenses) {
+      final label = resolveBillsExpensesSubCategoryLabel(
+        rawType: exp.expense.expenseCategory,
+        categoryId: exp.record.categoryId,
+        billsExpensesSubCategories: data.billsSubCategories,
+      );
+      grouped.putIfAbsent(label, () => []).add(
+            ExpenseRecordTile(
+              item: exp,
+              subCategoryLabel: label,
+              onTap: () => _openExpenseDetailModal(context, exp),
+            ),
+          );
+    }
+
+    for (final asset in taggedAssets) {
+      grouped.putIfAbsent('Other', () => []).add(
+            AssetSummaryTile(
+              item: asset,
+              linkedExpenseCount: data.lookup.expensesByAsset[asset.record.id] ?? 0,
+              linkedDocumentCount: data.lookup.docsByAsset[asset.record.id] ?? 0,
+              onTap: () => _openRecordDetailModal(context, asset, data.lookup),
+            ),
+          );
+    }
+
+    final orderedLabels = <String>{
+      for (final sub in data.billsSubCategories)
+        if (grouped.containsKey(sub.name)) sub.name,
+      ...grouped.keys,
+    }.toList();
+
+    final children = <Widget>[];
+    for (final label in orderedLabels) {
+      final groupItems = grouped[label]!;
+      children.add(BillsSubCategoryHeader(label: label, count: groupItems.length));
+      children.addAll(groupItems);
+    }
+    return children;
+  }
+
+  Widget _buildErrorState(Object err) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.statusDangerStroke, size: 48),
+            const SizedBox(height: 12),
+            const Text('Failed to load records', style: AppTypography.cardTitle),
+            const SizedBox(height: 8),
+            Text(err.toString(), style: AppTypography.bodySecondary, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, {required bool isFiltered}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: adaptiveSageFill(context),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.inventory_2_outlined, color: context.brandAccent, size: 36),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  isFiltered ? 'No Matching Records' : 'No Life Records Yet',
+                  style: AppTypography.cardTitle,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isFiltered
+                      ? 'Try adjusting your search query or selecting a different category.'
+                      : 'Keep your property, vehicle, appliance warranties, and receipts organized in one place.',
+                  style: AppTypography.bodySecondary,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                if (!isFiltered)
+                  ElevatedButton.icon(
+                    onPressed: () => _openAddAssetModal(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add First Asset'),
+                  )
+                else
+                  OutlinedButton(
+                    onPressed: _clearFilters,
+                    child: const Text('Clear Filters'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _matchesBillQuery(RecordWithBill bill, String needle) {
+    final haystacks = [
+      bill.record.title,
+      bill.record.description,
+      bill.bill.providerName,
+      bill.bill.utilityType,
+      bill.bill.accountNumber,
+    ];
+    return haystacks.any((s) => s != null && s.toLowerCase().contains(needle));
+  }
+
+  bool _matchesExpenseQuery(RecordWithExpense exp, String needle) {
+    final haystacks = [
+      exp.record.title,
+      exp.record.description,
+      exp.expense.expenseCategory,
+      exp.expense.paymentMethod,
+    ];
+    return haystacks.any((s) => s != null && s.toLowerCase().contains(needle));
+  }
+
   Widget _buildFilterChip({
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
       selected: isSelected,
@@ -296,24 +773,32 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.brandPrimary : context.surfaceCard,
+              color: isSelected ? colorScheme.primary : context.surfaceCard,
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: isSelected ? AppColors.brandPrimary : context.borderSubtle,
+                color: isSelected ? colorScheme.primary : context.borderSubtle,
                 width: 1,
               ),
             ),
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
+              style: AppTypography.bodySecondary.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? AppColors.brandOnPrimary : context.textPrimary,
+                color: isSelected ? colorScheme.onPrimary : context.textPrimary,
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  void _openManageCategoriesModal(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ManageCategoriesSheet(),
     );
   }
 
@@ -337,21 +822,51 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
-  Future<void> _openRecordDetailModal(BuildContext context, RecordWithAsset item) async {
+  void _openBillDetailModal(BuildContext context, RecordWithBill billItem) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BillDetailSheet(item: billItem),
+    );
+  }
+
+  void _openExpenseDetailModal(BuildContext context, RecordWithExpense expenseItem) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ExpenseDetailSheet(item: expenseItem),
+    );
+  }
+
+  Future<void> _openRecordDetailModal(
+    BuildContext context,
+    RecordWithAsset item,
+    _RecordsLookup lookup,
+  ) async {
+    final bill = lookup.billById[item.record.id];
+    if (bill != null) {
+      _openBillDetailModal(context, bill);
+      return;
+    }
+
     if (item.record.recordType == 'bill') {
       final billRepo = ref.read(billRepositoryProvider);
       final billItem = await billRepo.getBillById(item.record.id);
       if (billItem != null && context.mounted) {
-        showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => BillDetailSheet(item: billItem),
-        );
+        _openBillDetailModal(context, billItem);
       }
-    } else {
-      _openAssetDetailModal(context, item);
+      return;
     }
+
+    final expense = lookup.expenseById[item.record.id];
+    if (expense != null) {
+      _openExpenseDetailModal(context, expense);
+      return;
+    }
+
+    _openAssetDetailModal(context, item);
   }
 
   void _openAssetDetailModal(BuildContext context, RecordWithAsset item) {
@@ -360,6 +875,155 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AssetDetailSheet(item: item),
+    );
+  }
+}
+
+class _RecordsViewData {
+  final List<RecordWithAsset> records;
+  final List<Category> categories;
+  final List<Category> billsSubCategories;
+  final List<RecordWithBill> bills;
+  final List<RecordWithExpense> expenses;
+  final Set<String> activeAssetIds;
+  final Set<String> activeBillIds;
+  final _RecordsLookup lookup;
+  final List<RecordWithExpense> standaloneExpenses;
+
+  const _RecordsViewData({
+    required this.records,
+    required this.categories,
+    required this.billsSubCategories,
+    required this.bills,
+    required this.expenses,
+    required this.activeAssetIds,
+    required this.activeBillIds,
+    required this.lookup,
+    required this.standaloneExpenses,
+  });
+
+  factory _RecordsViewData.from({
+    required List<RecordWithAsset> records,
+    required List<RecordWithAsset> activeAssets,
+    required List<Category> categories,
+    required List<Category> billsSubCategories,
+    required List<RecordWithBill> bills,
+    required List<RecordWithExpense> expenses,
+    required List<RecordWithTask> tasks,
+    required List<RecordWithDocument> docs,
+  }) {
+    final activeAssetIds = {for (final a in activeAssets) a.record.id};
+    final activeBillIds = {for (final b in bills) b.record.id};
+    final lookup = _RecordsLookup.from(
+      bills: bills,
+      expenses: expenses,
+      tasks: tasks,
+      docs: docs,
+      activeAssetIds: activeAssetIds,
+    );
+    final standaloneExpenses = expenses.where((e) {
+      final hasActiveAsset =
+          e.expense.linkedAssetRecordId != null && activeAssetIds.contains(e.expense.linkedAssetRecordId);
+      final hasActiveBill =
+          e.expense.linkedBillRecordId != null && activeBillIds.contains(e.expense.linkedBillRecordId);
+      return !hasActiveAsset && !hasActiveBill;
+    }).toList();
+
+    return _RecordsViewData(
+      records: records,
+      categories: categories,
+      billsSubCategories: billsSubCategories,
+      bills: bills,
+      expenses: expenses,
+      activeAssetIds: activeAssetIds,
+      activeBillIds: activeBillIds,
+      lookup: lookup,
+      standaloneExpenses: standaloneExpenses,
+    );
+  }
+
+  bool isStandaloneExpense(RecordWithExpense e) {
+    final hasActiveAsset =
+        e.expense.linkedAssetRecordId != null && activeAssetIds.contains(e.expense.linkedAssetRecordId);
+    final hasActiveBill =
+        e.expense.linkedBillRecordId != null && activeBillIds.contains(e.expense.linkedBillRecordId);
+    return !hasActiveAsset && !hasActiveBill;
+  }
+
+  Category? findCategory(String id) {
+    for (final cat in categories) {
+      if (cat.id == id) return cat;
+    }
+    return null;
+  }
+}
+
+class _RecordsLookup {
+  final Map<String, int> expensesByAsset;
+  final Map<String, int> docsByAsset;
+  final Map<String, int> linkedPaymentsByBill;
+  final Set<String> linkedTaskIds;
+  final Map<String, RecordWithBill> billById;
+  final Map<String, RecordWithExpense> expenseById;
+
+  const _RecordsLookup({
+    required this.expensesByAsset,
+    required this.docsByAsset,
+    required this.linkedPaymentsByBill,
+    required this.linkedTaskIds,
+    required this.billById,
+    required this.expenseById,
+  });
+
+  factory _RecordsLookup.from({
+    required List<RecordWithBill> bills,
+    required List<RecordWithExpense> expenses,
+    required List<RecordWithTask> tasks,
+    required List<RecordWithDocument> docs,
+    required Set<String> activeAssetIds,
+  }) {
+    final expensesByAsset = <String, int>{};
+    final linkedPaymentsByBill = <String, int>{};
+    final expenseById = <String, RecordWithExpense>{};
+    for (final exp in expenses) {
+      expenseById[exp.record.id] = exp;
+      final assetId = exp.expense.linkedAssetRecordId;
+      if (assetId != null) {
+        expensesByAsset[assetId] = (expensesByAsset[assetId] ?? 0) + 1;
+      }
+      final billId = exp.expense.linkedBillRecordId;
+      if (billId != null) {
+        linkedPaymentsByBill[billId] = (linkedPaymentsByBill[billId] ?? 0) + 1;
+      }
+    }
+
+    final docsByAsset = <String, int>{};
+    for (final doc in docs) {
+      final assetId = doc.document.linkedAssetRecordId;
+      if (assetId != null) {
+        docsByAsset[assetId] = (docsByAsset[assetId] ?? 0) + 1;
+      }
+    }
+
+    final linkedTaskIds = <String>{};
+    for (final task in tasks) {
+      final assetId = task.task.assetRecordId;
+      if (assetId != null && activeAssetIds.contains(assetId)) {
+        linkedTaskIds.add(task.record.id);
+      }
+    }
+
+    final billById = <String, RecordWithBill>{
+      for (final bill in bills) bill.record.id: bill,
+    };
+
+    return _RecordsLookup(
+      expensesByAsset: expensesByAsset,
+      docsByAsset: docsByAsset,
+      linkedPaymentsByBill: linkedPaymentsByBill,
+      linkedTaskIds: linkedTaskIds,
+      billById: billById,
+      expenseById: expenseById,
     );
   }
 }
@@ -1439,8 +2103,10 @@ class AssetDetailSheet extends ConsumerWidget {
     final record = item.record;
     final asset = item.asset;
     final totalExpensesAsync = ref.watch(assetTotalExpensesProvider(record.id));
+    final assetExpensesAsync = ref.watch(assetExpensesStreamProvider(record.id));
     final hasExpenseError = totalExpensesAsync.hasError;
     final maintenanceCostsMinor = totalExpensesAsync.value ?? 0;
+    final hasLinkedExpenses = assetExpensesAsync.asData?.value.isNotEmpty ?? false;
     final currency = asset?.purchaseCurrency ?? 'PHP';
     final hasPurchasePrice = asset?.purchaseAmountMinor != null;
     final purchasePriceMinor = asset?.purchaseAmountMinor ?? 0;
@@ -1592,7 +2258,10 @@ class AssetDetailSheet extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (asset?.odometerReading != null || asset?.pmsDistanceIntervalKm != null || maintenanceCostsMinor > 0) ...[
+              if (asset?.odometerReading != null ||
+                  asset?.pmsDistanceIntervalKm != null ||
+                  maintenanceCostsMinor > 0 ||
+                  hasLinkedExpenses) ...[
                 const SizedBox(height: 16),
                 _AssetServiceHistorySection(assetRecordId: record.id, currency: currency),
               ],
@@ -1897,7 +2566,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.brandAccentSage,
+                              color: adaptiveSageFill(context),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(Icons.build_outlined, size: 18, color: context.brandAccent),

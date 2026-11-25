@@ -94,6 +94,19 @@ final defaultCategoriesStreamProvider = StreamProvider<List<Category>>((ref) {
   return repository.watchCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
 });
 
+/// Reactive stream provider for active sub-categories belonging to a parent category.
+final subCategoriesStreamProvider =
+    StreamProvider.family<List<Category>, String>((ref, parentCategoryId) {
+  final repository = ref.watch(categoryRepositoryProvider);
+  return repository.watchSubCategories(parentCategoryId);
+});
+
+/// Reactive stream provider for active sub-categories under Bills & Expenses.
+final billsExpensesSubCategoriesStreamProvider = StreamProvider<List<Category>>((ref) {
+  final repository = ref.watch(categoryRepositoryProvider);
+  return repository.watchSubCategories(CategoryRepositoryImpl.billsExpensesCategoryId);
+});
+
 /// Notifier for real-time search query on records.
 class RecordSearchNotifier extends Notifier<String> {
   @override
