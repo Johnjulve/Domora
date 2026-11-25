@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../bills/domain/bill_item.dart';
 import '../../../categories/domain/category.dart';
 import '../../../expenses/domain/expense_item.dart';
@@ -389,7 +390,7 @@ class AssetSummaryTile extends StatelessWidget {
             if (asset?.purchaseAmountMinor != null) ...[
               const SizedBox(height: 6),
               Text(
-                'Value: ${asset!.purchaseCurrency} ${(asset.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
+                'Value: ${CurrencyFormatter.formatMinor(asset!.purchaseAmountMinor!, currencyCode: asset.purchaseCurrency)}',
                 style: AppTypography.bodyPrimary.copyWith(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -432,6 +433,7 @@ class BillRecordTile extends StatelessWidget {
     final effectivePaymentCount = linkedPaymentCount > 0
         ? linkedPaymentCount
         : (bill.linkedExpenseRecordId != null ? 1 : 0);
+    final recurringSubtitle = _buildRecurringSubtitle(bill);
 
     return InkWell(
       key: Key('bill_item_${item.record.id}'),
@@ -455,6 +457,7 @@ class BillRecordTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
+                  key: Key('bill_status_pill_${item.record.id}'),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: statusBadge.fill,
@@ -490,6 +493,15 @@ class BillRecordTile extends StatelessWidget {
                   ),
               ],
             ),
+            if (recurringSubtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                recurringSubtitle,
+                style: AppTypography.caption.copyWith(color: context.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             if (effectivePaymentCount > 0) ...[
               const SizedBox(height: 6),
               _MetaPill(
@@ -502,6 +514,19 @@ class BillRecordTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String? _buildRecurringSubtitle(BillItem bill) {
+    if (!bill.isRecurring) return null;
+    final cycleLabel = bill.recurrenceCycleEnum.label;
+    if (bill.isPaused) return '$cycleLabel • Paused';
+    if (bill.isCancelled) return '$cycleLabel • Cancelled';
+    final mode = bill.autoLogPayment ? 'Auto-log' : 'Manual';
+    final due = bill.dueDate;
+    if (due == null) return '$cycleLabel • $mode';
+    final dateStr =
+        '${due.year.toString().padLeft(4, '0')}-${due.month.toString().padLeft(2, '0')}-${due.day.toString().padLeft(2, '0')}';
+    return '$cycleLabel • $mode • Next: $dateStr';
   }
 
   ({String label, Color fill, Color text}) _resolveStatusBadge(
@@ -518,20 +543,47 @@ class BillRecordTile extends StatelessWidget {
         text: isDark ? AppTheme.darkBrandSecondary : AppColors.statusSuccessText,
       );
     }
-    if (bill.paymentStatus == BillPaymentStatus.overdue.value || bill.isPastDue) {
+    if (bill.isPaused) {
       return (
-        label: 'Overdue',
+        label: 'Paused',
+        fill: context.surfaceContainerLow,
+        text: context.textSecondary,
+      );
+    }
+    if (bill.isCancelled) {
+      return (
+        label: 'Cancelled',
+        fill: context.surfaceContainerLow,
+        text: context.textSecondary,
+      );
+    }
+    final delta = bill.daysUntilDue();
+    if (bill.paymentStatus == BillPaymentStatus.overdue.value || bill.isPastDue) {
+      final overdueLabel = delta != null && delta < 0 ? 'Overdue by ${-delta}d' : 'Overdue';
+      return (
+        label: overdueLabel,
         fill: isDark
             ? AppColors.statusDangerStroke.withValues(alpha: 0.22)
             : AppColors.statusDangerFill,
         text: isDark ? AppColors.statusDangerStroke : AppColors.statusDangerText,
       );
     }
-    if (bill.paymentStatus == BillPaymentStatus.cancelled.value) {
+    if (delta == 0) {
       return (
-        label: 'Cancelled',
-        fill: context.surfaceContainerLow,
-        text: context.textSecondary,
+        label: 'Due today',
+        fill: isDark
+            ? AppColors.statusWarningStroke.withValues(alpha: 0.22)
+            : AppColors.statusWarningFill,
+        text: isDark ? AppColors.statusWarningStroke : AppColors.statusWarningText,
+      );
+    }
+    if (delta != null && delta > 0 && delta <= 7) {
+      return (
+        label: 'Due in ${delta}d',
+        fill: isDark
+            ? AppColors.statusWarningStroke.withValues(alpha: 0.22)
+            : AppColors.statusWarningFill,
+        text: isDark ? AppColors.statusWarningStroke : AppColors.statusWarningText,
       );
     }
     return (

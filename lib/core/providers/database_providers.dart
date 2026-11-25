@@ -323,3 +323,10 @@ final workspaceTotalUnpaidBillsProvider = StreamProvider<int>((ref) {
   final repository = ref.watch(billRepositoryProvider);
   return repository.watchTotalUnpaidBillsAmount(AppConstants.defaultWorkspaceId);
 });
+
+/// Reactive stream provider for linked payment history expenses of a specific bill.
+final billPaymentHistoryStreamProvider =
+    StreamProvider.family<List<RecordWithExpense>, String>((ref, billRecordId) {
+  final repository = ref.watch(billRepositoryProvider);
+  return repository.watchPaymentHistoryForBill(billRecordId);
+});

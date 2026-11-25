@@ -7,6 +7,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../categories/domain/category.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
@@ -54,6 +55,8 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
   final _notesController = TextEditingController();
 
   late String _utilityType;
+  late BillRecurrenceCycle _recurrenceCycle;
+  late bool _autoLogPayment;
   String _selectedCurrency = AppConstants.defaultCurrency;
   DateTime? _dueDate;
   DateTime? _billingPeriodStart;
@@ -66,9 +69,22 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
   void initState() {
     super.initState();
     _utilityType = widget.initialUtilityType ?? UtilityType.electricity.value;
+    final isInitialSubscription =
+        _utilityType.trim().toLowerCase() == UtilityType.subscription.value;
+    _recurrenceCycle =
+        isInitialSubscription ? BillRecurrenceCycle.monthly : BillRecurrenceCycle.none;
+    _autoLogPayment = isInitialSubscription;
     _dueDate = DateTime.now().add(const Duration(days: 7));
     _selectedAssetRecordId = widget.initialAssetRecordId;
     _isMoreDetailsExpanded = widget.initialAssetRecordId != null;
+  }
+
+  bool get _isDueDateOverdue {
+    final due = _dueDate;
+    if (due == null) return false;
+    final now = DateTime.now();
+    return DateTime.utc(due.year, due.month, due.day)
+        .isBefore(DateTime.utc(now.year, now.month, now.day));
   }
 
   @override
@@ -191,9 +207,15 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
       final account = _accountController.text.trim();
       final notes = _notesController.text.trim();
 
-      final parsedAmount = double.parse(_amountDueController.text.trim());
-      final amountMinor = (parsedAmount * 100).round();
+      final amountMinor = CurrencyFormatter.parseMajorToMinor(_amountDueController.text);
+      if (amountMinor == null || amountMinor <= 0) {
+        if (mounted) setState(() => _isSubmitting = false);
+        return;
+      }
       final matchedOption = options.where((o) => o.value == _utilityType).firstOrNull;
+
+      final shouldAutoLog =
+          _recurrenceCycle != BillRecurrenceCycle.none && _dueDate != null && _autoLogPayment;
 
       await repo.createBillRecord(
         record: Record(
@@ -217,9 +239,28 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
           amountDueMinor: amountMinor,
           currencyCode: _selectedCurrency,
           paymentStatus: BillPaymentStatus.unpaid.value,
+          recurrenceCycle:
+              _recurrenceCycle == BillRecurrenceCycle.none ? null : _recurrenceCycle.value,
+          autoLogPayment: shouldAutoLog,
           linkedAssetRecordId: _selectedAssetRecordId,
         ),
       );
+
+      if (shouldAutoLog) {
+        final loggedCount =
+            await repo.processDueSubscriptions(AppConstants.defaultWorkspaceId);
+        if (loggedCount > 0) {
+          ref.invalidate(activeRecordsStreamProvider);
+          ref.invalidate(dashboardRecordsStreamProvider);
+          ref.invalidate(activeBillsStreamProvider);
+          ref.invalidate(dashboardBillsStreamProvider);
+          ref.invalidate(upcomingBillsStreamProvider);
+          ref.invalidate(workspaceTotalUnpaidBillsProvider);
+          ref.invalidate(activeExpensesStreamProvider);
+          ref.invalidate(dashboardExpensesStreamProvider);
+          ref.invalidate(workspaceTotalExpensesProvider);
+        }
+      }
 
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
@@ -227,7 +268,7 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Added bill: $title ($_selectedCurrency ${parsedAmount.toStringAsFixed(2)})',
+              'Added bill: $title (${CurrencyFormatter.formatMinor(amountMinor, currencyCode: _selectedCurrency)})',
             ),
           ),
         );
@@ -327,7 +368,15 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                     );
                   }).toList(),
                   onChanged: (val) {
-                    if (val != null) setState(() => _utilityType = val);
+                    if (val == null) return;
+                    setState(() {
+                      _utilityType = val;
+                      if (val.trim().toLowerCase() == UtilityType.subscription.value &&
+                          _recurrenceCycle == BillRecurrenceCycle.none) {
+                        _recurrenceCycle = BillRecurrenceCycle.monthly;
+                        _autoLogPayment = true;
+                      }
+                    });
                   },
                 ),
                 if (subCategoriesAsync.hasError) ...[
@@ -336,6 +385,34 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                     'Custom categories unavailable: ${subCategoriesAsync.error}',
                     style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
                   ),
+                ],
+                const SizedBox(height: 12),
+
+                // Billing Coverage (One-time vs Recurring cycle)
+                DropdownButtonFormField<BillRecurrenceCycle>(
+                  key: const Key('bill_recurrence_dropdown'),
+                  isExpanded: true,
+                  initialValue: _recurrenceCycle,
+                  decoration: const InputDecoration(labelText: 'Billing Coverage'),
+                  items: BillRecurrenceCycle.values.map((cycle) {
+                    return DropdownMenuItem<BillRecurrenceCycle>(
+                      value: cycle,
+                      child: Text(cycle.label, overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val == null) return;
+                    setState(() {
+                      _recurrenceCycle = val;
+                      if (val == BillRecurrenceCycle.none) {
+                        _autoLogPayment = false;
+                      }
+                    });
+                  },
+                ),
+                if (_recurrenceCycle != BillRecurrenceCycle.none) ...[
+                  const SizedBox(height: 10),
+                  _buildAutoLogToggleCard(context),
                 ],
                 const SizedBox(height: 12),
 
@@ -366,9 +443,10 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                       child: TextFormField(
                         key: const Key('bill_amount_due_field'),
                         controller: _amountDueController,
+                        inputFormatters: const [ThousandsSeparatorInputFormatter()],
                         decoration: InputDecoration(
                           labelText: 'Amount Due *',
-                          hintText: 'e.g. 2450.00',
+                          hintText: 'e.g. 2,450.00',
                           prefixText: '$_selectedCurrency ',
                         ),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -376,8 +454,8 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                           if (val == null || val.trim().isEmpty) {
                             return 'Amount is required';
                           }
-                          final parsed = double.tryParse(val.trim());
-                          if (parsed == null || parsed <= 0) {
+                          final parsedMinor = CurrencyFormatter.parseMajorToMinor(val);
+                          if (parsedMinor == null || parsedMinor <= 0) {
                             return 'Enter valid amount';
                           }
                           return null;
@@ -413,8 +491,30 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                               color: _dueDate == null ? context.textSecondary : context.textPrimary,
                               fontWeight: _dueDate == null ? FontWeight.normal : FontWeight.w500,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (_isDueDateOverdue) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            key: const Key('bill_due_date_overdue_badge'),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: context.isDarkMode
+                                  ? AppColors.statusDangerStroke.withValues(alpha: 0.22)
+                                  : AppColors.statusDangerFill,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Overdue',
+                              style: AppTypography.badge.copyWith(
+                                color: context.isDarkMode
+                                    ? AppColors.statusDangerStroke
+                                    : AppColors.statusDangerText,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -443,6 +543,49 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAutoLogToggleCard(BuildContext context) {
+    final canAutoLog = _dueDate != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Auto-log payments',
+                  style: AppTypography.cardTitle.copyWith(
+                    fontSize: 13,
+                    color: context.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  canAutoLog
+                      ? 'Automatically logs each cycle on its renewal date and advances to the next cycle.'
+                      : 'Select a due date to enable automatic logging.',
+                  style: AppTypography.caption.copyWith(color: context.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(
+            key: const Key('bill_auto_log_switch'),
+            value: canAutoLog && _autoLogPayment,
+            onChanged: canAutoLog ? (val) => setState(() => _autoLogPayment = val) : null,
+          ),
+        ],
       ),
     );
   }
