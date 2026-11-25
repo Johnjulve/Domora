@@ -488,4 +488,7 @@ abstract class RecordRepository {
     required Map<String, String> fieldValues,
     String? categoryId,
   });
+
+  /// Watches active `'License Plate'` custom field values across a workspace (`recordId -> plate`).
+  Stream<Map<String, String>> watchLicensePlatesByWorkspace(String workspaceId);
 }

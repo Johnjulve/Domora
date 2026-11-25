@@ -18,6 +18,7 @@ import '../../expenses/presentation/add_expense_sheet.dart';
 import '../../expenses/presentation/expense_detail_sheet.dart';
 import '../../tasks/domain/task_item.dart';
 import '../../vault/domain/document_item.dart';
+import '../../vault/domain/vault_asset_matcher.dart';
 import '../../vault/presentation/vault_screen.dart';
 import '../domain/record.dart';
 import 'widgets/edit_asset_sheet.dart';
@@ -2848,7 +2849,7 @@ class AssetDetailSheet extends ConsumerWidget {
                 _AssetServiceHistorySection(assetRecordId: record.id, currency: currency),
               ],
               const SizedBox(height: 16),
-              _AssetLinkedDocumentsSection(assetRecordId: record.id, assetTitle: record.title),
+              _AssetLinkedDocumentsSection(currentItem: currentItem),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -3235,98 +3236,269 @@ class _AssetServiceHistorySection extends ConsumerWidget {
   }
 }
 
-class _AssetLinkedDocumentsSection extends ConsumerWidget {
-  final String assetRecordId;
-  final String assetTitle;
+class _AssetLinkedDocumentsSection extends ConsumerStatefulWidget {
+  final RecordWithAsset currentItem;
 
   const _AssetLinkedDocumentsSection({
-    required this.assetRecordId,
-    required this.assetTitle,
+    required this.currentItem,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final docsAsync = ref.watch(assetDocumentsStreamProvider(assetRecordId));
+  ConsumerState<_AssetLinkedDocumentsSection> createState() =>
+      _AssetLinkedDocumentsSectionState();
+}
 
-    return docsAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (docs) {
-        if (docs.isEmpty) return const SizedBox.shrink();
+class _AssetLinkedDocumentsSectionState extends ConsumerState<_AssetLinkedDocumentsSection> {
+  final Set<String> _connectingDocIds = <String>{};
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+  Future<void> _connectSuggestedDocument(VaultDocumentMatch match) async {
+    final docId = match.document.record.id;
+    if (_connectingDocIds.contains(docId)) return;
+
+    setState(() => _connectingDocIds.add(docId));
+    final colorScheme = Theme.of(context).colorScheme;
+    final assetId = widget.currentItem.record.id;
+
+    try {
+      await ref.read(documentRepositoryProvider).updateDocumentAssetLink(
+            documentRecordId: docId,
+            linkedAssetRecordId: assetId,
+          );
+      ref.invalidate(activeDocumentsStreamProvider);
+      ref.invalidate(dashboardDocumentsStreamProvider);
+      ref.invalidate(assetDocumentsStreamProvider(assetId));
+
+      if (!mounted) return;
+      setState(() => _connectingDocIds.remove(docId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Connected "${match.document.record.title}" to ${widget.currentItem.record.title}.',
+            style: TextStyle(color: colorScheme.onPrimary),
+          ),
+          backgroundColor: colorScheme.primary,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _connectingDocIds.remove(docId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to connect document: $e',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: AppColors.statusDangerStroke,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final assetRecordId = widget.currentItem.record.id;
+    final linkedDocsAsync = ref.watch(assetDocumentsStreamProvider(assetRecordId));
+    final allDocsAsync = ref.watch(dashboardDocumentsStreamProvider);
+    final platesAsync = ref.watch(workspaceLicensePlatesStreamProvider);
+
+    final linkedDocs = linkedDocsAsync.asData?.value ?? const <RecordWithDocument>[];
+    final allDocs = allDocsAsync.asData?.value ?? const <RecordWithDocument>[];
+    final plates = platesAsync.asData?.value ?? const <String, String>{};
+
+    final suggestedDocs = widget.currentItem.record.recordType == 'asset'
+        ? VaultAssetMatcher.findMatchingUnlinkedDocumentsForAsset(
+            candidate: VaultAssetCandidate(
+              asset: widget.currentItem,
+              licensePlate: plates[assetRecordId],
+            ),
+            documents: allDocs,
+          )
+        : const <VaultDocumentMatch>[];
+
+    if (linkedDocs.isEmpty && suggestedDocs.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (linkedDocs.isNotEmpty) ...[
+          _buildLinkedDocumentsList(context, assetRecordId, linkedDocs),
+        ],
+        if (suggestedDocs.isNotEmpty) ...[
+          if (linkedDocs.isNotEmpty) const SizedBox(height: 12),
+          _buildSuggestedDocumentsCard(context, suggestedDocs),
+        ],
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildLinkedDocumentsList(
+    BuildContext context,
+    String assetRecordId,
+    List<RecordWithDocument> docs,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(Icons.folder_shared_outlined, size: 18, color: context.brandAccent),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Vault Documents & Attachments',
+                      style: AppTypography.cardTitle.copyWith(fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_circle_outline, size: 20, color: context.brandAccent),
+              tooltip: 'Attach Document',
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  isDismissible: false,
+                  enableDrag: false,
+                  builder: (_) => AddDocumentSheet(initialAssetRecordId: assetRecordId),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: docs.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 6),
+          itemBuilder: (context, index) {
+            final item = docs[index];
+            return Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                dense: true,
+                leading: Icon(Icons.description_outlined, color: context.brandAccent, size: 20),
+                title: Text(item.record.title, style: AppTypography.cardTitle.copyWith(fontSize: 13)),
+                subtitle: Text(
+                  '${item.document.fileName} • ${item.document.formattedFileSize}',
+                  style: AppTypography.caption.copyWith(color: context.textTertiary),
+                ),
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    isDismissible: false,
+                    enableDrag: false,
+                    builder: (_) => DocumentDetailSheet(item: item),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuggestedDocumentsCard(
+    BuildContext context,
+    List<VaultDocumentMatch> matches,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('asset_suggested_documents_section'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: adaptiveSageFill(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.brandAccent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_outlined, size: 17, color: context.brandAccent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Suggested Vault Papers',
+                  style: AppTypography.cardTitle.copyWith(
+                    fontSize: 14,
+                    color: context.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < matches.length; i++) ...[
+            if (i > 0) Divider(height: 14, color: context.borderSubtle),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.folder_shared_outlined, size: 18, color: context.brandAccent),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Vault Documents & Attachments',
-                          style: AppTypography.cardTitle.copyWith(fontSize: 16),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        matches[i].document.record.title,
+                        style: AppTypography.bodySecondary.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: context.textPrimary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        matches[i].reason,
+                        style: AppTypography.caption.copyWith(color: context.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.add_circle_outline, size: 20, color: context.brandAccent),
-                  tooltip: 'Attach Document',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {
-                    showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      isDismissible: false,
-                      enableDrag: false,
-                      builder: (_) => AddDocumentSheet(initialAssetRecordId: assetRecordId),
-                    );
-                  },
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  key: Key('connect_suggested_doc_${matches[i].document.record.id}'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  onPressed: _connectingDocIds.contains(matches[i].document.record.id)
+                      ? null
+                      : () => _connectSuggestedDocument(matches[i]),
+                  child: _connectingDocIds.contains(matches[i].document.record.id)
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.onPrimary,
+                          ),
+                        )
+                      : const Text('Connect'),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: docs.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 6),
-              itemBuilder: (context, index) {
-                final item = docs[index];
-                return Card(
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(Icons.description_outlined, color: context.brandAccent, size: 20),
-                    title: Text(item.record.title, style: AppTypography.cardTitle.copyWith(fontSize: 13)),
-                    subtitle: Text(
-                      '${item.document.fileName} • ${item.document.formattedFileSize}',
-                      style: AppTypography.caption.copyWith(color: context.textTertiary),
-                    ),
-                    trailing: const Icon(Icons.chevron_right, size: 18),
-                    onTap: () {
-                      showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        isDismissible: false,
-                        enableDrag: false,
-                        builder: (_) => DocumentDetailSheet(item: item),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
           ],
-        );
-      },
+        ],
+      ),
     );
   }
 }

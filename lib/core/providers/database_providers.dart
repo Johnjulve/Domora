@@ -157,6 +157,12 @@ final recordCustomFieldsProvider = FutureProvider.family<List<CustomFieldEntry>,
   return repository.getCustomFieldsForRecord(recordId);
 });
 
+/// Batched reactive stream of active `'License Plate'` custom field values (`recordId -> plate`).
+final workspaceLicensePlatesStreamProvider = StreamProvider<Map<String, String>>((ref) {
+  final repository = ref.watch(recordRepositoryProvider);
+  return repository.watchLicensePlatesByWorkspace(AppConstants.defaultWorkspaceId);
+});
+
 /// Notifier for task status filtering ('pending', 'completed', 'all').
 class TaskFilterNotifier extends Notifier<String> {
   @override

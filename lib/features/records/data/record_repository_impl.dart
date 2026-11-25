@@ -470,6 +470,37 @@ class RecordRepositoryImpl implements RecordRepository {
     });
   }
 
+  @override
+  Stream<Map<String, String>> watchLicensePlatesByWorkspace(String workspaceId) {
+    final query = _db.select(_db.fieldValues).join([
+      innerJoin(
+        _db.fieldDefinitions,
+        _db.fieldDefinitions.id.equalsExp(_db.fieldValues.fieldDefinitionId),
+      ),
+      innerJoin(
+        _db.records,
+        _db.records.id.equalsExp(_db.fieldValues.recordId),
+      ),
+    ])
+      ..where(
+        _db.records.workspaceId.equals(workspaceId) &
+            _db.records.deletedAt.isNull() &
+            _db.fieldDefinitions.fieldKey.equals('License Plate'),
+      );
+
+    return query.watch().map((rows) {
+      final result = <String, String>{};
+      for (final row in rows) {
+        final fieldValue = row.readTable(_db.fieldValues);
+        final trimmed = fieldValue.valueText.trim();
+        if (trimmed.isNotEmpty) {
+          result[fieldValue.recordId] = trimmed;
+        }
+      }
+      return result;
+    });
+  }
+
   JoinedSelectStatement _buildActiveWorkspaceQuery(
     String workspaceId, {
     String? recordType,
