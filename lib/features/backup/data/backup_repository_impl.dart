@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/database/app_database.dart';
+import '../../bills/domain/bill_item.dart';
 import '../domain/backup_manifest.dart';
 import '../domain/backup_repository.dart';
 
@@ -178,6 +179,8 @@ class BackupRepositoryImpl implements BackupRepository {
           'currencyCode': b.currencyCode,
           'paymentStatus': b.paymentStatus,
           'paidAt': b.paidAt?.toIso8601String(),
+          'recurrenceCycle': b.recurrenceCycle,
+          'autoLogPayment': b.autoLogPayment,
           'linkedAssetRecordId': b.linkedAssetRecordId,
           'linkedExpenseRecordId': b.linkedExpenseRecordId,
         }).toList();
@@ -548,6 +551,10 @@ class BackupRepositoryImpl implements BackupRepository {
 
       // 8. Insert Bills
       for (final b in payload.bills) {
+        final parsedCycle = BillRecurrenceCycle.fromString(b['recurrenceCycle'] as String?);
+        final parsedDueDate = b['dueDate'] != null
+            ? DateTime.parse(b['dueDate'] as String).toUtc()
+            : null;
         await _db.into(_db.bills).insertOnConflictUpdate(
               BillsCompanion(
                 recordId: Value(b['recordId'] as String),
@@ -560,15 +567,19 @@ class BackupRepositoryImpl implements BackupRepository {
                 billingPeriodEnd: Value(b['billingPeriodEnd'] != null
                     ? DateTime.parse(b['billingPeriodEnd'] as String).toUtc()
                     : null),
-                dueDate: Value(b['dueDate'] != null
-                    ? DateTime.parse(b['dueDate'] as String).toUtc()
-                    : null),
+                dueDate: Value(parsedDueDate),
                 amountDueMinor: Value(b['amountDueMinor'] as int),
                 currencyCode: Value(b['currencyCode'] as String? ?? 'PHP'),
                 paymentStatus: Value(b['paymentStatus'] as String? ?? 'unpaid'),
                 paidAt: Value(b['paidAt'] != null
                     ? DateTime.parse(b['paidAt'] as String).toUtc()
                     : null),
+                recurrenceCycle: Value(parsedCycle.isRecurring ? parsedCycle.value : null),
+                autoLogPayment: Value(
+                  parsedCycle.isRecurring &&
+                      parsedDueDate != null &&
+                      (b['autoLogPayment'] as bool? ?? false),
+                ),
                 linkedAssetRecordId: Value(b['linkedAssetRecordId'] as String?),
                 linkedExpenseRecordId: Value(b['linkedExpenseRecordId'] as String?),
               ),

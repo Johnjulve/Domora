@@ -4633,6 +4633,32 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _recurrenceCycleMeta = const VerificationMeta(
+    'recurrenceCycle',
+  );
+  @override
+  late final GeneratedColumn<String> recurrenceCycle = GeneratedColumn<String>(
+    'recurrence_cycle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _autoLogPaymentMeta = const VerificationMeta(
+    'autoLogPayment',
+  );
+  @override
+  late final GeneratedColumn<bool> autoLogPayment = GeneratedColumn<bool>(
+    'auto_log_payment',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_log_payment" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _linkedAssetRecordIdMeta =
       const VerificationMeta('linkedAssetRecordId');
   @override
@@ -4674,6 +4700,8 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
     currencyCode,
     paymentStatus,
     paidAt,
+    recurrenceCycle,
+    autoLogPayment,
     linkedAssetRecordId,
     linkedExpenseRecordId,
   ];
@@ -4783,6 +4811,24 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
         paidAt.isAcceptableOrUnknown(data['paid_at']!, _paidAtMeta),
       );
     }
+    if (data.containsKey('recurrence_cycle')) {
+      context.handle(
+        _recurrenceCycleMeta,
+        recurrenceCycle.isAcceptableOrUnknown(
+          data['recurrence_cycle']!,
+          _recurrenceCycleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('auto_log_payment')) {
+      context.handle(
+        _autoLogPaymentMeta,
+        autoLogPayment.isAcceptableOrUnknown(
+          data['auto_log_payment']!,
+          _autoLogPaymentMeta,
+        ),
+      );
+    }
     if (data.containsKey('linked_asset_record_id')) {
       context.handle(
         _linkedAssetRecordIdMeta,
@@ -4854,6 +4900,14 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}paid_at'],
       ),
+      recurrenceCycle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_cycle'],
+      ),
+      autoLogPayment: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_log_payment'],
+      )!,
       linkedAssetRecordId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}linked_asset_record_id'],
@@ -4883,6 +4937,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
   final String currencyCode;
   final String paymentStatus;
   final DateTime? paidAt;
+  final String? recurrenceCycle;
+  final bool autoLogPayment;
   final String? linkedAssetRecordId;
   final String? linkedExpenseRecordId;
   const BillEntity({
@@ -4897,6 +4953,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     required this.currencyCode,
     required this.paymentStatus,
     this.paidAt,
+    this.recurrenceCycle,
+    required this.autoLogPayment,
     this.linkedAssetRecordId,
     this.linkedExpenseRecordId,
   });
@@ -4926,6 +4984,10 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     if (!nullToAbsent || paidAt != null) {
       map['paid_at'] = Variable<DateTime>(paidAt);
     }
+    if (!nullToAbsent || recurrenceCycle != null) {
+      map['recurrence_cycle'] = Variable<String>(recurrenceCycle);
+    }
+    map['auto_log_payment'] = Variable<bool>(autoLogPayment);
     if (!nullToAbsent || linkedAssetRecordId != null) {
       map['linked_asset_record_id'] = Variable<String>(linkedAssetRecordId);
     }
@@ -4960,6 +5022,10 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
       paidAt: paidAt == null && nullToAbsent
           ? const Value.absent()
           : Value(paidAt),
+      recurrenceCycle: recurrenceCycle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceCycle),
+      autoLogPayment: Value(autoLogPayment),
       linkedAssetRecordId: linkedAssetRecordId == null && nullToAbsent
           ? const Value.absent()
           : Value(linkedAssetRecordId),
@@ -4990,6 +5056,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
       paymentStatus: serializer.fromJson<String>(json['paymentStatus']),
       paidAt: serializer.fromJson<DateTime?>(json['paidAt']),
+      recurrenceCycle: serializer.fromJson<String?>(json['recurrenceCycle']),
+      autoLogPayment: serializer.fromJson<bool>(json['autoLogPayment']),
       linkedAssetRecordId: serializer.fromJson<String?>(
         json['linkedAssetRecordId'],
       ),
@@ -5013,6 +5081,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
       'currencyCode': serializer.toJson<String>(currencyCode),
       'paymentStatus': serializer.toJson<String>(paymentStatus),
       'paidAt': serializer.toJson<DateTime?>(paidAt),
+      'recurrenceCycle': serializer.toJson<String?>(recurrenceCycle),
+      'autoLogPayment': serializer.toJson<bool>(autoLogPayment),
       'linkedAssetRecordId': serializer.toJson<String?>(linkedAssetRecordId),
       'linkedExpenseRecordId': serializer.toJson<String?>(
         linkedExpenseRecordId,
@@ -5032,6 +5102,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     String? currencyCode,
     String? paymentStatus,
     Value<DateTime?> paidAt = const Value.absent(),
+    Value<String?> recurrenceCycle = const Value.absent(),
+    bool? autoLogPayment,
     Value<String?> linkedAssetRecordId = const Value.absent(),
     Value<String?> linkedExpenseRecordId = const Value.absent(),
   }) => BillEntity(
@@ -5052,6 +5124,10 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     currencyCode: currencyCode ?? this.currencyCode,
     paymentStatus: paymentStatus ?? this.paymentStatus,
     paidAt: paidAt.present ? paidAt.value : this.paidAt,
+    recurrenceCycle: recurrenceCycle.present
+        ? recurrenceCycle.value
+        : this.recurrenceCycle,
+    autoLogPayment: autoLogPayment ?? this.autoLogPayment,
     linkedAssetRecordId: linkedAssetRecordId.present
         ? linkedAssetRecordId.value
         : this.linkedAssetRecordId,
@@ -5088,6 +5164,12 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
           ? data.paymentStatus.value
           : this.paymentStatus,
       paidAt: data.paidAt.present ? data.paidAt.value : this.paidAt,
+      recurrenceCycle: data.recurrenceCycle.present
+          ? data.recurrenceCycle.value
+          : this.recurrenceCycle,
+      autoLogPayment: data.autoLogPayment.present
+          ? data.autoLogPayment.value
+          : this.autoLogPayment,
       linkedAssetRecordId: data.linkedAssetRecordId.present
           ? data.linkedAssetRecordId.value
           : this.linkedAssetRecordId,
@@ -5111,6 +5193,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
           ..write('currencyCode: $currencyCode, ')
           ..write('paymentStatus: $paymentStatus, ')
           ..write('paidAt: $paidAt, ')
+          ..write('recurrenceCycle: $recurrenceCycle, ')
+          ..write('autoLogPayment: $autoLogPayment, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedExpenseRecordId: $linkedExpenseRecordId')
           ..write(')'))
@@ -5130,6 +5214,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     currencyCode,
     paymentStatus,
     paidAt,
+    recurrenceCycle,
+    autoLogPayment,
     linkedAssetRecordId,
     linkedExpenseRecordId,
   );
@@ -5148,6 +5234,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
           other.currencyCode == this.currencyCode &&
           other.paymentStatus == this.paymentStatus &&
           other.paidAt == this.paidAt &&
+          other.recurrenceCycle == this.recurrenceCycle &&
+          other.autoLogPayment == this.autoLogPayment &&
           other.linkedAssetRecordId == this.linkedAssetRecordId &&
           other.linkedExpenseRecordId == this.linkedExpenseRecordId);
 }
@@ -5164,6 +5252,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
   final Value<String> currencyCode;
   final Value<String> paymentStatus;
   final Value<DateTime?> paidAt;
+  final Value<String?> recurrenceCycle;
+  final Value<bool> autoLogPayment;
   final Value<String?> linkedAssetRecordId;
   final Value<String?> linkedExpenseRecordId;
   final Value<int> rowid;
@@ -5179,6 +5269,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     this.currencyCode = const Value.absent(),
     this.paymentStatus = const Value.absent(),
     this.paidAt = const Value.absent(),
+    this.recurrenceCycle = const Value.absent(),
+    this.autoLogPayment = const Value.absent(),
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedExpenseRecordId = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5195,6 +5287,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     this.currencyCode = const Value.absent(),
     this.paymentStatus = const Value.absent(),
     this.paidAt = const Value.absent(),
+    this.recurrenceCycle = const Value.absent(),
+    this.autoLogPayment = const Value.absent(),
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedExpenseRecordId = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5212,6 +5306,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     Expression<String>? currencyCode,
     Expression<String>? paymentStatus,
     Expression<DateTime>? paidAt,
+    Expression<String>? recurrenceCycle,
+    Expression<bool>? autoLogPayment,
     Expression<String>? linkedAssetRecordId,
     Expression<String>? linkedExpenseRecordId,
     Expression<int>? rowid,
@@ -5229,6 +5325,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
       if (currencyCode != null) 'currency_code': currencyCode,
       if (paymentStatus != null) 'payment_status': paymentStatus,
       if (paidAt != null) 'paid_at': paidAt,
+      if (recurrenceCycle != null) 'recurrence_cycle': recurrenceCycle,
+      if (autoLogPayment != null) 'auto_log_payment': autoLogPayment,
       if (linkedAssetRecordId != null)
         'linked_asset_record_id': linkedAssetRecordId,
       if (linkedExpenseRecordId != null)
@@ -5249,6 +5347,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     Value<String>? currencyCode,
     Value<String>? paymentStatus,
     Value<DateTime?>? paidAt,
+    Value<String?>? recurrenceCycle,
+    Value<bool>? autoLogPayment,
     Value<String?>? linkedAssetRecordId,
     Value<String?>? linkedExpenseRecordId,
     Value<int>? rowid,
@@ -5265,6 +5365,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
       currencyCode: currencyCode ?? this.currencyCode,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paidAt: paidAt ?? this.paidAt,
+      recurrenceCycle: recurrenceCycle ?? this.recurrenceCycle,
+      autoLogPayment: autoLogPayment ?? this.autoLogPayment,
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedExpenseRecordId:
           linkedExpenseRecordId ?? this.linkedExpenseRecordId,
@@ -5310,6 +5412,12 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     if (paidAt.present) {
       map['paid_at'] = Variable<DateTime>(paidAt.value);
     }
+    if (recurrenceCycle.present) {
+      map['recurrence_cycle'] = Variable<String>(recurrenceCycle.value);
+    }
+    if (autoLogPayment.present) {
+      map['auto_log_payment'] = Variable<bool>(autoLogPayment.value);
+    }
     if (linkedAssetRecordId.present) {
       map['linked_asset_record_id'] = Variable<String>(
         linkedAssetRecordId.value,
@@ -5340,6 +5448,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
           ..write('currencyCode: $currencyCode, ')
           ..write('paymentStatus: $paymentStatus, ')
           ..write('paidAt: $paidAt, ')
+          ..write('recurrenceCycle: $recurrenceCycle, ')
+          ..write('autoLogPayment: $autoLogPayment, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedExpenseRecordId: $linkedExpenseRecordId, ')
           ..write('rowid: $rowid')
@@ -11690,6 +11800,8 @@ typedef $$BillsTableCreateCompanionBuilder =
       Value<String> currencyCode,
       Value<String> paymentStatus,
       Value<DateTime?> paidAt,
+      Value<String?> recurrenceCycle,
+      Value<bool> autoLogPayment,
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedExpenseRecordId,
       Value<int> rowid,
@@ -11707,6 +11819,8 @@ typedef $$BillsTableUpdateCompanionBuilder =
       Value<String> currencyCode,
       Value<String> paymentStatus,
       Value<DateTime?> paidAt,
+      Value<String?> recurrenceCycle,
+      Value<bool> autoLogPayment,
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedExpenseRecordId,
       Value<int> rowid,
@@ -11825,6 +11939,16 @@ class $$BillsTableFilterComposer extends Composer<_$AppDatabase, $BillsTable> {
 
   ColumnFilters<DateTime> get paidAt => $composableBuilder(
     column: $table.paidAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrenceCycle => $composableBuilder(
+    column: $table.recurrenceCycle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoLogPayment => $composableBuilder(
+    column: $table.autoLogPayment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11957,6 +12081,16 @@ class $$BillsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get recurrenceCycle => $composableBuilder(
+    column: $table.recurrenceCycle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get autoLogPayment => $composableBuilder(
+    column: $table.autoLogPayment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RecordsTableOrderingComposer get recordId {
     final $$RecordsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -12082,6 +12216,16 @@ class $$BillsTableAnnotationComposer
   GeneratedColumn<DateTime> get paidAt =>
       $composableBuilder(column: $table.paidAt, builder: (column) => column);
 
+  GeneratedColumn<String> get recurrenceCycle => $composableBuilder(
+    column: $table.recurrenceCycle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get autoLogPayment => $composableBuilder(
+    column: $table.autoLogPayment,
+    builder: (column) => column,
+  );
+
   $$RecordsTableAnnotationComposer get recordId {
     final $$RecordsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -12195,6 +12339,8 @@ class $$BillsTableTableManager
                 Value<String> currencyCode = const Value.absent(),
                 Value<String> paymentStatus = const Value.absent(),
                 Value<DateTime?> paidAt = const Value.absent(),
+                Value<String?> recurrenceCycle = const Value.absent(),
+                Value<bool> autoLogPayment = const Value.absent(),
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedExpenseRecordId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -12210,6 +12356,8 @@ class $$BillsTableTableManager
                 currencyCode: currencyCode,
                 paymentStatus: paymentStatus,
                 paidAt: paidAt,
+                recurrenceCycle: recurrenceCycle,
+                autoLogPayment: autoLogPayment,
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedExpenseRecordId: linkedExpenseRecordId,
                 rowid: rowid,
@@ -12227,6 +12375,8 @@ class $$BillsTableTableManager
                 Value<String> currencyCode = const Value.absent(),
                 Value<String> paymentStatus = const Value.absent(),
                 Value<DateTime?> paidAt = const Value.absent(),
+                Value<String?> recurrenceCycle = const Value.absent(),
+                Value<bool> autoLogPayment = const Value.absent(),
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedExpenseRecordId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -12242,6 +12392,8 @@ class $$BillsTableTableManager
                 currencyCode: currencyCode,
                 paymentStatus: paymentStatus,
                 paidAt: paidAt,
+                recurrenceCycle: recurrenceCycle,
+                autoLogPayment: autoLogPayment,
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedExpenseRecordId: linkedExpenseRecordId,
                 rowid: rowid,

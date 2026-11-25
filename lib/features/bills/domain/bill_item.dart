@@ -28,11 +28,89 @@ enum UtilityType {
   }
 }
 
+/// Supported recurrence cycles for subscriptions and recurring bills.
+enum BillRecurrenceCycle {
+  none('none', 'One-time', null),
+  weekly('weekly', 'Weekly', null),
+  monthly('monthly', 'Monthly', 1),
+  quarterly('quarterly', 'Quarterly (3 months)', 3),
+  semiAnnual('semi_annual', 'Semi-Annual (6 months)', 6),
+  annual('annual', 'Annual (12 months)', 12);
+
+  final String value;
+  final String label;
+  final int? months;
+
+  const BillRecurrenceCycle(this.value, this.label, this.months);
+
+  bool get isRecurring => this != BillRecurrenceCycle.none;
+
+  static BillRecurrenceCycle fromString(String? val) {
+    if (val == null) return BillRecurrenceCycle.none;
+    final normalized = val.trim().toLowerCase();
+    return BillRecurrenceCycle.values.firstWhere(
+      (e) => e.value == normalized,
+      orElse: () => BillRecurrenceCycle.none,
+    );
+  }
+
+  /// Advances [from] by one cycle, clamping end-of-month days and preserving UTC/local kind.
+  DateTime advanceDate(DateTime from) {
+    if (this == BillRecurrenceCycle.none) return from;
+    if (this == BillRecurrenceCycle.weekly) {
+      return _buildDate(
+        from.isUtc,
+        from.year,
+        from.month,
+        from.day + 7,
+        from,
+      );
+    }
+    final zeroBasedMonth = (from.month - 1) + months!;
+    final targetYear = from.year + (zeroBasedMonth ~/ 12);
+    final targetMonth = (zeroBasedMonth % 12) + 1;
+    final maxDays = DateTime.utc(targetYear, targetMonth + 1, 0).day;
+    final targetDay = from.day > maxDays ? maxDays : from.day;
+    return _buildDate(from.isUtc, targetYear, targetMonth, targetDay, from);
+  }
+
+  static DateTime _buildDate(
+    bool isUtc,
+    int year,
+    int month,
+    int day,
+    DateTime template,
+  ) {
+    return isUtc
+        ? DateTime.utc(
+            year,
+            month,
+            day,
+            template.hour,
+            template.minute,
+            template.second,
+            template.millisecond,
+            template.microsecond,
+          )
+        : DateTime(
+            year,
+            month,
+            day,
+            template.hour,
+            template.minute,
+            template.second,
+            template.millisecond,
+            template.microsecond,
+          );
+  }
+}
+
 /// Lifecycle payment status for bills.
 enum BillPaymentStatus {
   unpaid('unpaid', 'Unpaid', Icons.schedule),
   paid('paid', 'Paid', Icons.check_circle_outline),
   overdue('overdue', 'Overdue', Icons.error_outline),
+  paused('paused', 'Paused', Icons.pause_circle_outline),
   cancelled('cancelled', 'Cancelled', Icons.cancel_outlined);
 
   final String value;
@@ -62,6 +140,8 @@ class BillItem {
   final String currencyCode;
   final String paymentStatus;
   final DateTime? paidAt;
+  final String? recurrenceCycle;
+  final bool autoLogPayment;
   final String? linkedAssetRecordId;
   final String? linkedExpenseRecordId;
 
@@ -77,6 +157,8 @@ class BillItem {
     this.currencyCode = 'PHP',
     this.paymentStatus = 'unpaid',
     this.paidAt,
+    this.recurrenceCycle,
+    this.autoLogPayment = false,
     this.linkedAssetRecordId,
     this.linkedExpenseRecordId,
   });
@@ -87,24 +169,30 @@ class BillItem {
     return '$currencyCode ${major.toStringAsFixed(2)}';
   }
 
+  /// Calendar-day difference between [dueDate] and [referenceDate] (negative when overdue).
+  int? daysUntilDue([DateTime? referenceDate]) {
+    if (dueDate == null) return null;
+    final now = referenceDate ?? DateTime.now();
+    final todayUtc = DateTime.utc(now.year, now.month, now.day);
+    final dueUtc = DateTime.utc(dueDate!.year, dueDate!.month, dueDate!.day);
+    return dueUtc.difference(todayUtc).inDays;
+  }
+
   /// Whether this bill is due today.
   bool isDueToday([DateTime? referenceDate]) {
-    if (dueDate == null) return false;
-    final now = referenceDate ?? DateTime.now();
-    return dueDate!.year == now.year && dueDate!.month == now.month && dueDate!.day == now.day;
+    return daysUntilDue(referenceDate) == 0;
   }
 
   /// Whether this bill is unpaid and past its due date.
   bool isPastDueAt([DateTime? referenceDate]) {
     if (paymentStatus == BillPaymentStatus.paid.value ||
+        paymentStatus == BillPaymentStatus.paused.value ||
         paymentStatus == BillPaymentStatus.cancelled.value ||
         dueDate == null) {
       return false;
     }
-    final now = referenceDate ?? DateTime.now();
-    if (isDueToday(now)) return false;
-    final todayMidnight = DateTime(now.year, now.month, now.day);
-    return dueDate!.isBefore(todayMidnight);
+    final delta = daysUntilDue(referenceDate);
+    return delta != null && delta < 0;
   }
 
   /// Convenience getter for [isPastDueAt].
@@ -112,6 +200,10 @@ class BillItem {
 
   UtilityType get utilityTypeEnum => UtilityType.fromString(utilityType);
   BillPaymentStatus get paymentStatusEnum => BillPaymentStatus.fromString(paymentStatus);
+  BillRecurrenceCycle get recurrenceCycleEnum => BillRecurrenceCycle.fromString(recurrenceCycle);
+  bool get isRecurring => recurrenceCycleEnum.isRecurring;
+  bool get isPaused => paymentStatus == BillPaymentStatus.paused.value;
+  bool get isCancelled => paymentStatus == BillPaymentStatus.cancelled.value;
 
   BillItem copyWith({
     String? recordId,
@@ -125,6 +217,8 @@ class BillItem {
     String? currencyCode,
     String? paymentStatus,
     DateTime? paidAt,
+    String? recurrenceCycle,
+    bool? autoLogPayment,
     String? linkedAssetRecordId,
     String? linkedExpenseRecordId,
   }) {
@@ -140,10 +234,52 @@ class BillItem {
       currencyCode: currencyCode ?? this.currencyCode,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paidAt: paidAt ?? this.paidAt,
+      recurrenceCycle: recurrenceCycle ?? this.recurrenceCycle,
+      autoLogPayment: autoLogPayment ?? this.autoLogPayment,
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedExpenseRecordId: linkedExpenseRecordId ?? this.linkedExpenseRecordId,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BillItem &&
+          runtimeType == other.runtimeType &&
+          recordId == other.recordId &&
+          utilityType == other.utilityType &&
+          providerName == other.providerName &&
+          accountNumber == other.accountNumber &&
+          billingPeriodStart == other.billingPeriodStart &&
+          billingPeriodEnd == other.billingPeriodEnd &&
+          dueDate == other.dueDate &&
+          amountDueMinor == other.amountDueMinor &&
+          currencyCode == other.currencyCode &&
+          paymentStatus == other.paymentStatus &&
+          paidAt == other.paidAt &&
+          recurrenceCycle == other.recurrenceCycle &&
+          autoLogPayment == other.autoLogPayment &&
+          linkedAssetRecordId == other.linkedAssetRecordId &&
+          linkedExpenseRecordId == other.linkedExpenseRecordId;
+
+  @override
+  int get hashCode => Object.hash(
+        recordId,
+        utilityType,
+        providerName,
+        accountNumber,
+        billingPeriodStart,
+        billingPeriodEnd,
+        dueDate,
+        amountDueMinor,
+        currencyCode,
+        paymentStatus,
+        paidAt,
+        recurrenceCycle,
+        autoLogPayment,
+        linkedAssetRecordId,
+        linkedExpenseRecordId,
+      );
 }
 
 /// Composite projection bundling universal [Record] with specialized [BillItem],

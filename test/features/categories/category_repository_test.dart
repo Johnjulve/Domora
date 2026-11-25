@@ -361,6 +361,34 @@ void main() {
           archived_at INTEGER
         );
         CREATE INDEX categories_workspace_name_idx ON categories (workspace_id, name);
+        CREATE TABLE records (
+          id TEXT NOT NULL PRIMARY KEY,
+          workspace_id TEXT NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
+          category_id TEXT REFERENCES categories (id) ON DELETE SET NULL,
+          record_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          archived_at INTEGER,
+          deleted_at INTEGER
+        );
+        CREATE TABLE bills (
+          record_id TEXT NOT NULL PRIMARY KEY REFERENCES records (id) ON DELETE CASCADE,
+          utility_type TEXT NOT NULL DEFAULT 'utility',
+          provider_name TEXT,
+          account_number TEXT,
+          billing_period_start INTEGER,
+          billing_period_end INTEGER,
+          due_date INTEGER,
+          amount_due_minor INTEGER NOT NULL,
+          currency_code TEXT NOT NULL DEFAULT 'PHP',
+          payment_status TEXT NOT NULL DEFAULT 'unpaid',
+          paid_at INTEGER,
+          linked_asset_record_id TEXT REFERENCES records (id) ON DELETE SET NULL,
+          linked_expense_record_id TEXT REFERENCES records (id) ON DELETE SET NULL
+        );
         PRAGMA user_version = 8;
       ''');
 

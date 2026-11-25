@@ -708,5 +708,92 @@ void main() {
       final grandchildren = await targetCategoryRepo.getSubCategories('cat-child');
       expect(grandchildren.map((c) => c.id), equals(['cat-grandchild']));
     });
+
+    test('restoreBackup round-trips recurring bill recurrenceCycle and autoLogPayment and supports legacy v9 bills', () async {
+      final now = DateTime.utc(2026, 11, 25, 10, 0);
+
+      await billRepo.createBillRecord(
+        record: Record(
+          id: 'bill-recurring-sub',
+          workspaceId: AppConstants.defaultWorkspaceId,
+          recordType: 'bill',
+          title: 'Netflix Standard',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        bill: BillItem(
+          recordId: 'bill-recurring-sub',
+          utilityType: UtilityType.subscription.value,
+          dueDate: DateTime.utc(2026, 12, 1),
+          amountDueMinor: 39900,
+          recurrenceCycle: BillRecurrenceCycle.monthly.value,
+          autoLogPayment: true,
+        ),
+      );
+
+      final exportedJson = await backupRepo.exportBackupToJson(AppConstants.defaultWorkspaceId);
+      final validation = await backupRepo.validateBackup(exportedJson);
+      expect(validation.isValid, isTrue);
+
+      // 1. Round-trip v10 recurring bill
+      final dbTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbTarget.close);
+      final targetBackupRepo = BackupRepositoryImpl(dbTarget);
+      final targetBillRepo = BillRepositoryImpl(dbTarget);
+
+      await targetBackupRepo.restoreBackup(validation.payload!, clearExisting: true);
+      final restored = await targetBillRepo.getBillById('bill-recurring-sub');
+      expect(restored, isNotNull);
+      expect(restored!.bill.recurrenceCycle, equals('monthly'));
+      expect(restored.bill.autoLogPayment, isTrue);
+
+      // 2. Legacy v9 bill JSON without recurrenceCycle / autoLogPayment keys
+      final decoded = jsonDecode(exportedJson) as Map<String, dynamic>;
+      final data = decoded['data'] as Map<String, dynamic>;
+      final billsList = (data['bills'] as List<dynamic>).cast<Map<String, dynamic>>();
+      for (final b in billsList) {
+        b.remove('recurrenceCycle');
+        b.remove('autoLogPayment');
+      }
+      (decoded['manifest'] as Map<String, dynamic>)['payloadChecksum'] =
+          BackupPayload.computeChecksum(data);
+
+      final dbLegacyTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbLegacyTarget.close);
+      final legacyBackupRepo = BackupRepositoryImpl(dbLegacyTarget);
+      final legacyBillRepo = BillRepositoryImpl(dbLegacyTarget);
+
+      final legacyVal = await legacyBackupRepo.validateBackup(jsonEncode(decoded));
+      expect(legacyVal.isValid, isTrue);
+
+      await legacyBackupRepo.restoreBackup(legacyVal.payload!, clearExisting: true);
+      final restoredLegacy = await legacyBillRepo.getBillById('bill-recurring-sub');
+      expect(restoredLegacy, isNotNull);
+      expect(restoredLegacy!.bill.recurrenceCycle, isNull);
+      expect(restoredLegacy.bill.autoLogPayment, isFalse);
+
+      // 3. Invalid non-recurring payload with autoLogPayment: true is normalized to false on restore
+      final invalidDecoded = jsonDecode(exportedJson) as Map<String, dynamic>;
+      final invalidData = invalidDecoded['data'] as Map<String, dynamic>;
+      final invalidBills = (invalidData['bills'] as List<dynamic>).cast<Map<String, dynamic>>();
+      for (final b in invalidBills) {
+        b['recurrenceCycle'] = 'none';
+        b['autoLogPayment'] = true;
+      }
+      (invalidDecoded['manifest'] as Map<String, dynamic>)['payloadChecksum'] =
+          BackupPayload.computeChecksum(invalidData);
+
+      final dbNormalizedTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbNormalizedTarget.close);
+      final normBackupRepo = BackupRepositoryImpl(dbNormalizedTarget);
+      final normBillRepo = BillRepositoryImpl(dbNormalizedTarget);
+      final normVal = await normBackupRepo.validateBackup(jsonEncode(invalidDecoded));
+      expect(normVal.isValid, isTrue);
+      await normBackupRepo.restoreBackup(normVal.payload!, clearExisting: true);
+
+      final normalizedBill = await normBillRepo.getBillById('bill-recurring-sub');
+      expect(normalizedBill!.bill.recurrenceCycle, isNull);
+      expect(normalizedBill.bill.autoLogPayment, isFalse);
+    });
   });
 }

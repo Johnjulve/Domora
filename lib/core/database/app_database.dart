@@ -70,6 +70,10 @@ class AppDatabase extends _$AppDatabase {
           }
           await m.createIndex(categoriesWorkspaceParentIdx);
         }
+        if (from < 10 && from >= 6) {
+          await m.addColumn(bills, bills.recurrenceCycle);
+          await m.addColumn(bills, bills.autoLogPayment);
+        }
       },
       beforeOpen: (details) async {
         // Enforce SQLite Foreign Key constraints and enable WAL mode for concurrent reliability

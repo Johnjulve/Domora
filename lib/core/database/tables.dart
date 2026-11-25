@@ -164,8 +164,10 @@ class Bills extends Table {
   DateTimeColumn get dueDate => dateTime().nullable()();
   IntColumn get amountDueMinor => integer()(); // Financial integer precision in minor units (e.g. cents)
   TextColumn get currencyCode => text().withDefault(const Constant('PHP'))();
-  TextColumn get paymentStatus => text().withDefault(const Constant('unpaid'))(); // 'unpaid', 'paid', 'overdue', 'cancelled'
+  TextColumn get paymentStatus => text().withDefault(const Constant('unpaid'))(); // 'unpaid', 'paid', 'overdue', 'paused', 'cancelled'
   DateTimeColumn get paidAt => dateTime().nullable()();
+  TextColumn get recurrenceCycle => text().nullable()(); // 'weekly', 'monthly', 'quarterly', 'semi_annual', 'annual'
+  BoolColumn get autoLogPayment => boolean().withDefault(const Constant(false))();
   @ReferenceName('billsForAsset')
   TextColumn get linkedAssetRecordId => text().nullable().references(Records, #id, onDelete: KeyAction.setNull)();
   @ReferenceName('billLinkedExpense')
