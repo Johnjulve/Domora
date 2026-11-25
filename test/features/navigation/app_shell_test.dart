@@ -633,8 +633,8 @@ void main() {
       await tester.tap(find.text('Log Maintenance / Expense'));
       await tester.pumpAndSettle();
 
-      // AddExpenseSheet opens with linked asset
-      expect(find.text('Log Expense / Maintenance'), findsOneWidget);
+      // AddExpenseSheet opens with linked asset prioritized
+      expect(find.text('Log Maintenance'), findsOneWidget);
 
       // Fill in expense details: Title, Amount, Category
       await tester.enterText(find.widgetWithText(TextFormField, 'Expense Title *'), 'Synthetic Oil & Spark Plug');
@@ -727,18 +727,25 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      // Starts at Records screen. Tap 'Add Utility Bill' action in AppBar
-      final addBillAction = find.byTooltip('Add Utility Bill');
-      expect(addBillAction, findsOneWidget);
-      await tester.tap(addBillAction);
+      // Starts at Records screen. Tap unified '+' button -> Bill / Subscription
+      final quickAddButton = find.byKey(const Key('records_quick_add_button'));
+      expect(quickAddButton, findsOneWidget);
+      await tester.tap(quickAddButton);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('quick_add_bill')));
       await tester.pumpAndSettle();
 
       // Add Utility Bill bottom sheet opens
       expect(find.text('Add Utility Bill'), findsOneWidget);
 
-      // Fill in details
+      // Fill in primary details
       await tester.enterText(find.widgetWithText(TextFormField, 'Bill Title *'), 'Meralco Electric Bill');
       await tester.enterText(find.widgetWithText(TextFormField, 'Amount Due *'), '3450.50');
+
+      // Expand optional Billing Details & Notes drawer for Provider and Account
+      await tester.tap(find.byKey(const Key('bill_more_details_toggle')));
+      await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextFormField, 'Provider / Issuer'), 'Meralco Power');
       await tester.enterText(find.widgetWithText(TextFormField, 'Account / Ref No.'), 'ACC-987654');
 

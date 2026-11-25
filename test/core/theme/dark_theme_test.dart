@@ -1032,6 +1032,10 @@ void main() {
       expect(dueDateDec.color, AppTheme.darkSurfaceContainerLow);
       expect((dueDateDec.border as Border).top.color, AppTheme.darkBorderSubtle);
 
+      // Expand Billing Details & Notes drawer to verify Billing Period selector cards
+      await tester.tap(find.byKey(const Key('bill_more_details_toggle')));
+      await tester.pumpAndSettle();
+
       // Verify Billing Period selector cards have darkSurfaceContainerLow and darkBorderSubtle
       final periodStartCard = tester.widget<Container>(find.descendant(
         of: find.byKey(const Key('billing_period_start_card')),

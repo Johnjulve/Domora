@@ -7,18 +7,39 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../categories/domain/category.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
+import '../../records/presentation/widgets/record_section_card.dart';
 import '../domain/bill_item.dart';
 
 const List<String> _availableCurrencies = [
   'PHP', 'USD', 'EUR', 'JPY', 'GBP', 'SGD', 'AUD', 'CAD',
 ];
 
+class _BillTypeOption {
+  final String value;
+  final String label;
+  final IconData icon;
+  final String? subCategoryId;
+
+  const _BillTypeOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+    this.subCategoryId,
+  });
+}
+
 class AddBillSheet extends ConsumerStatefulWidget {
   final String? initialAssetRecordId;
+  final String? initialUtilityType;
 
-  const AddBillSheet({super.key, this.initialAssetRecordId});
+  const AddBillSheet({
+    super.key,
+    this.initialAssetRecordId,
+    this.initialUtilityType,
+  });
 
   @override
   ConsumerState<AddBillSheet> createState() => _AddBillSheetState();
@@ -38,14 +59,16 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
   DateTime? _billingPeriodStart;
   DateTime? _billingPeriodEnd;
   String? _selectedAssetRecordId;
+  bool _isMoreDetailsExpanded = false;
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    _utilityType = UtilityType.electricity.value;
+    _utilityType = widget.initialUtilityType ?? UtilityType.electricity.value;
     _dueDate = DateTime.now().add(const Duration(days: 7));
     _selectedAssetRecordId = widget.initialAssetRecordId;
+    _isMoreDetailsExpanded = widget.initialAssetRecordId != null;
   }
 
   @override
@@ -56,6 +79,68 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
     _amountDueController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  String? _matchBuiltInBillSubCategoryId(UtilityType type, List<Category> subCategories) {
+    final valueLower = type.value.toLowerCase();
+    final labelLower = type.label.toLowerCase();
+    for (final sub in subCategories) {
+      final subLower = sub.name.trim().toLowerCase();
+      if (subLower == valueLower || subLower == labelLower) {
+        return sub.id;
+      }
+    }
+    if (type == UtilityType.subscription) {
+      return subCategories.where((s) => s.id == 'cat-sub-subscription').firstOrNull?.id;
+    }
+    return null;
+  }
+
+  List<_BillTypeOption> _buildTypeOptions(List<Category> subCategories) {
+    final options = <_BillTypeOption>[
+      for (final type in UtilityType.values)
+        _BillTypeOption(
+          value: type.value,
+          label: type.label,
+          icon: type.icon,
+          subCategoryId: _matchBuiltInBillSubCategoryId(type, subCategories),
+        ),
+    ];
+
+    final seenNormalized = <String>{
+      for (final opt in options) opt.value.toLowerCase(),
+      for (final opt in options) opt.label.toLowerCase(),
+    };
+
+    for (final sub in subCategories) {
+      final normalizedName = sub.name.trim().toLowerCase();
+      if (normalizedName.isEmpty || seenNormalized.contains(normalizedName)) {
+        continue;
+      }
+      // Skip default unrenamed "Bill" since specific utility types cover bills
+      if (sub.id == 'cat-sub-bill' && normalizedName == 'bill') continue;
+      seenNormalized.add(normalizedName);
+      options.add(
+        _BillTypeOption(
+          value: sub.name.trim(),
+          label: sub.name.trim(),
+          icon: categoryIconFromKey(sub.iconKey),
+          subCategoryId: sub.id,
+        ),
+      );
+    }
+
+    if (!options.any((opt) => opt.value == _utilityType)) {
+      options.add(
+        _BillTypeOption(
+          value: _utilityType,
+          label: _utilityType,
+          icon: Icons.receipt_long_outlined,
+        ),
+      );
+    }
+
+    return options;
   }
 
   Future<void> _pickDueDate(BuildContext context) async {
@@ -92,7 +177,7 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(List<_BillTypeOption> options) async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
@@ -108,11 +193,13 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
 
       final parsedAmount = double.parse(_amountDueController.text.trim());
       final amountMinor = (parsedAmount * 100).round();
+      final matchedOption = options.where((o) => o.value == _utilityType).firstOrNull;
 
       await repo.createBillRecord(
         record: Record(
           id: recordId,
           workspaceId: AppConstants.defaultWorkspaceId,
+          categoryId: matchedOption?.subCategoryId,
           recordType: 'bill',
           title: title,
           description: notes.isNotEmpty ? notes : null,
@@ -135,8 +222,9 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
       );
 
       if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
               'Added bill: $title ($_selectedCurrency ${parsedAmount.toStringAsFixed(2)})',
@@ -160,6 +248,9 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
   @override
   Widget build(BuildContext context) {
     final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
+    final subCategoriesAsync = ref.watch(billsExpensesSubCategoriesStreamProvider);
+    final subCategories = subCategoriesAsync.asData?.value ?? const <Category>[];
+    final typeOptions = _buildTypeOptions(subCategories);
 
     return Container(
       decoration: BoxDecoration(
@@ -183,7 +274,10 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Add Utility Bill', style: AppTypography.sectionTitle),
+                    Text(
+                      'Add Utility Bill',
+                      style: AppTypography.sectionTitle.copyWith(color: context.textPrimary),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
@@ -209,21 +303,22 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Utility Type (Full-width for non-cramped display)
+                // Category / Type (merged with active Bills & Expenses sub-categories)
                 DropdownButtonFormField<String>(
+                  key: const Key('bill_type_dropdown'),
                   isExpanded: true,
                   initialValue: _utilityType,
-                  decoration: const InputDecoration(labelText: 'Utility Type'),
-                  items: UtilityType.values.map((type) {
+                  decoration: const InputDecoration(labelText: 'Category / Type'),
+                  items: typeOptions.map((option) {
                     return DropdownMenuItem<String>(
-                      value: type.value,
+                      value: option.value,
                       child: Row(
                         children: [
-                          Icon(type.icon, size: 18, color: context.brandAccent),
+                          Icon(option.icon, size: 18, color: context.brandAccent),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              type.label,
+                              option.label,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -235,9 +330,16 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                     if (val != null) setState(() => _utilityType = val);
                   },
                 ),
+                if (subCategoriesAsync.hasError) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Custom categories unavailable: ${subCategoriesAsync.error}',
+                    style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+                  ),
+                ],
                 const SizedBox(height: 12),
 
-                // Responsive Currency Selector (flex 3) & Amount Due (flex 7) -> No truncation!
+                // Responsive Currency Selector (flex 3) & Amount Due (flex 7)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -286,32 +388,6 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Provider & Account/Ref No.
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _providerController,
-                        decoration: const InputDecoration(
-                          labelText: 'Provider / Issuer',
-                          hintText: 'e.g. Meralco, PLDT',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _accountController,
-                        decoration: const InputDecoration(
-                          labelText: 'Account / Ref No.',
-                          hintText: 'e.g. 1029384756',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
                 // Due Date Selector (Dark-adapted touch target >= 48px)
                 InkWell(
                   onTap: () => _pickDueDate(context),
@@ -345,115 +421,13 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // Billing Period Selectors (High-contrast, touch-friendly cards >= 44px)
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        key: const Key('billing_period_start_card'),
-                        onTap: () => _pickBillingPeriod(context, isStart: true),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 44),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: context.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: context.borderSubtle),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.date_range_outlined, size: 16, color: context.brandAccent),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _billingPeriodStart == null
-                                      ? 'Period Start'
-                                      : '${_billingPeriodStart!.month}/${_billingPeriodStart!.day}/${_billingPeriodStart!.year}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _billingPeriodStart == null ? context.textSecondary : context.textPrimary,
-                                    fontWeight: _billingPeriodStart == null ? FontWeight.normal : FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (_billingPeriodStart != null)
-                                GestureDetector(
-                                  onTap: () => setState(() => _billingPeriodStart = null),
-                                  child: Icon(Icons.close, size: 14, color: context.textSecondary),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: InkWell(
-                        key: const Key('billing_period_end_card'),
-                        onTap: () => _pickBillingPeriod(context, isStart: false),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          constraints: const BoxConstraints(minHeight: 44),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: context.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: context.borderSubtle),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.date_range_outlined, size: 16, color: context.brandAccent),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _billingPeriodEnd == null
-                                      ? 'Period End'
-                                      : '${_billingPeriodEnd!.month}/${_billingPeriodEnd!.day}/${_billingPeriodEnd!.year}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _billingPeriodEnd == null ? context.textSecondary : context.textPrimary,
-                                    fontWeight: _billingPeriodEnd == null ? FontWeight.normal : FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (_billingPeriodEnd != null)
-                                GestureDetector(
-                                  onTap: () => setState(() => _billingPeriodEnd = null),
-                                  child: Icon(Icons.close, size: 14, color: context.textSecondary),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Linked Asset Selector (Clean reusable widget with async states)
-                AssetPickerTile(
-                  selectedAssetRecordId: _selectedAssetRecordId,
-                  noneLabel: 'None (General Household Bill)',
-                  onAssetChanged: (id) => setState(() => _selectedAssetRecordId = id),
-                ),
-
-                // Notes
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes / Payment Instructions',
-                    hintText: 'e.g. Disconnection warning if unpaid by due date',
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 24),
+                // Collapsible Billing Details & Notes
+                _buildBillingDetailsDrawer(context),
+                const SizedBox(height: 20),
 
                 // Save Button
                 ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : () => _submit(typeOptions),
                   child: _isSubmitting
                       ? const SizedBox(
                           height: 20,
@@ -468,6 +442,200 @@ class _AddBillSheetState extends ConsumerState<AddBillSheet> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBillingDetailsDrawer(BuildContext context) {
+    final hasExtraData = _providerController.text.trim().isNotEmpty ||
+        _accountController.text.trim().isNotEmpty ||
+        _billingPeriodStart != null ||
+        _billingPeriodEnd != null ||
+        _selectedAssetRecordId != null ||
+        _notesController.text.trim().isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            key: const Key('bill_more_details_toggle'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _isMoreDetailsExpanded = !_isMoreDetailsExpanded),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 46),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.tune_rounded, size: 17, color: context.brandAccent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Billing Details & Notes',
+                        style: AppTypography.cardTitle.copyWith(
+                          fontSize: 13,
+                          color: context.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (hasExtraData) ...[
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: context.brandAccent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Icon(
+                      _isMoreDetailsExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: context.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_isMoreDetailsExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _providerController,
+                          decoration: InputDecoration(
+                            labelText: 'Provider / Issuer',
+                            hintText: 'e.g. Meralco, PLDT',
+                            filled: true,
+                            fillColor: context.surfaceCard,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _accountController,
+                          decoration: InputDecoration(
+                            labelText: 'Account / Ref No.',
+                            hintText: 'e.g. 1029384756',
+                            filled: true,
+                            fillColor: context.surfaceCard,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildBillingPeriodRow(context),
+                  const SizedBox(height: 10),
+                  AssetPickerTile(
+                    selectedAssetRecordId: _selectedAssetRecordId,
+                    noneLabel: 'None (General Household Bill)',
+                    onAssetChanged: (id) => setState(() => _selectedAssetRecordId = id),
+                  ),
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: InputDecoration(
+                      labelText: 'Notes / Payment Instructions',
+                      hintText: 'e.g. Disconnection warning if unpaid by due date',
+                      filled: true,
+                      fillColor: context.surfaceCard,
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBillingPeriodRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildPeriodCard(
+            context: context,
+            cardKey: const Key('billing_period_start_card'),
+            date: _billingPeriodStart,
+            placeholder: 'Period Start',
+            onTap: () => _pickBillingPeriod(context, isStart: true),
+            onClear: () => setState(() => _billingPeriodStart = null),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildPeriodCard(
+            context: context,
+            cardKey: const Key('billing_period_end_card'),
+            date: _billingPeriodEnd,
+            placeholder: 'Period End',
+            onTap: () => _pickBillingPeriod(context, isStart: false),
+            onClear: () => setState(() => _billingPeriodEnd = null),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodCard({
+    required BuildContext context,
+    required Key cardKey,
+    required DateTime? date,
+    required String placeholder,
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    return InkWell(
+      key: cardKey,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: context.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.borderSubtle),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.date_range_outlined, size: 16, color: context.brandAccent),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                date == null ? placeholder : '${date.month}/${date.day}/${date.year}',
+                style: AppTypography.caption.copyWith(
+                  color: date == null ? context.textSecondary : context.textPrimary,
+                  fontWeight: date == null ? FontWeight.normal : FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (date != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close, size: 14, color: context.textSecondary),
+              ),
+          ],
         ),
       ),
     );

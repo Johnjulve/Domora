@@ -178,7 +178,7 @@ void main() {
       await tester.tap(find.text('Vehicles').last);
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(TextFormField, 'Starting / Current Odometer (km)'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'Current Odometer (km)'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'PMS Distance (km)'), findsOneWidget);
       expect(find.text('PMS Time Limit'), findsOneWidget);
 

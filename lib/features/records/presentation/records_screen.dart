@@ -20,6 +20,7 @@ import '../../vault/domain/document_item.dart';
 import '../../vault/presentation/vault_screen.dart';
 import '../domain/record.dart';
 import 'widgets/manage_categories_sheet.dart';
+import 'widgets/quick_add_record_sheet.dart';
 import 'widgets/record_section_card.dart';
 
 class RecordsScreen extends ConsumerStatefulWidget {
@@ -77,14 +78,10 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
         title: const Text('Life Records'),
         actions: [
           IconButton(
-            icon: Icon(Icons.receipt_long_outlined, color: context.brandAccent),
-            tooltip: 'Add Utility Bill',
-            onPressed: () => _openAddBillModal(context),
-          ),
-          IconButton(
+            key: const Key('records_quick_add_button'),
             icon: Icon(Icons.add_circle_outline, color: context.brandAccent),
             tooltip: 'Add Record',
-            onPressed: () => _openAddAssetModal(context),
+            onPressed: () => _openQuickAddModal(context),
           ),
         ],
       ),
@@ -802,6 +799,34 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
+  Future<void> _openQuickAddModal(BuildContext context) async {
+    final action = await showModalBottomSheet<QuickAddAction>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const QuickAddRecordSheet(),
+    );
+    if (action == null || !context.mounted) return;
+
+    switch (action.kind) {
+      case QuickAddKind.bill:
+        _openAddBillModal(context);
+      case QuickAddKind.expense:
+        _openAddExpenseModal(
+          context,
+          initialExpenseCategory: ExpenseCategory.other.value,
+        );
+      case QuickAddKind.maintenance:
+        _openAddExpenseModal(
+          context,
+          initialExpenseCategory: ExpenseCategory.maintenance.value,
+          prioritizeAssetLink: true,
+        );
+      case QuickAddKind.asset:
+        _openAddAssetModal(context, initialCategoryId: action.categoryId);
+    }
+  }
+
   void _openAddBillModal(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -812,13 +837,30 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
-  void _openAddAssetModal(BuildContext context) {
+  void _openAddExpenseModal(
+    BuildContext context, {
+    String? initialExpenseCategory,
+    bool prioritizeAssetLink = false,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       isDismissible: false,
       backgroundColor: Colors.transparent,
-      builder: (_) => const AddAssetSheet(),
+      builder: (_) => AddExpenseSheet(
+        initialExpenseCategory: initialExpenseCategory,
+        prioritizeAssetLink: prioritizeAssetLink,
+      ),
+    );
+  }
+
+  void _openAddAssetModal(BuildContext context, {String? initialCategoryId}) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddAssetSheet(initialCategoryId: initialCategoryId),
     );
   }
 
@@ -1043,7 +1085,9 @@ class _CustomFieldEntryInput {
 }
 
 class AddAssetSheet extends ConsumerStatefulWidget {
-  const AddAssetSheet({super.key});
+  final String? initialCategoryId;
+
+  const AddAssetSheet({super.key, this.initialCategoryId});
 
   @override
   ConsumerState<AddAssetSheet> createState() => _AddAssetSheetState();
@@ -1062,6 +1106,14 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
   final _pmsDistanceController = TextEditingController(text: '5000');
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
+
+  // Family member template controllers & state
+  final _familyPhoneController = TextEditingController();
+  final _familyIdNumberController = TextEditingController();
+  final _familyMedicalNotesController = TextEditingController();
+  String _familyRelationship = 'Spouse';
+  DateTime? _familyBirthdate;
+  String _familyBloodType = 'Unknown';
 
   int _pmsMonths = 6;
   String? _selectedCategoryId;
@@ -1085,6 +1137,35 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     'SGD',
   ];
 
+  static const List<String> _familyRelationships = [
+    'Spouse',
+    'Child',
+    'Parent',
+    'Sibling',
+    'Pet',
+    'Other',
+  ];
+
+  static const List<String> _bloodTypes = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+    'Unknown',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialCategoryId;
+    _selectedCategoryId =
+        initial == CategoryRepositoryImpl.billsExpensesCategoryId ? null : initial;
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -1098,10 +1179,26 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     _pmsDistanceController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
+    _familyPhoneController.dispose();
+    _familyIdNumberController.dispose();
+    _familyMedicalNotesController.dispose();
     for (final cf in _customFields) {
       cf.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _pickFamilyBirthdate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _familyBirthdate ?? DateTime(now.year - 25, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked != null) {
+      setState(() => _familyBirthdate = picked);
+    }
   }
 
   DateTime _addCalendarMonths(DateTime from, int months) {
@@ -1239,7 +1336,42 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     });
   }
 
-  Future<void> _submit() async {
+  Map<String, String> _buildCustomFieldMap({required String? categoryId}) {
+    final customFieldMap = <String, String>{};
+    if (categoryId == 'cat-family') {
+      customFieldMap['Relationship'] = _familyRelationship;
+      if (_familyBirthdate != null) {
+        customFieldMap['Birthdate'] = _formatDate(_familyBirthdate!);
+      }
+      customFieldMap['Blood Type'] = _familyBloodType;
+      if (_familyPhoneController.text.trim().isNotEmpty) {
+        customFieldMap['Contact / Emergency Phone'] = _familyPhoneController.text.trim();
+      }
+      if (_familyIdNumberController.text.trim().isNotEmpty) {
+        customFieldMap['ID / Insurance / PhilHealth No.'] = _familyIdNumberController.text.trim();
+      }
+      if (_familyMedicalNotesController.text.trim().isNotEmpty) {
+        customFieldMap['Medical Notes & Allergies'] = _familyMedicalNotesController.text.trim();
+      }
+    } else {
+      if (categoryId == 'cat-properties' && _deedNumberController.text.trim().isNotEmpty) {
+        customFieldMap['Title / Deed Number'] = _deedNumberController.text.trim();
+      }
+      if (categoryId == 'cat-vehicles' && _licensePlateController.text.trim().isNotEmpty) {
+        customFieldMap['License Plate'] = _licensePlateController.text.trim();
+      }
+    }
+    for (final cf in _customFields) {
+      final k = cf.keyController.text.trim();
+      final v = cf.valueController.text.trim();
+      if (k.isNotEmpty && v.isNotEmpty) {
+        customFieldMap[k] = v;
+      }
+    }
+    return customFieldMap;
+  }
+
+  Future<void> _submit(String? effectiveCategoryId) async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
@@ -1249,58 +1381,51 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
       final recordId = const Uuid().v4();
       final now = DateTime.now().toUtc();
 
-      final parsedAmount = double.tryParse(_amountController.text.trim());
+      final isFamily = effectiveCategoryId == 'cat-family';
+      final isVehicle = effectiveCategoryId == 'cat-vehicles';
+      final parsedAmount = isFamily ? null : double.tryParse(_amountController.text.trim());
       final int? amountMinor = parsedAmount != null && parsedAmount >= 0
           ? (parsedAmount * 100).round()
           : null;
 
-      final isVehicle = _selectedCategoryId == 'cat-vehicles';
       final parsedOdometer = isVehicle ? int.tryParse(_odometerController.text.trim()) : null;
       final parsedPmsDistance = isVehicle ? int.tryParse(_pmsDistanceController.text.trim()) : null;
-
       final initialTargetOdo = (isVehicle && parsedOdometer != null && parsedPmsDistance != null)
           ? parsedOdometer + parsedPmsDistance
           : null;
       final initialDueDate = isVehicle ? _addCalendarMonths(now, _pmsMonths) : null;
-
-      final customFieldMap = <String, String>{};
-      if (_isProperty && _deedNumberController.text.trim().isNotEmpty) {
-        customFieldMap['Title / Deed Number'] = _deedNumberController.text.trim();
-      }
-      if (_isVehicle && _licensePlateController.text.trim().isNotEmpty) {
-        customFieldMap['License Plate'] = _licensePlateController.text.trim();
-      }
-      for (final cf in _customFields) {
-        final k = cf.keyController.text.trim();
-        final v = cf.valueController.text.trim();
-        if (k.isNotEmpty && v.isNotEmpty) {
-          customFieldMap[k] = v;
-        }
-      }
+      final customFieldMap = _buildCustomFieldMap(categoryId: effectiveCategoryId);
 
       await repo.createAssetRecord(
         record: Record(
           id: recordId,
           workspaceId: AppConstants.defaultWorkspaceId,
-          categoryId: _selectedCategoryId,
+          categoryId: effectiveCategoryId,
           recordType: 'asset',
           title: _titleController.text.trim(),
-          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          description: isFamily
+              ? (_familyMedicalNotesController.text.trim().isEmpty
+                  ? null
+                  : _familyMedicalNotesController.text.trim())
+              : (_descriptionController.text.trim().isEmpty
+                  ? null
+                  : _descriptionController.text.trim()),
           createdAt: now,
           updatedAt: now,
         ),
         asset: Asset(
           recordId: recordId,
-          brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
-          model: _modelController.text.trim().isEmpty ? null : _modelController.text.trim(),
-          serialNumber: _serialController.text.trim().isEmpty ? null : _serialController.text.trim(),
-          condition: _condition,
-          purchaseDate: _purchaseDate,
-          purchaseAmountMinor: amountMinor,
-          purchaseCurrency: _selectedCurrency,
-          locationDescription:
-              _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
-          warrantyExpiryDate: _warrantyExpiryDate,
+          brand: isFamily || _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
+          model: isFamily || _modelController.text.trim().isEmpty ? null : _modelController.text.trim(),
+          serialNumber: isFamily || _serialController.text.trim().isEmpty ? null : _serialController.text.trim(),
+          condition: isFamily ? null : _condition,
+          purchaseDate: isFamily ? null : _purchaseDate,
+          purchaseAmountMinor: isFamily ? null : amountMinor,
+          purchaseCurrency: isFamily ? AppConstants.defaultCurrency : _selectedCurrency,
+          locationDescription: isFamily || _locationController.text.trim().isEmpty
+              ? null
+              : _locationController.text.trim(),
+          warrantyExpiryDate: isFamily ? null : _warrantyExpiryDate,
           odometerReading: isVehicle ? parsedOdometer : null,
           pmsDistanceIntervalKm: isVehicle ? parsedPmsDistance : null,
           pmsTimeIntervalMonths: isVehicle ? _pmsMonths : null,
@@ -1326,16 +1451,39 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     }
   }
 
-  bool get _isVehicle => _selectedCategoryId == 'cat-vehicles';
-  bool get _isProperty => _selectedCategoryId == 'cat-properties';
-  bool get _isApplianceOrElectronics =>
-      _selectedCategoryId == 'cat-appliances' || _selectedCategoryId == 'cat-electronics';
-  bool get _isFurnitureOrTools =>
-      _selectedCategoryId == 'cat-furniture' || _selectedCategoryId == 'cat-tools';
+  String? _resolveEffectiveCategoryId(AsyncValue<List<Category>> categoriesAsync) {
+    final loaded = categoriesAsync.asData?.value;
+    if (loaded == null) {
+      return _selectedCategoryId == CategoryRepositoryImpl.billsExpensesCategoryId
+          ? null
+          : _selectedCategoryId;
+    }
+    final isActiveAssetCategory = loaded.any(
+      (c) => c.id == _selectedCategoryId && c.id != CategoryRepositoryImpl.billsExpensesCategoryId,
+    );
+    return isActiveAssetCategory ? _selectedCategoryId : null;
+  }
+
+  String _headerTitleFor(String? categoryId) {
+    switch (categoryId) {
+      case 'cat-vehicles':
+        return 'Add Vehicle';
+      case 'cat-appliances':
+        return 'Add Appliance';
+      case 'cat-family':
+        return 'Add Family Member';
+      case 'cat-properties':
+        return 'Add Property';
+      default:
+        return 'New Asset Record';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(defaultCategoriesStreamProvider);
+    final effectiveCategoryId = _resolveEffectiveCategoryId(categoriesAsync);
+    final isFamily = effectiveCategoryId == 'cat-family';
     final theme = Theme.of(context);
     final sheetBg = theme.bottomSheetTheme.backgroundColor ?? theme.cardColor;
 
@@ -1361,7 +1509,10 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('New Asset Record', style: AppTypography.sectionTitle),
+                    Text(
+                      _headerTitleFor(effectiveCategoryId),
+                      style: AppTypography.sectionTitle.copyWith(color: context.textPrimary),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
@@ -1371,37 +1522,48 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Asset Title *', hintText: 'e.g. Living Room Smart TV'),
+                  decoration: InputDecoration(
+                    labelText: isFamily ? 'Full Name *' : 'Asset Title *',
+                    hintText: isFamily ? 'e.g. Maria Santos' : 'e.g. Living Room Smart TV',
+                  ),
                   autofocus: true,
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
-                      return 'Title is required';
+                      return isFamily ? 'Full name is required' : 'Title is required';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 8),
-                // Category Selector & "+ Add New Category" action
+                // Category Selector & "+ Add New Category" action (excluding Bills & Expenses)
                 categoriesAsync.when(
                   loading: () => const SizedBox.shrink(),
                   error: (_, _) => const SizedBox.shrink(),
                   data: (categories) {
+                    final assetCategories = categories
+                        .where((cat) => cat.id != CategoryRepositoryImpl.billsExpensesCategoryId)
+                        .toList();
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            initialValue: _selectedCategoryId,
+                            key: const Key('asset_category_dropdown'),
+                            isExpanded: true,
+                            initialValue: effectiveCategoryId,
                             decoration: const InputDecoration(labelText: 'Category'),
                             items: [
                               const DropdownMenuItem<String>(
                                 value: null,
-                                child: Text('General / Uncategorized'),
+                                child: Text(
+                                  'General / Uncategorized',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              ...categories.map(
+                              ...assetCategories.map(
                                 (cat) => DropdownMenuItem<String>(
                                   value: cat.id,
-                                  child: Text(cat.name),
+                                  child: Text(cat.name, overflow: TextOverflow.ellipsis),
                                 ),
                               ),
                             ],
@@ -1420,23 +1582,25 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                 ),
                 const SizedBox(height: 8),
                 // Category-Specific Template Fields (Preserving all controller values non-destructively)
-                _buildTemplateFields(context),
-                const SizedBox(height: 8),
-                // Common Acquisition & Financial Section
-                _buildAcquisitionSection(context),
+                _buildTemplateFields(context, effectiveCategoryId),
+                if (!isFamily) ...[
+                  const SizedBox(height: 8),
+                  // Common Acquisition & Financial Section
+                  _buildAcquisitionSection(context),
+                ],
                 const SizedBox(height: 8),
                 // User-Defined Custom Fields Section
                 _buildCustomFieldsSection(context),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : () => _submit(effectiveCategoryId),
                   child: _isSubmitting
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('Save Asset Record'),
+                      : Text(isFamily ? 'Save Family Member' : 'Save Asset Record'),
                 ),
               ],
             ),
@@ -1446,308 +1610,21 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     );
   }
 
-  Widget _buildTemplateFields(BuildContext context) {
-    if (_isVehicle) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: context.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.directions_car_outlined, size: 18, color: context.brandAccent),
-                const SizedBox(width: 8),
-                Text(
-                  'Vehicle PMS Limits & Odometer',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 14),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _brandController,
-                    decoration: const InputDecoration(labelText: 'Brand / Make', hintText: 'e.g. Toyota'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _modelController,
-                    decoration: const InputDecoration(labelText: 'Model', hintText: 'e.g. RAV4 Hybrid'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _serialController,
-                    decoration: const InputDecoration(labelText: 'VIN / Serial Number', hintText: 'e.g. 4T1B...'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _licensePlateController,
-                    decoration: const InputDecoration(labelText: 'License Plate', hintText: 'e.g. ABC-1234'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _odometerController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Starting / Current Odometer (km)',
-                hintText: 'e.g. 15000',
-                prefixIcon: Icon(Icons.speed, size: 20),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _pmsDistanceController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'PMS Distance (km)',
-                      hintText: 'e.g. 5000',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _pmsMonths,
-                    decoration: const InputDecoration(labelText: 'PMS Time Limit'),
-                    items: const [
-                      DropdownMenuItem(value: 3, child: Text('Every 3 mos')),
-                      DropdownMenuItem(value: 6, child: Text('Every 6 mos')),
-                      DropdownMenuItem(value: 12, child: Text('Every 12 mos')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) setState(() => _pmsMonths = val);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _locationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Parking / Garage Location',
-                      hintText: 'e.g. Main Garage Bay 1',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildConditionDropdown(),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+  Widget _buildTemplateFields(BuildContext context, String? categoryId) {
+    if (categoryId == 'cat-family') {
+      return _buildFamilyTemplateFields(context);
     }
-
-    if (_isProperty) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: context.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.home_work_outlined, size: 18, color: context.brandAccent),
-                const SizedBox(width: 8),
-                Text(
-                  'Property Details',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 14),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'Address / Location',
-                hintText: 'e.g. 123 Heritage Way',
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _deedNumberController,
-                    decoration: const InputDecoration(
-                      labelText: 'Title / Deed Number',
-                      hintText: 'e.g. TCT-987654',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildConditionDropdown(),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+    if (categoryId == 'cat-vehicles') {
+      return _buildVehicleTemplateFields(context);
     }
-
-    if (_isApplianceOrElectronics) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: context.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.devices_outlined, size: 18, color: context.brandAccent),
-                const SizedBox(width: 8),
-                Text(
-                  'Appliance / Electronic Details',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 14),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _brandController,
-                    decoration: const InputDecoration(labelText: 'Brand', hintText: 'e.g. Sony'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _modelController,
-                    decoration: const InputDecoration(labelText: 'Model', hintText: 'e.g. Bravia 65"'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _serialController,
-                    decoration: const InputDecoration(labelText: 'Serial No.', hintText: 'e.g. SN-49281'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildConditionDropdown(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(labelText: 'Location / Room', hintText: 'e.g. Living Room / Kitchen'),
-            ),
-          ],
-        ),
-      );
+    if (categoryId == 'cat-properties') {
+      return _buildPropertyTemplateFields(context);
     }
-
-    if (_isFurnitureOrTools) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: context.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.home_repair_service_outlined, size: 18, color: context.brandAccent),
-                const SizedBox(width: 8),
-                Text(
-                  'Furniture & Tools Details',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 14),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _brandController,
-                    decoration: const InputDecoration(labelText: 'Brand / Maker', hintText: 'e.g. Herman Miller'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _modelController,
-                    decoration: const InputDecoration(labelText: 'Model / Type', hintText: 'e.g. Aeron Chair'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _locationController,
-                    decoration: const InputDecoration(labelText: 'Location / Room', hintText: 'e.g. Home Office / Workshop'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildConditionDropdown(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _serialController,
-              decoration: const InputDecoration(
-                labelText: 'Serial / Part No. (optional)',
-                hintText: 'e.g. SN-8821',
-              ),
-            ),
-          ],
-        ),
-      );
+    if (categoryId == 'cat-appliances' || categoryId == 'cat-electronics') {
+      return _buildApplianceTemplateFields(context);
+    }
+    if (categoryId == 'cat-furniture' || categoryId == 'cat-tools') {
+      return _buildFurnitureTemplateFields(context);
     }
 
     // General / Default Template
@@ -1794,15 +1671,562 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
     );
   }
 
+  Widget _buildVehicleTemplateFields(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.directions_car_outlined, size: 18, color: context.brandAccent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Vehicle PMS Limits & Odometer',
+                  style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _brandController,
+                  decoration: InputDecoration(
+                    labelText: 'Brand / Make',
+                    hintText: 'e.g. Toyota',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _modelController,
+                  decoration: InputDecoration(
+                    labelText: 'Model',
+                    hintText: 'e.g. RAV4 Hybrid',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _serialController,
+                  decoration: InputDecoration(
+                    labelText: 'VIN / Serial',
+                    hintText: 'e.g. 4T1B...',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _licensePlateController,
+                  decoration: InputDecoration(
+                    labelText: 'License Plate',
+                    hintText: 'e.g. ABC-1234',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _odometerController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Current Odometer (km)',
+              hintText: 'e.g. 15000',
+              prefixIcon: const Icon(Icons.speed, size: 20),
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _pmsDistanceController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'PMS Distance (km)',
+                    hintText: 'e.g. 5000',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  key: const Key('vehicle_pms_time_dropdown'),
+                  isExpanded: true,
+                  initialValue: _pmsMonths,
+                  decoration: InputDecoration(
+                    labelText: 'PMS Time Limit',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text('3 months', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 6,
+                      child: Text('6 months', overflow: TextOverflow.ellipsis),
+                    ),
+                    DropdownMenuItem(
+                      value: 12,
+                      child: Text('12 months', overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _pmsMonths = val);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Parking / Garage',
+                    hintText: 'e.g. Main Garage Bay 1',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildConditionDropdown(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPropertyTemplateFields(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.home_work_outlined, size: 18, color: context.brandAccent),
+              const SizedBox(width: 8),
+              Text(
+                'Property Details',
+                style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _locationController,
+            decoration: InputDecoration(
+              labelText: 'Address / Location',
+              hintText: 'e.g. 123 Heritage Way',
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _deedNumberController,
+                  decoration: InputDecoration(
+                    labelText: 'Title / Deed Number',
+                    hintText: 'e.g. TCT-987654',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildConditionDropdown(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplianceTemplateFields(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.devices_outlined, size: 18, color: context.brandAccent),
+              const SizedBox(width: 8),
+              Text(
+                'Appliance / Electronic Details',
+                style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _brandController,
+                  decoration: InputDecoration(
+                    labelText: 'Brand',
+                    hintText: 'e.g. Sony',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _modelController,
+                  decoration: InputDecoration(
+                    labelText: 'Model',
+                    hintText: 'e.g. Bravia 65"',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _serialController,
+                  decoration: InputDecoration(
+                    labelText: 'Serial No.',
+                    hintText: 'e.g. SN-49281',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildConditionDropdown(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _locationController,
+            decoration: InputDecoration(
+              labelText: 'Location / Room',
+              hintText: 'e.g. Living Room / Kitchen',
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFurnitureTemplateFields(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.home_repair_service_outlined, size: 18, color: context.brandAccent),
+              const SizedBox(width: 8),
+              Text(
+                'Furniture & Tools Details',
+                style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _brandController,
+                  decoration: InputDecoration(
+                    labelText: 'Brand / Maker',
+                    hintText: 'e.g. Herman Miller',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _modelController,
+                  decoration: InputDecoration(
+                    labelText: 'Model / Type',
+                    hintText: 'e.g. Aeron Chair',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location / Room',
+                    hintText: 'e.g. Home Office / Workshop',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildConditionDropdown(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _serialController,
+            decoration: InputDecoration(
+              labelText: 'Serial / Part No. (optional)',
+              hintText: 'e.g. SN-8821',
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFamilyTemplateFields(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.people_outlined, size: 18, color: context.brandAccent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Family Member Details',
+                  style: AppTypography.cardTitle.copyWith(fontSize: 14, color: context.textPrimary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: const Key('family_relationship_dropdown'),
+                  isExpanded: true,
+                  initialValue: _familyRelationship,
+                  decoration: InputDecoration(
+                    labelText: 'Relationship',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                  items: _familyRelationships
+                      .map(
+                        (rel) => DropdownMenuItem(
+                          value: rel,
+                          child: Text(rel, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _familyRelationship = val);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: const Key('family_blood_type_dropdown'),
+                  isExpanded: true,
+                  initialValue: _familyBloodType,
+                  decoration: InputDecoration(
+                    labelText: 'Blood Type',
+                    filled: true,
+                    fillColor: context.surfaceCard,
+                  ),
+                  items: _bloodTypes
+                      .map(
+                        (bt) => DropdownMenuItem(
+                          value: bt,
+                          child: Text(bt, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _familyBloodType = val);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            key: const Key('family_birthdate_picker'),
+            onTap: _pickFamilyBirthdate,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: context.surfaceCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.cake_outlined, size: 18, color: context.brandAccent),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _familyBirthdate == null
+                          ? 'Birthdate (optional)'
+                          : 'Birthdate: ${_formatDate(_familyBirthdate!)}',
+                      style: AppTypography.bodyPrimary.copyWith(
+                        color: _familyBirthdate == null
+                            ? context.textSecondary
+                            : context.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (_familyBirthdate != null)
+                    GestureDetector(
+                      onTap: () => setState(() => _familyBirthdate = null),
+                      child: Icon(Icons.close, size: 16, color: context.textSecondary),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            key: const Key('family_phone_field'),
+            controller: _familyPhoneController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: 'Contact / Emergency Phone',
+              hintText: 'e.g. +63 917 123 4567',
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            key: const Key('family_id_number_field'),
+            controller: _familyIdNumberController,
+            decoration: InputDecoration(
+              labelText: 'ID / Insurance / PhilHealth No.',
+              hintText: 'e.g. 12-345678901-2',
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            key: const Key('family_medical_notes_field'),
+            controller: _familyMedicalNotesController,
+            decoration: InputDecoration(
+              labelText: 'Medical Notes & Allergies',
+              hintText: 'e.g. Penicillin allergy, primary doctor...',
+              filled: true,
+              fillColor: context.surfaceCard,
+            ),
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildConditionDropdown() {
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       initialValue: _condition,
       decoration: const InputDecoration(labelText: 'Condition'),
       items: const [
-        DropdownMenuItem(value: 'Mint', child: Text('Mint')),
-        DropdownMenuItem(value: 'Good', child: Text('Good')),
-        DropdownMenuItem(value: 'Fair', child: Text('Fair')),
-        DropdownMenuItem(value: 'Needs Repair', child: Text('Needs Repair')),
+        DropdownMenuItem(value: 'Mint', child: Text('Mint', overflow: TextOverflow.ellipsis)),
+        DropdownMenuItem(value: 'Good', child: Text('Good', overflow: TextOverflow.ellipsis)),
+        DropdownMenuItem(value: 'Fair', child: Text('Fair', overflow: TextOverflow.ellipsis)),
+        DropdownMenuItem(
+          value: 'Needs Repair',
+          child: Text('Needs Repair', overflow: TextOverflow.ellipsis),
+        ),
       ],
       onChanged: (val) {
         if (val != null) setState(() => _condition = val);
@@ -1888,9 +2312,13 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                 children: [
                   Icon(Icons.verified_user_outlined, size: 16, color: context.brandAccent),
                   const SizedBox(width: 8),
-                  Text(
-                    'Warranty, Dates & Notes',
-                    style: AppTypography.cardTitle.copyWith(fontSize: 13),
+                  Expanded(
+                    child: Text(
+                      'Warranty, Dates & Notes',
+                      style: AppTypography.cardTitle.copyWith(fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   if (hasData) ...[
                     const SizedBox(width: 6),
@@ -1903,7 +2331,7 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                       ),
                     ),
                   ],
-                  const Spacer(),
+                  const SizedBox(width: 6),
                   Icon(
                     isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 20,
@@ -1925,6 +2353,7 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(0, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             side: BorderSide(color: context.borderSubtle),
                           ),
                           onPressed: _pickPurchaseDate,
@@ -1934,11 +2363,16 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                                 ? 'Purchase Date'
                                 : 'Pur: ${_formatDate(_purchaseDate!)}',
                             style: const TextStyle(fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
                       if (_purchaseDate != null)
                         IconButton(
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          padding: EdgeInsets.zero,
                           icon: const Icon(Icons.clear, size: 16),
                           tooltip: 'Clear Purchase Date',
                           onPressed: () => setState(() => _purchaseDate = null),
@@ -1948,6 +2382,7 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(0, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             side: BorderSide(color: context.borderSubtle),
                           ),
                           onPressed: _pickWarrantyExpiryDate,
@@ -1957,11 +2392,16 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
                                 ? 'Warranty Expiry'
                                 : 'War: ${_formatDate(_warrantyExpiryDate!)}',
                             style: const TextStyle(fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
                       if (_warrantyExpiryDate != null)
                         IconButton(
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          padding: EdgeInsets.zero,
                           icon: const Icon(Icons.clear, size: 16),
                           tooltip: 'Clear Warranty Expiry Date',
                           onPressed: () => setState(() => _warrantyExpiryDate = null),
@@ -2001,20 +2441,28 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.tune_outlined, size: 16, color: context.brandAccent),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Custom Fields (${_customFields.length})',
-                      style: AppTypography.cardTitle.copyWith(fontSize: 13),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.tune_outlined, size: 16, color: context.brandAccent),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Custom Fields (${_customFields.length})',
+                          style: AppTypography.cardTitle.copyWith(fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 TextButton.icon(
-                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
                   onPressed: () {
                     setState(() {
                       _isCustomFieldsExpanded = true;
@@ -2244,7 +2692,13 @@ class AssetDetailSheet extends ConsumerWidget {
                           ),
                         ],
                       ],
-                      if (record.description != null && record.description!.trim().isNotEmpty) ...[
+                      if (record.description != null &&
+                          record.description!.trim().isNotEmpty &&
+                          !customFields.any(
+                            (cf) =>
+                                cf.definition.label == 'Medical Notes & Allergies' &&
+                                cf.value.valueText.trim() == record.description!.trim(),
+                          )) ...[
                         const Divider(),
                         _buildDetailRow('Notes / Description', record.description!),
                       ],
@@ -2278,7 +2732,10 @@ class AssetDetailSheet extends ConsumerWidget {
                           isScrollControlled: true,
                           isDismissible: false,
                           enableDrag: false,
-                          builder: (_) => AddExpenseSheet(initialAssetRecordId: record.id),
+                          builder: (_) => AddExpenseSheet(
+                            initialAssetRecordId: record.id,
+                            prioritizeAssetLink: true,
+                          ),
                         );
                       },
                       icon: const Icon(Icons.receipt_long_outlined, size: 18),
