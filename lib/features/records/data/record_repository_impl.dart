@@ -180,6 +180,152 @@ class RecordRepositoryImpl implements RecordRepository {
   }
 
   @override
+  Future<void> updateAssetRecord({
+    required Record record,
+    required Asset asset,
+    Map<String, String>? customFields,
+  }) async {
+    await _db.transaction(() async {
+      final existingRecord = await (_db.select(_db.records)
+            ..where((r) => r.id.equals(record.id) & r.deletedAt.isNull()))
+          .getSingleOrNull();
+      if (existingRecord == null) {
+        throw StateError('Active record not found for id: ${record.id}');
+      }
+      if (existingRecord.recordType != 'asset') {
+        throw StateError(
+          'Cannot update non-asset record "${record.id}" (type: ${existingRecord.recordType})',
+        );
+      }
+
+      final now = DateTime.now().toUtc();
+
+      // Update only editable Record attributes; preserve locked categoryId & recordType.
+      await (_db.update(_db.records)
+            ..where((r) => r.id.equals(record.id) & r.deletedAt.isNull()))
+          .write(
+        RecordsCompanion(
+          title: Value(record.title),
+          description: Value(record.description),
+          updatedAt: Value(now),
+        ),
+      );
+
+      // Update only editable Asset columns; preserve locked brand, model & serialNumber.
+      final updatedAssetRows = await (_db.update(_db.assets)
+            ..where((a) => a.recordId.equals(record.id)))
+          .write(
+        AssetsCompanion(
+          condition: Value(asset.condition),
+          locationDescription: Value(asset.locationDescription),
+          purchaseDate: Value(asset.purchaseDate?.toUtc()),
+          purchaseAmountMinor: Value(asset.purchaseAmountMinor),
+          purchaseCurrency: Value(asset.purchaseCurrency),
+          warrantyExpiryDate: Value(asset.warrantyExpiryDate?.toUtc()),
+          odometerReading: Value(asset.odometerReading),
+          pmsDistanceIntervalKm: Value(asset.pmsDistanceIntervalKm),
+          pmsTimeIntervalMonths: Value(asset.pmsTimeIntervalMonths),
+          nextPmsOdometerTarget: Value(asset.nextPmsOdometerTarget),
+          nextPmsDueDate: Value(asset.nextPmsDueDate?.toUtc()),
+        ),
+      );
+
+      if (updatedAssetRows == 0) {
+        await _db.into(_db.assets).insert(_toAssetCompanion(asset.copyWith(recordId: record.id)));
+      }
+
+      if (customFields != null) {
+        await _syncCustomFieldValuesInternal(
+          recordId: record.id,
+          workspaceId: existingRecord.workspaceId,
+          categoryId: existingRecord.categoryId,
+          customFields: customFields,
+          now: now,
+        );
+      }
+    });
+  }
+
+  Future<String> _upsertCustomFieldValueInternal({
+    required String recordId,
+    required String workspaceId,
+    required String? categoryId,
+    required String fieldKey,
+    required String valueText,
+    required DateTime now,
+  }) async {
+    final definition = await _getOrCreateFieldDefinitionInternal(
+      workspaceId: workspaceId,
+      categoryId: categoryId,
+      fieldKey: fieldKey,
+      label: fieldKey,
+    );
+
+    final existingValue = await (_db.select(_db.fieldValues)
+          ..where(
+            (v) => v.recordId.equals(recordId) & v.fieldDefinitionId.equals(definition.id),
+          ))
+        .getSingleOrNull();
+
+    if (existingValue != null) {
+      await (_db.update(_db.fieldValues)..where((v) => v.id.equals(existingValue.id))).write(
+        FieldValuesCompanion(
+          valueText: Value(valueText),
+          updatedAt: Value(now),
+        ),
+      );
+    } else {
+      await _db.into(_db.fieldValues).insert(
+            FieldValuesCompanion.insert(
+              id: const Uuid().v4(),
+              recordId: recordId,
+              fieldDefinitionId: definition.id,
+              valueText: valueText,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    }
+    return definition.id;
+  }
+
+  Future<void> _syncCustomFieldValuesInternal({
+    required String recordId,
+    required String workspaceId,
+    required String? categoryId,
+    required Map<String, String> customFields,
+    required DateTime now,
+  }) async {
+    final retainedDefIds = <String>[];
+
+    for (final entry in customFields.entries) {
+      final trimmedKey = entry.key.trim();
+      final trimmedValue = entry.value.trim();
+      if (trimmedKey.isEmpty || trimmedValue.isEmpty) continue;
+
+      final definitionId = await _upsertCustomFieldValueInternal(
+        recordId: recordId,
+        workspaceId: workspaceId,
+        categoryId: categoryId,
+        fieldKey: trimmedKey,
+        valueText: trimmedValue,
+        now: now,
+      );
+      retainedDefIds.add(definitionId);
+    }
+
+    if (retainedDefIds.isEmpty) {
+      await (_db.delete(_db.fieldValues)..where((v) => v.recordId.equals(recordId))).go();
+    } else {
+      await (_db.delete(_db.fieldValues)
+            ..where(
+              (v) => v.recordId.equals(recordId) & v.fieldDefinitionId.isNotIn(retainedDefIds),
+            ))
+          .go();
+    }
+  }
+
+  @override
   Future<void> softDeleteRecord(String recordId) async {
     final now = DateTime.now().toUtc();
     await (_db.update(_db.records)..where((r) => r.id.equals(recordId))).write(
@@ -312,41 +458,14 @@ class RecordRepositoryImpl implements RecordRepository {
         final trimmed = entry.value.trim();
         if (trimmed.isEmpty) continue;
 
-        final definition = await _getOrCreateFieldDefinitionInternal(
+        await _upsertCustomFieldValueInternal(
+          recordId: recordId,
           workspaceId: workspaceId,
           categoryId: categoryId,
           fieldKey: entry.key,
-          label: entry.key,
+          valueText: trimmed,
+          now: now,
         );
-
-        // Check if value already exists for this record and definition
-        final existingValue = await (_db.select(_db.fieldValues)
-              ..where((v) =>
-                  v.recordId.equals(recordId) &
-                  v.fieldDefinitionId.equals(definition.id)))
-            .getSingleOrNull();
-
-        if (existingValue != null) {
-          await (_db.update(_db.fieldValues)
-                ..where((v) => v.id.equals(existingValue.id)))
-              .write(
-            FieldValuesCompanion(
-              valueText: Value(trimmed),
-              updatedAt: Value(now),
-            ),
-          );
-        } else {
-          await _db.into(_db.fieldValues).insert(
-                FieldValuesCompanion.insert(
-                  id: const Uuid().v4(),
-                  recordId: recordId,
-                  fieldDefinitionId: definition.id,
-                  valueText: trimmed,
-                  createdAt: now,
-                  updatedAt: now,
-                ),
-              );
-        }
       }
     });
   }

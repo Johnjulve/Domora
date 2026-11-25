@@ -7,6 +7,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../bills/domain/bill_item.dart';
 import '../../bills/presentation/add_bill_sheet.dart';
 import '../../bills/presentation/bill_detail_sheet.dart';
@@ -19,6 +20,7 @@ import '../../tasks/domain/task_item.dart';
 import '../../vault/domain/document_item.dart';
 import '../../vault/presentation/vault_screen.dart';
 import '../domain/record.dart';
+import 'widgets/edit_asset_sheet.dart';
 import 'widgets/manage_categories_sheet.dart';
 import 'widgets/quick_add_record_sheet.dart';
 import 'widgets/record_section_card.dart';
@@ -30,18 +32,63 @@ class RecordsScreen extends ConsumerStatefulWidget {
   ConsumerState<RecordsScreen> createState() => _RecordsScreenState();
 }
 
-class _RecordsScreenState extends ConsumerState<RecordsScreen> {
+class _RecordsScreenState extends ConsumerState<RecordsScreen>
+    with WidgetsBindingObserver {
   late final TextEditingController _searchController;
   final Set<String> _collapsedSectionIds = <String>{};
+  bool _isProcessingDueSubscriptions = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _searchController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _processDueSubscriptions());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _processDueSubscriptions();
+    }
+  }
+
+  Future<void> _processDueSubscriptions() async {
+    if (!mounted || _isProcessingDueSubscriptions) return;
+    _isProcessingDueSubscriptions = true;
+    try {
+      final loggedCount = await ref
+          .read(billRepositoryProvider)
+          .processDueSubscriptions(AppConstants.defaultWorkspaceId);
+      if (loggedCount > 0 && mounted) {
+        ref.invalidate(activeRecordsStreamProvider);
+        ref.invalidate(dashboardRecordsStreamProvider);
+        ref.invalidate(activeBillsStreamProvider);
+        ref.invalidate(dashboardBillsStreamProvider);
+        ref.invalidate(upcomingBillsStreamProvider);
+        ref.invalidate(workspaceTotalUnpaidBillsProvider);
+        ref.invalidate(activeExpensesStreamProvider);
+        ref.invalidate(dashboardExpensesStreamProvider);
+        ref.invalidate(workspaceTotalExpensesProvider);
+      }
+    } catch (e) {
+      debugPrint('Failed to process due subscriptions: $e');
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text('Failed to sync due subscriptions: $e'),
+            backgroundColor: AppColors.statusDangerStroke,
+          ),
+        );
+      }
+    } finally {
+      _isProcessingDueSubscriptions = false;
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
   }
@@ -1383,10 +1430,8 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
 
       final isFamily = effectiveCategoryId == 'cat-family';
       final isVehicle = effectiveCategoryId == 'cat-vehicles';
-      final parsedAmount = isFamily ? null : double.tryParse(_amountController.text.trim());
-      final int? amountMinor = parsedAmount != null && parsedAmount >= 0
-          ? (parsedAmount * 100).round()
-          : null;
+      final int? amountMinor =
+          isFamily ? null : CurrencyFormatter.parseMajorToMinor(_amountController.text);
 
       final parsedOdometer = isVehicle ? int.tryParse(_odometerController.text.trim()) : null;
       final parsedPmsDistance = isVehicle ? int.tryParse(_pmsDistanceController.text.trim()) : null;
@@ -2266,14 +2311,15 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
               child: TextFormField(
                 controller: _amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: const [ThousandsSeparatorInputFormatter()],
                 decoration: InputDecoration(
                   labelText: 'Purchase Amount ($_selectedCurrency)',
-                  hintText: 'e.g. 45000',
+                  hintText: 'e.g. 45,000',
                 ),
                 validator: (val) {
                   if (val != null && val.trim().isNotEmpty) {
-                    final parsed = double.tryParse(val.trim());
-                    if (parsed == null || parsed < 0) {
+                    final parsedMinor = CurrencyFormatter.parseMajorToMinor(val);
+                    if (parsedMinor == null) {
                       return 'Enter a valid non-negative amount';
                     }
                   }
@@ -2524,14 +2570,33 @@ class _AddAssetSheetState extends ConsumerState<AddAssetSheet> {
   }
 }
 
+final RegExp _wholeThousandsPattern = RegExp(r'\B(?=(\d{3})+(?!\d))');
+
+String _formatWholeNumber(int value) {
+  final s = value.toString();
+  if (s.length <= 3) return s;
+  return s.replaceAll(_wholeThousandsPattern, ',');
+}
+
 class AssetDetailSheet extends ConsumerWidget {
   final RecordWithAsset item;
 
   const AssetDetailSheet({super.key, required this.item});
 
+  String _formatPmsInterval(int? distanceKm, int? months) {
+    final parts = <String>[];
+    if (distanceKm != null) {
+      parts.add('${_formatWholeNumber(distanceKm)} km');
+    }
+    if (months != null) {
+      parts.add('$months ${months == 1 ? 'month' : 'months'}');
+    }
+    return parts.join(' or ');
+  }
+
   String _formatPmsTargetSummary(int? odoTarget, DateTime? dueDate) {
     final parts = <String>[];
-    if (odoTarget != null) parts.add('$odoTarget km');
+    if (odoTarget != null) parts.add('${_formatWholeNumber(odoTarget)} km');
     if (dueDate != null) {
       final monthStr = dueDate.month.toString().padLeft(2, '0');
       final dayStr = dueDate.day.toString().padLeft(2, '0');
@@ -2546,10 +2611,41 @@ class AssetDetailSheet extends ConsumerWidget {
     return '${d.year}-$monthStr-$dayStr';
   }
 
+  Future<void> _openEditSheet(
+    BuildContext context, {
+    required RecordWithAsset currentItem,
+    required List<CustomFieldEntry> customFields,
+    required String? categoryName,
+  }) async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => EditAssetSheet(
+        item: currentItem,
+        initialCustomFields: customFields,
+        categoryName: categoryName,
+      ),
+    );
+    if (saved == true && context.mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: const Text('Record updated.'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final record = item.record;
-    final asset = item.asset;
+    final liveRecords = ref.watch(dashboardRecordsStreamProvider).asData?.value;
+    final currentItem =
+        liveRecords?.where((r) => r.record.id == item.record.id).firstOrNull ?? item;
+    final record = currentItem.record;
+    final asset = currentItem.asset;
     final totalExpensesAsync = ref.watch(assetTotalExpensesProvider(record.id));
     final assetExpensesAsync = ref.watch(assetExpensesStreamProvider(record.id));
     final hasExpenseError = totalExpensesAsync.hasError;
@@ -2574,7 +2670,7 @@ class AssetDetailSheet extends ConsumerWidget {
     );
 
     final customFieldsAsync = ref.watch(recordCustomFieldsProvider(record.id));
-    final customFields = customFieldsAsync.value ?? item.customFields;
+    final customFields = customFieldsAsync.value ?? currentItem.customFields;
 
     return Container(
       decoration: BoxDecoration(
@@ -2602,6 +2698,20 @@ class AssetDetailSheet extends ConsumerWidget {
                       style: AppTypography.pageHeader.copyWith(fontSize: 22),
                     ),
                   ),
+                  if (record.recordType == 'asset')
+                    IconButton(
+                      key: const Key('edit_asset_button'),
+                      tooltip: 'Edit Record',
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: !customFieldsAsync.hasValue
+                          ? null
+                          : () => _openEditSheet(
+                                context,
+                                currentItem: currentItem,
+                                customFields: customFields,
+                                categoryName: categoryName,
+                              ),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
@@ -2641,13 +2751,19 @@ class AssetDetailSheet extends ConsumerWidget {
                       ],
                       if (asset?.odometerReading != null) ...[
                         const Divider(),
-                        _buildDetailRow('Latest Odometer', '${asset!.odometerReading} km'),
+                        _buildDetailRow(
+                          'Latest Odometer',
+                          '${_formatWholeNumber(asset!.odometerReading!)} km',
+                        ),
                       ],
                       if (asset?.pmsDistanceIntervalKm != null || asset?.pmsTimeIntervalMonths != null) ...[
                         const Divider(),
                         _buildDetailRow(
                           'PMS Interval Limits',
-                          'Every ${asset?.pmsDistanceIntervalKm ?? 5000} km or ${asset?.pmsTimeIntervalMonths ?? 6} mos',
+                          _formatPmsInterval(
+                            asset?.pmsDistanceIntervalKm,
+                            asset?.pmsTimeIntervalMonths,
+                          ),
                         ),
                       ],
                       if (asset?.nextPmsOdometerTarget != null || asset?.nextPmsDueDate != null) ...[
@@ -2669,7 +2785,10 @@ class AssetDetailSheet extends ConsumerWidget {
                         const Divider(),
                         _buildDetailRow(
                           'Estimated Value',
-                          '$currency ${(asset!.purchaseAmountMinor! / 100).toStringAsFixed(2)}',
+                          CurrencyFormatter.formatMinor(
+                            asset!.purchaseAmountMinor!,
+                            currencyCode: currency,
+                          ),
                         ),
                       ],
                       if (hasExpenseError) ...[
@@ -2682,13 +2801,19 @@ class AssetDetailSheet extends ConsumerWidget {
                         const Divider(),
                         _buildDetailRow(
                           'Maintenance Costs',
-                          '$currency ${(maintenanceCostsMinor / 100).toStringAsFixed(2)}',
+                          CurrencyFormatter.formatMinor(
+                            maintenanceCostsMinor,
+                            currencyCode: currency,
+                          ),
                         ),
                         if (hasPurchasePrice) ...[
                           const Divider(),
                           _buildDetailRow(
                             'Total Ownership Cost',
-                            '$currency ${(totalOwnershipCostMinor / 100).toStringAsFixed(2)}',
+                            CurrencyFormatter.formatMinor(
+                              totalOwnershipCostMinor,
+                              currencyCode: currency,
+                            ),
                           ),
                         ],
                       ],
@@ -2702,7 +2827,10 @@ class AssetDetailSheet extends ConsumerWidget {
                         const Divider(),
                         _buildDetailRow('Notes / Description', record.description!),
                       ],
-                      if (customFields.isNotEmpty) ...[
+                      if (customFieldsAsync.hasError) ...[
+                        const Divider(),
+                        _buildDetailRow('Custom Fields', 'Failed to load'),
+                      ] else if (customFields.isNotEmpty) ...[
                         for (final cf in customFields) ...[
                           const Divider(),
                           _buildDetailRow(cf.definition.label, cf.value.valueText),
@@ -2914,16 +3042,22 @@ class _AssetServiceHistorySection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Icon(Icons.history_toggle_off_outlined, size: 18, color: context.brandAccent),
-                const SizedBox(width: 6),
-                Text(
-                  'Service & Maintenance History',
-                  style: AppTypography.cardTitle.copyWith(fontSize: 16),
-                ),
-              ],
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(Icons.history_toggle_off_outlined, size: 18, color: context.brandAccent),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Service & Maintenance History',
+                      style: AppTypography.cardTitle.copyWith(fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 8),
             expensesAsync.when(
               data: (list) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -3045,7 +3179,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                                       ),
                                     ),
                                     Text(
-                                      'Cost: $currency ${(expense.amountMinor / 100).toStringAsFixed(2)}',
+                                      'Cost: ${CurrencyFormatter.formatMinor(expense.amountMinor, currencyCode: expense.currencyCode)}',
                                       style: AppTypography.cardTitle.copyWith(
                                         fontSize: 14,
                                         color: context.brandAccent,
@@ -3067,7 +3201,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                                           border: Border.all(color: context.borderSubtle),
                                         ),
                                         child: Text(
-                                          '${expense.odometerReading} km',
+                                          '${_formatWholeNumber(expense.odometerReading!)} km',
                                           style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600),
                                         ),
                                       ),
@@ -3075,7 +3209,7 @@ class _AssetServiceHistorySection extends ConsumerWidget {
                                     if (deltaKm != null) ...[
                                       const SizedBox(width: 6),
                                       Text(
-                                        '+$deltaKm km delta',
+                                        '+${_formatWholeNumber(deltaKm)} km delta',
                                         style: AppTypography.caption.copyWith(
                                           color: context.brandAccent,
                                           fontSize: 10,
@@ -3126,15 +3260,20 @@ class _AssetLinkedDocumentsSection extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.folder_shared_outlined, size: 18, color: context.brandAccent),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Vault Documents & Attachments',
-                      style: AppTypography.cardTitle.copyWith(fontSize: 16),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.folder_shared_outlined, size: 18, color: context.brandAccent),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Vault Documents & Attachments',
+                          style: AppTypography.cardTitle.copyWith(fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   icon: Icon(Icons.add_circle_outline, size: 20, color: context.brandAccent),

@@ -169,7 +169,7 @@ void main() {
       // Modal closes and live record item is rendered
       expect(find.text('New Asset Record'), findsNothing);
       expect(find.text('Sony OLED TV'), findsOneWidget);
-      expect(find.text('Value: PHP 65000.00'), findsOneWidget);
+      expect(find.text('Value: PHP 65,000.00'), findsOneWidget);
 
       // Verify directly in Drift SQLite database
       final recordsInDb = await inMemoryDb.select(inMemoryDb.records).get();
@@ -626,7 +626,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Estimated Value is displayed
-      expect(find.text('PHP 25000.00'), findsOneWidget);
+      expect(find.text('PHP 25,000.00'), findsOneWidget);
       expect(find.text('Log Maintenance / Expense'), findsOneWidget);
 
       // Tap Log Maintenance / Expense
@@ -645,13 +645,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // SnackBar feedback appears
-      expect(find.text('Logged expense: Synthetic Oil & Spark Plug (PHP 1250.00)'), findsOneWidget);
+      expect(find.text('Logged expense: Synthetic Oil & Spark Plug (PHP 1,250.00)'), findsOneWidget);
 
       // AssetDetailSheet beneath is revealed and reactively updated with Maintenance Costs and Total Ownership Cost (25,000 + 1,250 = 26,250)
       expect(find.text('Maintenance Costs'), findsOneWidget);
-      expect(find.text('PHP 1250.00'), findsOneWidget);
+      expect(find.text('PHP 1,250.00'), findsOneWidget);
       expect(find.text('Total Ownership Cost'), findsOneWidget);
-      expect(find.text('PHP 26250.00'), findsOneWidget);
+      expect(find.text('PHP 26,250.00'), findsOneWidget);
 
       // Close sheet
       await tester.tap(find.byIcon(Icons.close));
@@ -663,7 +663,7 @@ void main() {
 
       // Verify dashboard metrics reflect the recorded expense
       expect(find.textContaining('Spent in'), findsOneWidget);
-      expect(find.text('PHP 1250.00'), findsOneWidget);
+      expect(find.text('PHP 1,250.00'), findsOneWidget);
 
       // Verify Recent Records Activity shows the expense
       expect(find.text('Synthetic Oil & Spark Plug'), findsOneWidget);
@@ -763,7 +763,7 @@ void main() {
       expect(find.text('Next 30 days'), findsOneWidget);
       expect(find.text('Bills & renewals'), findsOneWidget);
       expect(find.text('Meralco Electric Bill'), findsWidgets);
-      expect(find.text('PHP 3450.50'), findsWidgets);
+      expect(find.text('PHP 3,450.50'), findsWidgets);
       expect(find.text('DUE SOON'), findsWidgets);
 
       // Tap on the bill tile to open BillDetailSheet
@@ -790,9 +790,9 @@ void main() {
       await tester.tap(find.text('Mark Paid & Log Expense'));
       await tester.pumpAndSettle();
 
-      // In TodayScreen, verify Recorded Expenses now includes the PHP 3450.50 utility expense
+      // In TodayScreen, verify Recorded Expenses now includes the PHP 3,450.50 utility expense
       expect(find.textContaining('Spent in'), findsOneWidget);
-      expect(find.text('PHP 3450.50'), findsWidgets);
+      expect(find.text('PHP 3,450.50'), findsWidgets);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 100));
