@@ -6,6 +6,7 @@ class Category {
   final String? iconKey;
   final String? colorHex;
   final bool isSystem;
+  final String? parentCategoryId;
   final DateTime createdAt;
   final DateTime? archivedAt;
 
@@ -16,11 +17,13 @@ class Category {
     this.iconKey,
     this.colorHex,
     this.isSystem = true,
+    this.parentCategoryId,
     required this.createdAt,
     this.archivedAt,
   });
 
   bool get isArchived => archivedAt != null;
+  bool get isSubCategory => parentCategoryId != null;
 
   Category copyWith({
     String? id,
@@ -29,6 +32,7 @@ class Category {
     String? iconKey,
     String? colorHex,
     bool? isSystem,
+    String? parentCategoryId,
     DateTime? createdAt,
     DateTime? archivedAt,
   }) {
@@ -39,6 +43,7 @@ class Category {
       iconKey: iconKey ?? this.iconKey,
       colorHex: colorHex ?? this.colorHex,
       isSystem: isSystem ?? this.isSystem,
+      parentCategoryId: parentCategoryId ?? this.parentCategoryId,
       createdAt: createdAt ?? this.createdAt,
       archivedAt: archivedAt ?? this.archivedAt,
     );
@@ -55,6 +60,7 @@ class Category {
           iconKey == other.iconKey &&
           colorHex == other.colorHex &&
           isSystem == other.isSystem &&
+          parentCategoryId == other.parentCategoryId &&
           createdAt == other.createdAt &&
           archivedAt == other.archivedAt;
 
@@ -66,6 +72,7 @@ class Category {
         iconKey,
         colorHex,
         isSystem,
+        parentCategoryId,
         createdAt,
         archivedAt,
       );
@@ -73,16 +80,22 @@ class Category {
 
 /// Abstract contract for category persistence operations.
 abstract class CategoryRepository {
-  /// Retrieves all active categories belonging to a workspace.
+  /// Retrieves all active top-level categories belonging to a workspace.
   Future<List<Category>> getCategoriesByWorkspace(String workspaceId);
 
-  /// Watches active categories belonging to a workspace reactively.
+  /// Watches active top-level categories belonging to a workspace reactively.
   Stream<List<Category>> watchCategoriesByWorkspace(String workspaceId);
 
-  /// Idempotently seeds default Sanctuary categories.
+  /// Retrieves all active sub-categories belonging to a parent category.
+  Future<List<Category>> getSubCategories(String parentCategoryId);
+
+  /// Watches active sub-categories belonging to a parent category reactively.
+  Stream<List<Category>> watchSubCategories(String parentCategoryId);
+
+  /// Idempotently seeds default Sanctuary categories and sub-categories.
   Future<void> seedDefaultCategories(String workspaceId);
 
-  /// Creates a new user-defined category.
+  /// Creates a new user-defined category or sub-category.
   Future<Category> createCategory(Category category);
 
   /// Archives a category by setting its `archivedAt` timestamp.

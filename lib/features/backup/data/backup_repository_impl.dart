@@ -94,6 +94,7 @@ class BackupRepositoryImpl implements BackupRepository {
           'iconKey': c.iconKey,
           'colorHex': c.colorHex,
           'isSystem': c.isSystem,
+          'parentCategoryId': c.parentCategoryId,
           'createdAt': c.createdAt.toIso8601String(),
           'archivedAt': c.archivedAt?.toIso8601String(),
         }).toList();
@@ -417,8 +418,9 @@ class BackupRepositoryImpl implements BackupRepository {
             );
       }
 
-      // 2. Insert Categories
-      for (final c in payload.categories) {
+      // 2. Insert Categories (parents before descendants so self-referencing FKs succeed)
+      final orderedCategories = _orderCategoriesParentsFirst(payload.categories);
+      for (final c in orderedCategories) {
         await _db.into(_db.categories).insertOnConflictUpdate(
               CategoriesCompanion(
                 id: Value(c['id'] as String),
@@ -427,6 +429,7 @@ class BackupRepositoryImpl implements BackupRepository {
                 iconKey: Value(c['iconKey'] as String?),
                 colorHex: Value(c['colorHex'] as String?),
                 isSystem: Value(c['isSystem'] as bool? ?? false),
+                parentCategoryId: Value(c['parentCategoryId'] as String?),
                 createdAt: Value(DateTime.parse(c['createdAt'] as String).toUtc()),
                 archivedAt: Value(c['archivedAt'] != null
                     ? DateTime.parse(c['archivedAt'] as String).toUtc()
@@ -602,5 +605,35 @@ class BackupRepositoryImpl implements BackupRepository {
             );
       }
     });
+  }
+
+  List<Map<String, dynamic>> _orderCategoriesParentsFirst(
+    List<Map<String, dynamic>> categories,
+  ) {
+    final allIds = categories.map((c) => c['id'] as String).toSet();
+    final remaining = List<Map<String, dynamic>>.from(categories);
+    final ordered = <Map<String, dynamic>>[];
+    final placedIds = <String>{};
+
+    bool isReady(Map<String, dynamic> cat) {
+      final parentId = cat['parentCategoryId'] as String?;
+      return parentId == null ||
+          !allIds.contains(parentId) ||
+          placedIds.contains(parentId);
+    }
+
+    while (remaining.isNotEmpty) {
+      final batch = remaining.where(isReady).toList();
+      if (batch.isEmpty) {
+        // Cycle in payload: append remaining so SQLite FK surfaces the error instead of looping.
+        ordered.addAll(remaining);
+        break;
+      }
+      ordered.addAll(batch);
+      placedIds.addAll(batch.map((c) => c['id'] as String));
+      remaining.removeWhere((c) => placedIds.contains(c['id'] as String));
+    }
+
+    return ordered;
   }
 }

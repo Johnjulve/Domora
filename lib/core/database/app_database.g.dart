@@ -555,6 +555,20 @@ class $CategoriesTable extends Categories
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _parentCategoryIdMeta = const VerificationMeta(
+    'parentCategoryId',
+  );
+  @override
+  late final GeneratedColumn<String> parentCategoryId = GeneratedColumn<String>(
+    'parent_category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id) ON DELETE CASCADE',
+    ),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -585,6 +599,7 @@ class $CategoriesTable extends Categories
     iconKey,
     colorHex,
     isSystem,
+    parentCategoryId,
     createdAt,
     archivedAt,
   ];
@@ -642,6 +657,15 @@ class $CategoriesTable extends Categories
         isSystem.isAcceptableOrUnknown(data['is_system']!, _isSystemMeta),
       );
     }
+    if (data.containsKey('parent_category_id')) {
+      context.handle(
+        _parentCategoryIdMeta,
+        parentCategoryId.isAcceptableOrUnknown(
+          data['parent_category_id']!,
+          _parentCategoryIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -689,6 +713,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.bool,
         data['${effectivePrefix}is_system'],
       )!,
+      parentCategoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_category_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -713,6 +741,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
   final String? iconKey;
   final String? colorHex;
   final bool isSystem;
+  final String? parentCategoryId;
   final DateTime createdAt;
   final DateTime? archivedAt;
   const CategoryEntity({
@@ -722,6 +751,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     this.iconKey,
     this.colorHex,
     required this.isSystem,
+    this.parentCategoryId,
     required this.createdAt,
     this.archivedAt,
   });
@@ -738,6 +768,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       map['color_hex'] = Variable<String>(colorHex);
     }
     map['is_system'] = Variable<bool>(isSystem);
+    if (!nullToAbsent || parentCategoryId != null) {
+      map['parent_category_id'] = Variable<String>(parentCategoryId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || archivedAt != null) {
       map['archived_at'] = Variable<DateTime>(archivedAt);
@@ -757,6 +790,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           ? const Value.absent()
           : Value(colorHex),
       isSystem: Value(isSystem),
+      parentCategoryId: parentCategoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentCategoryId),
       createdAt: Value(createdAt),
       archivedAt: archivedAt == null && nullToAbsent
           ? const Value.absent()
@@ -776,6 +812,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       iconKey: serializer.fromJson<String?>(json['iconKey']),
       colorHex: serializer.fromJson<String?>(json['colorHex']),
       isSystem: serializer.fromJson<bool>(json['isSystem']),
+      parentCategoryId: serializer.fromJson<String?>(json['parentCategoryId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
     );
@@ -790,6 +827,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       'iconKey': serializer.toJson<String?>(iconKey),
       'colorHex': serializer.toJson<String?>(colorHex),
       'isSystem': serializer.toJson<bool>(isSystem),
+      'parentCategoryId': serializer.toJson<String?>(parentCategoryId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'archivedAt': serializer.toJson<DateTime?>(archivedAt),
     };
@@ -802,6 +840,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     Value<String?> iconKey = const Value.absent(),
     Value<String?> colorHex = const Value.absent(),
     bool? isSystem,
+    Value<String?> parentCategoryId = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> archivedAt = const Value.absent(),
   }) => CategoryEntity(
@@ -811,6 +850,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     iconKey: iconKey.present ? iconKey.value : this.iconKey,
     colorHex: colorHex.present ? colorHex.value : this.colorHex,
     isSystem: isSystem ?? this.isSystem,
+    parentCategoryId: parentCategoryId.present
+        ? parentCategoryId.value
+        : this.parentCategoryId,
     createdAt: createdAt ?? this.createdAt,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
   );
@@ -824,6 +866,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       iconKey: data.iconKey.present ? data.iconKey.value : this.iconKey,
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       isSystem: data.isSystem.present ? data.isSystem.value : this.isSystem,
+      parentCategoryId: data.parentCategoryId.present
+          ? data.parentCategoryId.value
+          : this.parentCategoryId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       archivedAt: data.archivedAt.present
           ? data.archivedAt.value
@@ -840,6 +885,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           ..write('iconKey: $iconKey, ')
           ..write('colorHex: $colorHex, ')
           ..write('isSystem: $isSystem, ')
+          ..write('parentCategoryId: $parentCategoryId, ')
           ..write('createdAt: $createdAt, ')
           ..write('archivedAt: $archivedAt')
           ..write(')'))
@@ -854,6 +900,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     iconKey,
     colorHex,
     isSystem,
+    parentCategoryId,
     createdAt,
     archivedAt,
   );
@@ -867,6 +914,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           other.iconKey == this.iconKey &&
           other.colorHex == this.colorHex &&
           other.isSystem == this.isSystem &&
+          other.parentCategoryId == this.parentCategoryId &&
           other.createdAt == this.createdAt &&
           other.archivedAt == this.archivedAt);
 }
@@ -878,6 +926,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
   final Value<String?> iconKey;
   final Value<String?> colorHex;
   final Value<bool> isSystem;
+  final Value<String?> parentCategoryId;
   final Value<DateTime> createdAt;
   final Value<DateTime?> archivedAt;
   final Value<int> rowid;
@@ -888,6 +937,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     this.iconKey = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.isSystem = const Value.absent(),
+    this.parentCategoryId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -899,6 +949,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     this.iconKey = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.isSystem = const Value.absent(),
+    this.parentCategoryId = const Value.absent(),
     required DateTime createdAt,
     this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -913,6 +964,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     Expression<String>? iconKey,
     Expression<String>? colorHex,
     Expression<bool>? isSystem,
+    Expression<String>? parentCategoryId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? archivedAt,
     Expression<int>? rowid,
@@ -924,6 +976,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
       if (iconKey != null) 'icon_key': iconKey,
       if (colorHex != null) 'color_hex': colorHex,
       if (isSystem != null) 'is_system': isSystem,
+      if (parentCategoryId != null) 'parent_category_id': parentCategoryId,
       if (createdAt != null) 'created_at': createdAt,
       if (archivedAt != null) 'archived_at': archivedAt,
       if (rowid != null) 'rowid': rowid,
@@ -937,6 +990,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     Value<String?>? iconKey,
     Value<String?>? colorHex,
     Value<bool>? isSystem,
+    Value<String?>? parentCategoryId,
     Value<DateTime>? createdAt,
     Value<DateTime?>? archivedAt,
     Value<int>? rowid,
@@ -948,6 +1002,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
       iconKey: iconKey ?? this.iconKey,
       colorHex: colorHex ?? this.colorHex,
       isSystem: isSystem ?? this.isSystem,
+      parentCategoryId: parentCategoryId ?? this.parentCategoryId,
       createdAt: createdAt ?? this.createdAt,
       archivedAt: archivedAt ?? this.archivedAt,
       rowid: rowid ?? this.rowid,
@@ -975,6 +1030,9 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     if (isSystem.present) {
       map['is_system'] = Variable<bool>(isSystem.value);
     }
+    if (parentCategoryId.present) {
+      map['parent_category_id'] = Variable<String>(parentCategoryId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -996,6 +1054,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
           ..write('iconKey: $iconKey, ')
           ..write('colorHex: $colorHex, ')
           ..write('isSystem: $isSystem, ')
+          ..write('parentCategoryId: $parentCategoryId, ')
           ..write('createdAt: $createdAt, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('rowid: $rowid')
@@ -6271,6 +6330,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'categories_workspace_name_idx',
     'CREATE INDEX categories_workspace_name_idx ON categories (workspace_id, name)',
   );
+  late final Index categoriesWorkspaceParentIdx = Index(
+    'categories_workspace_parent_idx',
+    'CREATE INDEX categories_workspace_parent_idx ON categories (workspace_id, parent_category_id)',
+  );
   late final Index recordsWorkspaceTypeIdx = Index(
     'records_workspace_type_idx',
     'CREATE INDEX records_workspace_type_idx ON records (workspace_id, record_type)',
@@ -6339,6 +6402,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     fieldDefinitions,
     fieldValues,
     categoriesWorkspaceNameIdx,
+    categoriesWorkspaceParentIdx,
     recordsWorkspaceTypeIdx,
     recordsDeletedIdx,
     tasksStatusDueIdx,
@@ -6358,6 +6422,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'workspaces',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('categories', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'categories',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('categories', kind: UpdateKind.delete)],
@@ -7042,6 +7113,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String?> iconKey,
       Value<String?> colorHex,
       Value<bool> isSystem,
+      Value<String?> parentCategoryId,
       required DateTime createdAt,
       Value<DateTime?> archivedAt,
       Value<int> rowid,
@@ -7054,6 +7126,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String?> iconKey,
       Value<String?> colorHex,
       Value<bool> isSystem,
+      Value<String?> parentCategoryId,
       Value<DateTime> createdAt,
       Value<DateTime?> archivedAt,
       Value<int> rowid,
@@ -7074,6 +7147,24 @@ final class $$CategoriesTableReferences
       $_db.workspaces,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_workspaceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CategoriesTable _parentCategoryIdTable(_$AppDatabase db) => db
+      .categories
+      .createAlias('categories__parent_category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager? get parentCategoryId {
+    final $_column = $_itemColumn<String>('parent_category_id');
+    if ($_column == null) return null;
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentCategoryIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7178,6 +7269,29 @@ class $$CategoriesTableFilterComposer
           }) => $$WorkspacesTableFilterComposer(
             $db: $db,
             $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableFilterComposer get parentCategoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentCategoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7304,6 +7418,29 @@ class $$CategoriesTableOrderingComposer
     );
     return composer;
   }
+
+  $$CategoriesTableOrderingComposer get parentCategoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentCategoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -7352,6 +7489,29 @@ class $$CategoriesTableAnnotationComposer
           }) => $$WorkspacesTableAnnotationComposer(
             $db: $db,
             $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableAnnotationComposer get parentCategoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentCategoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7427,6 +7587,7 @@ class $$CategoriesTableTableManager
           CategoryEntity,
           PrefetchHooks Function({
             bool workspaceId,
+            bool parentCategoryId,
             bool recordsInCategory,
             bool fieldsInCategory,
           })
@@ -7450,6 +7611,7 @@ class $$CategoriesTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<String?> colorHex = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
+                Value<String?> parentCategoryId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7460,6 +7622,7 @@ class $$CategoriesTableTableManager
                 iconKey: iconKey,
                 colorHex: colorHex,
                 isSystem: isSystem,
+                parentCategoryId: parentCategoryId,
                 createdAt: createdAt,
                 archivedAt: archivedAt,
                 rowid: rowid,
@@ -7472,6 +7635,7 @@ class $$CategoriesTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<String?> colorHex = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
+                Value<String?> parentCategoryId = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7482,6 +7646,7 @@ class $$CategoriesTableTableManager
                 iconKey: iconKey,
                 colorHex: colorHex,
                 isSystem: isSystem,
+                parentCategoryId: parentCategoryId,
                 createdAt: createdAt,
                 archivedAt: archivedAt,
                 rowid: rowid,
@@ -7497,6 +7662,7 @@ class $$CategoriesTableTableManager
           prefetchHooksCallback:
               ({
                 workspaceId = false,
+                parentCategoryId = false,
                 recordsInCategory = false,
                 fieldsInCategory = false,
               }) {
@@ -7532,6 +7698,20 @@ class $$CategoriesTableTableManager
                                     referencedColumn:
                                         $$CategoriesTableReferences
                                             ._workspaceIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (parentCategoryId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentCategoryId,
+                                    referencedTable: $$CategoriesTableReferences
+                                        ._parentCategoryIdTable(db),
+                                    referencedColumn:
+                                        $$CategoriesTableReferences
+                                            ._parentCategoryIdTable(db)
                                             .id,
                                   )
                                   as T;
@@ -7603,6 +7783,7 @@ typedef $$CategoriesTableProcessedTableManager =
       CategoryEntity,
       PrefetchHooks Function({
         bool workspaceId,
+        bool parentCategoryId,
         bool recordsInCategory,
         bool fieldsInCategory,
       })

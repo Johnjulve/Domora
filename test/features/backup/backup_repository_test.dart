@@ -166,14 +166,14 @@ void main() {
       expect(payload.manifest.version, equals(BackupManifest.currentFormatVersion));
       expect(payload.manifest.workspaceId, equals(AppConstants.defaultWorkspaceId));
       expect(payload.manifest.counts.workspaces, equals(1));
-      expect(payload.manifest.counts.categories, equals(7)); // 7 default categories seeded
+      expect(payload.manifest.counts.categories, equals(13)); // 8 top-level + 5 sub-categories seeded
       expect(payload.manifest.counts.records, equals(5)); // asset, task, doc, expense, bill
       expect(payload.manifest.counts.assets, equals(1));
       expect(payload.manifest.counts.tasks, equals(1));
       expect(payload.manifest.counts.documents, equals(1));
       expect(payload.manifest.counts.expenses, equals(1));
       expect(payload.manifest.counts.bills, equals(1));
-      expect(payload.manifest.counts.totalItems, equals(18));
+      expect(payload.manifest.counts.totalItems, equals(24));
 
       // Verify SHA-256 Checksum integrity
       final rawDataMap = (payload.toJson()['data'] as Map<String, dynamic>);
@@ -537,6 +537,176 @@ void main() {
       expect(activeCategories.any((c) => c.id == 'cat-family'), isFalse);
 
       await dbTarget.close();
+    });
+
+    test('restoreBackup preserves sub-categories (parentCategoryId) even when children precede parents in payload JSON', () async {
+      // Export backup containing seeded top-level categories and Bills & Expenses sub-categories
+      final exportedJson = await backupRepo.exportBackupToJson(AppConstants.defaultWorkspaceId);
+      final decoded = jsonDecode(exportedJson) as Map<String, dynamic>;
+      final data = decoded['data'] as Map<String, dynamic>;
+      final categories = (data['categories'] as List<dynamic>).cast<Map<String, dynamic>>();
+
+      // Ensure exported JSON includes parentCategoryId and move child categories BEFORE top-level parents
+      final children = categories.where((c) => c['parentCategoryId'] != null).toList();
+      final parents = categories.where((c) => c['parentCategoryId'] == null).toList();
+      expect(children.length, equals(5));
+      expect(parents.length, equals(8));
+
+      data['categories'] = [...children, ...parents];
+
+      // Recompute checksum after reordering categories
+      final manifest = decoded['manifest'] as Map<String, dynamic>;
+      manifest['payloadChecksum'] = BackupPayload.computeChecksum(data);
+
+      final reorderedJson = jsonEncode(decoded);
+
+      // Restore into a fresh database with PRAGMA foreign_keys = ON
+      final dbTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbTarget.close);
+      final targetBackupRepo = BackupRepositoryImpl(dbTarget);
+      final targetCategoryRepo = CategoryRepositoryImpl(dbTarget);
+
+      final validation = await targetBackupRepo.validateBackup(reorderedJson);
+      expect(validation.isValid, isTrue);
+
+      await targetBackupRepo.restoreBackup(validation.payload!, clearExisting: true);
+
+      final restoredTopLevel = await targetCategoryRepo.getCategoriesByWorkspace(
+        AppConstants.defaultWorkspaceId,
+      );
+      expect(restoredTopLevel.length, equals(8));
+
+      final restoredSubs = await targetCategoryRepo.getSubCategories(
+        CategoryRepositoryImpl.billsExpensesCategoryId,
+      );
+      expect(restoredSubs.length, equals(5));
+      expect(
+        restoredSubs.every(
+          (c) => c.parentCategoryId == CategoryRepositoryImpl.billsExpensesCategoryId,
+        ),
+        isTrue,
+      );
+    });
+
+    test('restoreBackup gracefully supports legacy v8 backups without parentCategoryId key', () async {
+      final exportedJson = await backupRepo.exportBackupToJson(AppConstants.defaultWorkspaceId);
+      final decoded = jsonDecode(exportedJson) as Map<String, dynamic>;
+      final data = decoded['data'] as Map<String, dynamic>;
+      final categories = (data['categories'] as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .where((c) => c['parentCategoryId'] == null)
+          .map((c) => Map<String, dynamic>.from(c)..remove('parentCategoryId'))
+          .toList();
+
+      data['categories'] = categories;
+      final manifest = decoded['manifest'] as Map<String, dynamic>;
+      manifest['payloadChecksum'] = BackupPayload.computeChecksum(data);
+
+      final dbTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbTarget.close);
+      final targetBackupRepo = BackupRepositoryImpl(dbTarget);
+      final targetCategoryRepo = CategoryRepositoryImpl(dbTarget);
+
+      final validation = await targetBackupRepo.validateBackup(jsonEncode(decoded));
+      expect(validation.isValid, isTrue);
+
+      await targetBackupRepo.restoreBackup(validation.payload!, clearExisting: true);
+
+      final restoredTopLevel = await targetCategoryRepo.getCategoriesByWorkspace(
+        AppConstants.defaultWorkspaceId,
+      );
+      expect(restoredTopLevel.length, equals(8));
+      expect(restoredTopLevel.every((c) => c.parentCategoryId == null), isTrue);
+    });
+
+    test('restoreBackup topologically orders multi-level category hierarchies (grandchild before child before root)', () async {
+      final now = DateTime.utc(2026, 11, 25, 12, 0, 0).toIso8601String();
+      final data = <String, dynamic>{
+        'workspaces': [
+          {
+            'id': AppConstants.defaultWorkspaceId,
+            'name': 'Personal',
+            'workspaceType': 'personal',
+            'createdAt': now,
+            'updatedAt': now,
+          },
+        ],
+        'categories': [
+          {
+            'id': 'cat-grandchild',
+            'workspaceId': AppConstants.defaultWorkspaceId,
+            'name': 'Grandchild',
+            'isSystem': false,
+            'parentCategoryId': 'cat-child',
+            'createdAt': now,
+          },
+          {
+            'id': 'cat-child',
+            'workspaceId': AppConstants.defaultWorkspaceId,
+            'name': 'Child',
+            'isSystem': false,
+            'parentCategoryId': 'cat-root',
+            'createdAt': now,
+          },
+          {
+            'id': 'cat-root',
+            'workspaceId': AppConstants.defaultWorkspaceId,
+            'name': 'Root',
+            'isSystem': false,
+            'parentCategoryId': null,
+            'createdAt': now,
+          },
+        ],
+        'records': <Map<String, dynamic>>[],
+        'assets': <Map<String, dynamic>>[],
+        'tasks': <Map<String, dynamic>>[],
+        'documents': <Map<String, dynamic>>[],
+        'expenses': <Map<String, dynamic>>[],
+        'bills': <Map<String, dynamic>>[],
+        'fieldDefinitions': <Map<String, dynamic>>[],
+        'fieldValues': <Map<String, dynamic>>[],
+      };
+
+      final archiveJson = jsonEncode({
+        'manifest': {
+          'version': BackupManifest.currentFormatVersion,
+          'appVersion': AppConstants.appVersion,
+          'exportedAt': now,
+          'workspaceId': AppConstants.defaultWorkspaceId,
+          'workspaceName': 'Personal',
+          'counts': {
+            'workspaces': 1,
+            'categories': 3,
+            'records': 0,
+            'assets': 0,
+            'tasks': 0,
+            'documents': 0,
+            'expenses': 0,
+            'bills': 0,
+            'fieldDefinitions': 0,
+            'fieldValues': 0,
+          },
+          'payloadChecksum': BackupPayload.computeChecksum(data),
+        },
+        'data': data,
+      });
+
+      final dbTarget = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbTarget.close);
+      final targetBackupRepo = BackupRepositoryImpl(dbTarget);
+      final targetCategoryRepo = CategoryRepositoryImpl(dbTarget);
+
+      final validation = await targetBackupRepo.validateBackup(archiveJson);
+      expect(validation.isValid, isTrue);
+
+      await targetBackupRepo.restoreBackup(validation.payload!, clearExisting: true);
+
+      final roots = await targetCategoryRepo.getCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
+      expect(roots.map((c) => c.id), equals(['cat-root']));
+      final children = await targetCategoryRepo.getSubCategories('cat-root');
+      expect(children.map((c) => c.id), equals(['cat-child']));
+      final grandchildren = await targetCategoryRepo.getSubCategories('cat-child');
+      expect(grandchildren.map((c) => c.id), equals(['cat-grandchild']));
     });
   });
 }

@@ -18,6 +18,7 @@ class Workspaces extends Table {
 /// Table definition for Categories (Properties, Vehicles, Appliances, Electronics, etc.).
 @DataClassName('CategoryEntity')
 @TableIndex(name: 'categories_workspace_name_idx', columns: {#workspaceId, #name})
+@TableIndex(name: 'categories_workspace_parent_idx', columns: {#workspaceId, #parentCategoryId})
 class Categories extends Table {
   TextColumn get id => text()();
   @ReferenceName('categoriesInWorkspace')
@@ -26,6 +27,9 @@ class Categories extends Table {
   TextColumn get iconKey => text().nullable()();
   TextColumn get colorHex => text().nullable()();
   BoolColumn get isSystem => boolean().withDefault(const Constant(true))();
+  @ReferenceName('childCategories')
+  TextColumn get parentCategoryId =>
+      text().nullable().references(Categories, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get archivedAt => dateTime().nullable()();
 

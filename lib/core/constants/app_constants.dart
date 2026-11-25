@@ -10,8 +10,8 @@ class AppConstants {
   static const String displayVersion = 'v$appVersion';
   static const String fullVersionTag = 'v$appVersion-$appReleaseChannel';
 
-  /// SQLite schema version for Drift (v8: Flexible Assets & Custom Fields Engine)
-  static const int schemaVersion = 8;
+  /// SQLite schema version for Drift (v9: Customizable Sections & Sub-Categories)
+  static const int schemaVersion = 9;
 
   /// Default personal workspace identifier (deterministic fallback before multi-workspace)
   static const String defaultWorkspaceId = 'default-personal-workspace';
