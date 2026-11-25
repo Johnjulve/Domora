@@ -1112,7 +1112,7 @@ void main() {
       expect(boltDec.color, AppTheme.darkSurfaceContainerLow);
 
       // Verify Amount Due value text has darkBrandSecondary
-      final amountDueText = tester.widget<Text>(find.text('PHP 2450.00'));
+      final amountDueText = tester.widget<Text>(find.text('PHP 2,450.00'));
       expect(amountDueText.style?.color, AppTheme.darkBrandSecondary);
     });
   });

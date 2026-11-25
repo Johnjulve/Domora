@@ -83,7 +83,7 @@ void main() {
 
       expect(created.record.id, equals('bill-meralco-oct'));
       expect(created.bill.amountDueMinor, equals(385050));
-      expect(created.bill.formattedAmountDue, equals('PHP 3850.50'));
+      expect(created.bill.formattedAmountDue, equals('PHP 3,850.50'));
       expect(created.bill.providerName, equals('Meralco'));
       expect(created.linkedAssetRecord?.title, equals('Makati Condo Unit 14B'));
       expect(created.bill.paymentStatus, equals('unpaid'));

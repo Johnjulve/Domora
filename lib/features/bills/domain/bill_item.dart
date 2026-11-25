@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/currency_formatter.dart';
 import '../../categories/domain/category.dart';
 import '../../records/domain/record.dart';
 
@@ -164,10 +165,10 @@ class BillItem {
   });
 
   /// Human-readable currency amount formatted from integer minor units.
-  String get formattedAmountDue {
-    final major = amountDueMinor / 100.0;
-    return '$currencyCode ${major.toStringAsFixed(2)}';
-  }
+  String get formattedAmountDue => CurrencyFormatter.formatMinor(
+        amountDueMinor,
+        currencyCode: currencyCode,
+      );
 
   /// Calendar-day difference between [dueDate] and [referenceDate] (negative when overdue).
   int? daysUntilDue([DateTime? referenceDate]) {

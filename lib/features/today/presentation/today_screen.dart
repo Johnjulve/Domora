@@ -6,6 +6,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../backup/presentation/backup_sheet.dart';
 import '../../bills/domain/bill_item.dart';
 import '../../bills/presentation/add_bill_sheet.dart';
@@ -473,7 +474,10 @@ class _SummaryCardsSection extends ConsumerWidget {
       expenseColor = null;
     } else {
       final totalExpensesMinor = expensesTotalAsync.value ?? 0;
-      formattedExpenses = '${AppConstants.defaultCurrency} ${(totalExpensesMinor / 100).toStringAsFixed(2)}';
+      formattedExpenses = CurrencyFormatter.formatMinor(
+        totalExpensesMinor,
+        currencyCode: AppConstants.defaultCurrency,
+      );
       expenseColor = null;
     }
 

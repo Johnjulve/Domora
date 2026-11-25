@@ -7,6 +7,7 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../categories/domain/category.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
@@ -180,8 +181,11 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
     final title = _titleController.text.trim();
     final notes = _notesController.text.trim();
 
-    final parsedAmount = double.parse(_amountController.text.trim());
-    final amountMinor = (parsedAmount * 100).round();
+    final amountMinor = CurrencyFormatter.parseMajorToMinor(_amountController.text);
+    if (amountMinor == null || amountMinor <= 0) {
+      if (mounted) setState(() => _isSubmitting = false);
+      return;
+    }
     final selectedAsset = _selectedAssetRecordId == null
         ? null
         : activeAssets.where((a) => a.record.id == _selectedAssetRecordId).firstOrNull;
@@ -327,7 +331,7 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
         content: Text(
           scheduledPms
               ? 'Logged expense & scheduled next PMS for ${selectedAsset?.record.title}'
-              : 'Logged expense: $title (${AppConstants.defaultCurrency} ${parsedAmount.toStringAsFixed(2)})',
+              : 'Logged expense: $title (${CurrencyFormatter.formatMinor(amountMinor, currencyCode: AppConstants.defaultCurrency)})',
         ),
         backgroundColor: primaryColor,
       ),
@@ -447,9 +451,10 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                         controller: _amountController,
                         style: TextStyle(color: context.textPrimary),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: const [ThousandsSeparatorInputFormatter()],
                         decoration: InputDecoration(
                           labelText: 'Amount (${AppConstants.defaultCurrency}) *',
-                          hintText: 'e.g. 1250.00',
+                          hintText: 'e.g. 1,250.00',
                           filled: true,
                           fillColor: context.surfaceContainerLow,
                         ),
@@ -457,8 +462,8 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                           if (val == null || val.trim().isEmpty) {
                             return 'Amount is required';
                           }
-                          final parsed = double.tryParse(val.trim());
-                          if (parsed == null || parsed <= 0) {
+                          final parsedMinor = CurrencyFormatter.parseMajorToMinor(val);
+                          if (parsedMinor == null || parsedMinor <= 0) {
                             return 'Enter a positive amount';
                           }
                           return null;
