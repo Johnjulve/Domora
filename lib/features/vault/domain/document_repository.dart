@@ -12,6 +12,12 @@ abstract class DocumentRepository {
   /// Soft deletes a document record.
   Future<void> softDeleteDocument(String recordId);
 
+  /// Atomically connects or disconnects a Vault document to/from an active asset record.
+  Future<void> updateDocumentAssetLink({
+    required String documentRecordId,
+    required String? linkedAssetRecordId,
+  });
+
   /// Reactively observes active documents for a specific workspace.
   Stream<List<RecordWithDocument>> watchDocumentsByWorkspace(
     String workspaceId, {

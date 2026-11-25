@@ -46,14 +46,126 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   }
 
   @override
-  Future<void> softDeleteExpense(String recordId) async {
-    final now = DateTime.now().toUtc();
-    await (_db.update(_db.records)..where((r) => r.id.equals(recordId))).write(
-      RecordsCompanion(
-        deletedAt: Value(now),
-        updatedAt: Value(now),
+  Future<void> linkTaskToExpense({
+    required String expenseRecordId,
+    required String taskRecordId,
+  }) async {
+    await _db.transaction(() async {
+      final activeExpense = await (_db.select(_db.records)
+            ..where(
+              (r) =>
+                  r.id.equals(expenseRecordId) &
+                  r.recordType.equals('expense') &
+                  r.deletedAt.isNull(),
+            ))
+          .getSingleOrNull();
+      if (activeExpense == null) {
+        throw StateError('Active expense record not found: $expenseRecordId');
+      }
+
+      final activeTask = await (_db.select(_db.records)
+            ..where(
+              (r) =>
+                  r.id.equals(taskRecordId) &
+                  r.recordType.equals('task') &
+                  r.deletedAt.isNull(),
+            ))
+          .getSingleOrNull();
+      if (activeTask == null) {
+        throw StateError('Active task record not found: $taskRecordId');
+      }
+      if (activeExpense.workspaceId != activeTask.workspaceId) {
+        throw StateError('Cannot link task and expense from different workspaces');
+      }
+
+      final now = DateTime.now().toUtc();
+      await (_db.update(_db.expenses)..where((e) => e.recordId.equals(expenseRecordId))).write(
+        ExpensesCompanion(linkedTaskRecordId: Value(taskRecordId)),
+      );
+      await (_db.update(_db.records)..where((r) => r.id.equals(expenseRecordId))).write(
+        RecordsCompanion(updatedAt: Value(now)),
+      );
+    });
+  }
+
+  @override
+  Future<void> softDeleteExpense(
+    String recordId, {
+    List<String> linkedTaskRecordIdsToDelete = const [],
+    bool clearAssetNextPmsTarget = false,
+  }) async {
+    await _db.transaction(() async {
+      final activeExpense = await (_db.select(_db.records)
+            ..where(
+              (r) =>
+                  r.id.equals(recordId) &
+                  r.recordType.equals('expense') &
+                  r.deletedAt.isNull(),
+            ))
+          .getSingleOrNull();
+      if (activeExpense == null) return;
+
+      final now = DateTime.now().toUtc();
+      final expenseRow = await (_db.select(_db.expenses)
+            ..where((e) => e.recordId.equals(recordId)))
+          .getSingleOrNull();
+
+      await (_db.update(_db.records)..where((r) => r.id.equals(recordId))).write(
+        RecordsCompanion(
+          deletedAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      final uniqueTaskIds = linkedTaskRecordIdsToDelete.toSet().toList();
+      if (uniqueTaskIds.isNotEmpty) {
+        await (_db.update(_db.records)
+              ..where(
+                (r) =>
+                    r.id.isIn(uniqueTaskIds) &
+                    r.workspaceId.equals(activeExpense.workspaceId) &
+                    r.recordType.equals('task') &
+                    r.deletedAt.isNull(),
+              ))
+            .write(
+          RecordsCompanion(
+            deletedAt: Value(now),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+
+      final linkedAssetId = expenseRow?.linkedAssetRecordId;
+      if (clearAssetNextPmsTarget && linkedAssetId != null) {
+        await _clearAssetNextPmsIfNoneRemaining(linkedAssetId, now);
+      }
+    });
+  }
+
+  Future<void> _clearAssetNextPmsIfNoneRemaining(String assetRecordId, DateTime now) async {
+    final remainingPmsQuery = _db.select(_db.records).join([
+      innerJoin(_db.tasks, _db.tasks.recordId.equalsExp(_db.records.id)),
+    ])
+      ..where(
+        _db.records.recordType.equals('task') &
+            _db.records.deletedAt.isNull() &
+            _db.tasks.assetRecordId.equals(assetRecordId) &
+            _db.tasks.status.equals('pending') &
+            _db.records.title.like('Next PMS%'),
+      );
+
+    final remaining = await remainingPmsQuery.get();
+    if (remaining.isNotEmpty) return;
+
+    await (_db.update(_db.assets)..where((a) => a.recordId.equals(assetRecordId))).write(
+      const AssetsCompanion(
+        nextPmsOdometerTarget: Value(null),
+        nextPmsDueDate: Value(null),
       ),
     );
+    await (_db.update(_db.records)
+          ..where((r) => r.id.equals(assetRecordId) & r.deletedAt.isNull()))
+        .write(RecordsCompanion(updatedAt: Value(now)));
   }
 
   @override

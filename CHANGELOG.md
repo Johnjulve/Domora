@@ -5,6 +5,31 @@ All notable changes to the Domora project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.14] - 2026-11-25
+
+### Added
+- **Life Records Remodel & Customizable Category Hierarchy (Drift Schema v9)**:
+  - Hierarchical Categories: Added `Categories.parentCategoryId` (nullable self-referencing FK with `ON DELETE CASCADE`) and `categories_workspace_parent_idx` index, seeding `Bills & Expenses` (`cat-bills-expenses`) with 5 default sub-categories (`Bill`, `Subscription`, `Withdraw / Deposit`, `Maintenance`, `General Expense`) and topological backup/restore ordering.
+  - Collapsible Boxed Sections (`RecordSectionCard`): Replaced the flat `Life Records` feed in `All` view with expandable/collapsible boxed category cards while keeping the upper search bar and filter chips; nested linked asset expenses/PMS tasks inside `AssetDetailSheet`, grouped `Bills & Expenses` by customizable sub-categories without duplicating paid-bill mirror rows, added an `Other Records` safety net, and fixed dark-mode badge contrast.
+  - Category & Sub-Category Manager (`ManageCategoriesSheet`): Added interactive creation, renaming, and soft-archiving for custom top-level sections and `Bills & Expenses` sub-categories.
+  - Unified Few-Click Creation (`QuickAddRecordSheet`): Replaced split AppBar icons with a single `+` quick-picker sheet routing across Money & Service (`Expense`, `Bill / Subscription`, `Maintenance`) and Items & Collections (`Vehicle`, `Appliance`, expandable `Other / Custom Section`), excluded `Bills & Expenses` from `AddAssetSheet`, decluttered Bill & Expense sheets with collapsible secondary drawers and dynamic custom sub-categories, and added the dedicated **Family Member** template (`cat-family`).
+- **Recurring Subscriptions, Late Manual Logging & Pause/Cancel Lifecycle (Drift Schema v10)**:
+  - Added `Bills.recurrenceCycle` (`Weekly`, `Monthly`, `Quarterly`, `Semi-Annual`, `Annual`) and `Bills.autoLogPayment` columns with timezone-safe UTC calendar-midnight date normalization, idempotent `processDueSubscriptions` auto-log catch-up (on launch, save/resume, and app foreground resume), `Paused` and `Cancelled` lifecycle controls (never back-charging missed cycles on resume), an **Actual Paid Date** picker with honest `Paid late` history logging, a reactive **Payment History** log inside `BillDetailSheet`, and `Due in Xd` / `Overdue` / `Paused` / `Cancelled` pills in `Life Records`.
+- **Edit Asset Details with Locked Identity (`EditAssetSheet`)**:
+  - Added transactional `updateAssetRecord` preserving locked hardware identity (`Brand`, `Model`, `VIN / Serial`) and category while allowing live editing of `Condition`, `Location`, `License Plate`, `Current Odometer`, `PMS Intervals` (with automatic Next Target PMS recalculation), `Estimated Value`, `Warranty`, `Notes`, `Family Member` fields, and custom fields; made `AssetDetailSheet` reactive to live updates.
+- **Today Spending Breakdown Chart (`SpendingBreakdownSheet`)**:
+  - Wired the `Spent in [Month]` card on `Today` to open a zero-dependency `CustomPainter` Donut Ring Chart with time-range pills (`This Month`, `3 Months`, `This Year`, `All Time`), mixed-currency notice, `<1%` share formatting, and expandable Category → Sub-Category totals.
+- **Offline Metadata-Based Vault Auto-Matching (`VaultAssetMatcher`)**:
+  - Added 100% offline boundary-safe matching across License Plate (score 100), Serial/VIN (95), Brand + Model (80), and Asset Title (60) backed by a single batched `watchLicensePlatesByWorkspace` stream and atomic `updateDocumentAssetLink`, powering live auto-preselection and 1-tap Connect/Unlink in `AddDocumentSheet`, `DocumentDetailSheet`, and `AssetDetailSheet`.
+- **Centralized Comma Currency Formatting (`CurrencyFormatter`)**:
+  - Added integer-precision `CurrencyFormatter` (`PHP 12,000.00`) and `ThousandsSeparatorInputFormatter` for live comma-formatted money inputs across Bills, Expenses, Assets, and `Today`.
+
+### Fixed
+- **Android 11+ Update Download (`ExternalUrlLauncher`)**: Added `http`/`https` `ACTION_VIEW` `<queries>` intents in `AndroidManifest.xml` and replaced silent `canLaunchUrl` gating in `SettingsProfileScreen` and `SettingsSheet` with direct external launch, `platformDefault` fallback, in-flight guards, and explicit error banners.
+- **Vehicle PMS Dropdown Overflow & Wording**: Fixed `RenderFlex` overflow in `AddAssetSheet` by replacing `'Every 3/6/12 mos'` with `'3 months'` / `'6 months'` / `'12 months'` (`isExpanded: true`) and tightening truncated labels.
+- **Maintenance Log Deletion & Linked Next PMS Cleanup**: Linked newly scheduled `Next PMS` tasks to their maintenance expense (`linkTaskToExpense`) and added a checked-by-default cascade-delete option in `ExpenseDetailSheet` (supporting both linked and legacy unlinked logs) while updating `ExpenseDetailSheet` to adaptive Light/Dark tokens.
+- **Automated Tests**: Added 85 new unit, migration, repository, and widget tests across categories, bills/subscriptions, currency formatting, asset editing, PMS cascade deletion, spending breakdown, external URL launcher, and Vault auto-matching (276 total passing tests, 0 analysis issues).
+
 ## [0.1.0-alpha.13] - 2026-11-24
 
 ### Fixed

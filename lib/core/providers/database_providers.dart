@@ -94,6 +94,19 @@ final defaultCategoriesStreamProvider = StreamProvider<List<Category>>((ref) {
   return repository.watchCategoriesByWorkspace(AppConstants.defaultWorkspaceId);
 });
 
+/// Reactive stream provider for active sub-categories belonging to a parent category.
+final subCategoriesStreamProvider =
+    StreamProvider.family<List<Category>, String>((ref, parentCategoryId) {
+  final repository = ref.watch(categoryRepositoryProvider);
+  return repository.watchSubCategories(parentCategoryId);
+});
+
+/// Reactive stream provider for active sub-categories under Bills & Expenses.
+final billsExpensesSubCategoriesStreamProvider = StreamProvider<List<Category>>((ref) {
+  final repository = ref.watch(categoryRepositoryProvider);
+  return repository.watchSubCategories(CategoryRepositoryImpl.billsExpensesCategoryId);
+});
+
 /// Notifier for real-time search query on records.
 class RecordSearchNotifier extends Notifier<String> {
   @override
@@ -142,6 +155,12 @@ final dashboardRecordsStreamProvider = StreamProvider<List<RecordWithAsset>>((re
 final recordCustomFieldsProvider = FutureProvider.family<List<CustomFieldEntry>, String>((ref, recordId) {
   final repository = ref.watch(recordRepositoryProvider);
   return repository.getCustomFieldsForRecord(recordId);
+});
+
+/// Batched reactive stream of active `'License Plate'` custom field values (`recordId -> plate`).
+final workspaceLicensePlatesStreamProvider = StreamProvider<Map<String, String>>((ref) {
+  final repository = ref.watch(recordRepositoryProvider);
+  return repository.watchLicensePlatesByWorkspace(AppConstants.defaultWorkspaceId);
 });
 
 /// Notifier for task status filtering ('pending', 'completed', 'all').
@@ -309,4 +328,11 @@ final upcomingBillsStreamProvider = StreamProvider<List<RecordWithBill>>((ref) {
 final workspaceTotalUnpaidBillsProvider = StreamProvider<int>((ref) {
   final repository = ref.watch(billRepositoryProvider);
   return repository.watchTotalUnpaidBillsAmount(AppConstants.defaultWorkspaceId);
+});
+
+/// Reactive stream provider for linked payment history expenses of a specific bill.
+final billPaymentHistoryStreamProvider =
+    StreamProvider.family<List<RecordWithExpense>, String>((ref, billRecordId) {
+  final repository = ref.watch(billRepositoryProvider);
+  return repository.watchPaymentHistoryForBill(billRecordId);
 });

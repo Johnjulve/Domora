@@ -555,6 +555,20 @@ class $CategoriesTable extends Categories
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _parentCategoryIdMeta = const VerificationMeta(
+    'parentCategoryId',
+  );
+  @override
+  late final GeneratedColumn<String> parentCategoryId = GeneratedColumn<String>(
+    'parent_category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id) ON DELETE CASCADE',
+    ),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -585,6 +599,7 @@ class $CategoriesTable extends Categories
     iconKey,
     colorHex,
     isSystem,
+    parentCategoryId,
     createdAt,
     archivedAt,
   ];
@@ -642,6 +657,15 @@ class $CategoriesTable extends Categories
         isSystem.isAcceptableOrUnknown(data['is_system']!, _isSystemMeta),
       );
     }
+    if (data.containsKey('parent_category_id')) {
+      context.handle(
+        _parentCategoryIdMeta,
+        parentCategoryId.isAcceptableOrUnknown(
+          data['parent_category_id']!,
+          _parentCategoryIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -689,6 +713,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.bool,
         data['${effectivePrefix}is_system'],
       )!,
+      parentCategoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_category_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -713,6 +741,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
   final String? iconKey;
   final String? colorHex;
   final bool isSystem;
+  final String? parentCategoryId;
   final DateTime createdAt;
   final DateTime? archivedAt;
   const CategoryEntity({
@@ -722,6 +751,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     this.iconKey,
     this.colorHex,
     required this.isSystem,
+    this.parentCategoryId,
     required this.createdAt,
     this.archivedAt,
   });
@@ -738,6 +768,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       map['color_hex'] = Variable<String>(colorHex);
     }
     map['is_system'] = Variable<bool>(isSystem);
+    if (!nullToAbsent || parentCategoryId != null) {
+      map['parent_category_id'] = Variable<String>(parentCategoryId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || archivedAt != null) {
       map['archived_at'] = Variable<DateTime>(archivedAt);
@@ -757,6 +790,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           ? const Value.absent()
           : Value(colorHex),
       isSystem: Value(isSystem),
+      parentCategoryId: parentCategoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentCategoryId),
       createdAt: Value(createdAt),
       archivedAt: archivedAt == null && nullToAbsent
           ? const Value.absent()
@@ -776,6 +812,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       iconKey: serializer.fromJson<String?>(json['iconKey']),
       colorHex: serializer.fromJson<String?>(json['colorHex']),
       isSystem: serializer.fromJson<bool>(json['isSystem']),
+      parentCategoryId: serializer.fromJson<String?>(json['parentCategoryId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
     );
@@ -790,6 +827,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       'iconKey': serializer.toJson<String?>(iconKey),
       'colorHex': serializer.toJson<String?>(colorHex),
       'isSystem': serializer.toJson<bool>(isSystem),
+      'parentCategoryId': serializer.toJson<String?>(parentCategoryId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'archivedAt': serializer.toJson<DateTime?>(archivedAt),
     };
@@ -802,6 +840,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     Value<String?> iconKey = const Value.absent(),
     Value<String?> colorHex = const Value.absent(),
     bool? isSystem,
+    Value<String?> parentCategoryId = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> archivedAt = const Value.absent(),
   }) => CategoryEntity(
@@ -811,6 +850,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     iconKey: iconKey.present ? iconKey.value : this.iconKey,
     colorHex: colorHex.present ? colorHex.value : this.colorHex,
     isSystem: isSystem ?? this.isSystem,
+    parentCategoryId: parentCategoryId.present
+        ? parentCategoryId.value
+        : this.parentCategoryId,
     createdAt: createdAt ?? this.createdAt,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
   );
@@ -824,6 +866,9 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
       iconKey: data.iconKey.present ? data.iconKey.value : this.iconKey,
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       isSystem: data.isSystem.present ? data.isSystem.value : this.isSystem,
+      parentCategoryId: data.parentCategoryId.present
+          ? data.parentCategoryId.value
+          : this.parentCategoryId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       archivedAt: data.archivedAt.present
           ? data.archivedAt.value
@@ -840,6 +885,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           ..write('iconKey: $iconKey, ')
           ..write('colorHex: $colorHex, ')
           ..write('isSystem: $isSystem, ')
+          ..write('parentCategoryId: $parentCategoryId, ')
           ..write('createdAt: $createdAt, ')
           ..write('archivedAt: $archivedAt')
           ..write(')'))
@@ -854,6 +900,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
     iconKey,
     colorHex,
     isSystem,
+    parentCategoryId,
     createdAt,
     archivedAt,
   );
@@ -867,6 +914,7 @@ class CategoryEntity extends DataClass implements Insertable<CategoryEntity> {
           other.iconKey == this.iconKey &&
           other.colorHex == this.colorHex &&
           other.isSystem == this.isSystem &&
+          other.parentCategoryId == this.parentCategoryId &&
           other.createdAt == this.createdAt &&
           other.archivedAt == this.archivedAt);
 }
@@ -878,6 +926,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
   final Value<String?> iconKey;
   final Value<String?> colorHex;
   final Value<bool> isSystem;
+  final Value<String?> parentCategoryId;
   final Value<DateTime> createdAt;
   final Value<DateTime?> archivedAt;
   final Value<int> rowid;
@@ -888,6 +937,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     this.iconKey = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.isSystem = const Value.absent(),
+    this.parentCategoryId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -899,6 +949,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     this.iconKey = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.isSystem = const Value.absent(),
+    this.parentCategoryId = const Value.absent(),
     required DateTime createdAt,
     this.archivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -913,6 +964,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     Expression<String>? iconKey,
     Expression<String>? colorHex,
     Expression<bool>? isSystem,
+    Expression<String>? parentCategoryId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? archivedAt,
     Expression<int>? rowid,
@@ -924,6 +976,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
       if (iconKey != null) 'icon_key': iconKey,
       if (colorHex != null) 'color_hex': colorHex,
       if (isSystem != null) 'is_system': isSystem,
+      if (parentCategoryId != null) 'parent_category_id': parentCategoryId,
       if (createdAt != null) 'created_at': createdAt,
       if (archivedAt != null) 'archived_at': archivedAt,
       if (rowid != null) 'rowid': rowid,
@@ -937,6 +990,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     Value<String?>? iconKey,
     Value<String?>? colorHex,
     Value<bool>? isSystem,
+    Value<String?>? parentCategoryId,
     Value<DateTime>? createdAt,
     Value<DateTime?>? archivedAt,
     Value<int>? rowid,
@@ -948,6 +1002,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
       iconKey: iconKey ?? this.iconKey,
       colorHex: colorHex ?? this.colorHex,
       isSystem: isSystem ?? this.isSystem,
+      parentCategoryId: parentCategoryId ?? this.parentCategoryId,
       createdAt: createdAt ?? this.createdAt,
       archivedAt: archivedAt ?? this.archivedAt,
       rowid: rowid ?? this.rowid,
@@ -975,6 +1030,9 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
     if (isSystem.present) {
       map['is_system'] = Variable<bool>(isSystem.value);
     }
+    if (parentCategoryId.present) {
+      map['parent_category_id'] = Variable<String>(parentCategoryId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -996,6 +1054,7 @@ class CategoriesCompanion extends UpdateCompanion<CategoryEntity> {
           ..write('iconKey: $iconKey, ')
           ..write('colorHex: $colorHex, ')
           ..write('isSystem: $isSystem, ')
+          ..write('parentCategoryId: $parentCategoryId, ')
           ..write('createdAt: $createdAt, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('rowid: $rowid')
@@ -4574,6 +4633,32 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _recurrenceCycleMeta = const VerificationMeta(
+    'recurrenceCycle',
+  );
+  @override
+  late final GeneratedColumn<String> recurrenceCycle = GeneratedColumn<String>(
+    'recurrence_cycle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _autoLogPaymentMeta = const VerificationMeta(
+    'autoLogPayment',
+  );
+  @override
+  late final GeneratedColumn<bool> autoLogPayment = GeneratedColumn<bool>(
+    'auto_log_payment',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_log_payment" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _linkedAssetRecordIdMeta =
       const VerificationMeta('linkedAssetRecordId');
   @override
@@ -4615,6 +4700,8 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
     currencyCode,
     paymentStatus,
     paidAt,
+    recurrenceCycle,
+    autoLogPayment,
     linkedAssetRecordId,
     linkedExpenseRecordId,
   ];
@@ -4724,6 +4811,24 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
         paidAt.isAcceptableOrUnknown(data['paid_at']!, _paidAtMeta),
       );
     }
+    if (data.containsKey('recurrence_cycle')) {
+      context.handle(
+        _recurrenceCycleMeta,
+        recurrenceCycle.isAcceptableOrUnknown(
+          data['recurrence_cycle']!,
+          _recurrenceCycleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('auto_log_payment')) {
+      context.handle(
+        _autoLogPaymentMeta,
+        autoLogPayment.isAcceptableOrUnknown(
+          data['auto_log_payment']!,
+          _autoLogPaymentMeta,
+        ),
+      );
+    }
     if (data.containsKey('linked_asset_record_id')) {
       context.handle(
         _linkedAssetRecordIdMeta,
@@ -4795,6 +4900,14 @@ class $BillsTable extends Bills with TableInfo<$BillsTable, BillEntity> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}paid_at'],
       ),
+      recurrenceCycle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_cycle'],
+      ),
+      autoLogPayment: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_log_payment'],
+      )!,
       linkedAssetRecordId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}linked_asset_record_id'],
@@ -4824,6 +4937,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
   final String currencyCode;
   final String paymentStatus;
   final DateTime? paidAt;
+  final String? recurrenceCycle;
+  final bool autoLogPayment;
   final String? linkedAssetRecordId;
   final String? linkedExpenseRecordId;
   const BillEntity({
@@ -4838,6 +4953,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     required this.currencyCode,
     required this.paymentStatus,
     this.paidAt,
+    this.recurrenceCycle,
+    required this.autoLogPayment,
     this.linkedAssetRecordId,
     this.linkedExpenseRecordId,
   });
@@ -4867,6 +4984,10 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     if (!nullToAbsent || paidAt != null) {
       map['paid_at'] = Variable<DateTime>(paidAt);
     }
+    if (!nullToAbsent || recurrenceCycle != null) {
+      map['recurrence_cycle'] = Variable<String>(recurrenceCycle);
+    }
+    map['auto_log_payment'] = Variable<bool>(autoLogPayment);
     if (!nullToAbsent || linkedAssetRecordId != null) {
       map['linked_asset_record_id'] = Variable<String>(linkedAssetRecordId);
     }
@@ -4901,6 +5022,10 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
       paidAt: paidAt == null && nullToAbsent
           ? const Value.absent()
           : Value(paidAt),
+      recurrenceCycle: recurrenceCycle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceCycle),
+      autoLogPayment: Value(autoLogPayment),
       linkedAssetRecordId: linkedAssetRecordId == null && nullToAbsent
           ? const Value.absent()
           : Value(linkedAssetRecordId),
@@ -4931,6 +5056,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
       paymentStatus: serializer.fromJson<String>(json['paymentStatus']),
       paidAt: serializer.fromJson<DateTime?>(json['paidAt']),
+      recurrenceCycle: serializer.fromJson<String?>(json['recurrenceCycle']),
+      autoLogPayment: serializer.fromJson<bool>(json['autoLogPayment']),
       linkedAssetRecordId: serializer.fromJson<String?>(
         json['linkedAssetRecordId'],
       ),
@@ -4954,6 +5081,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
       'currencyCode': serializer.toJson<String>(currencyCode),
       'paymentStatus': serializer.toJson<String>(paymentStatus),
       'paidAt': serializer.toJson<DateTime?>(paidAt),
+      'recurrenceCycle': serializer.toJson<String?>(recurrenceCycle),
+      'autoLogPayment': serializer.toJson<bool>(autoLogPayment),
       'linkedAssetRecordId': serializer.toJson<String?>(linkedAssetRecordId),
       'linkedExpenseRecordId': serializer.toJson<String?>(
         linkedExpenseRecordId,
@@ -4973,6 +5102,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     String? currencyCode,
     String? paymentStatus,
     Value<DateTime?> paidAt = const Value.absent(),
+    Value<String?> recurrenceCycle = const Value.absent(),
+    bool? autoLogPayment,
     Value<String?> linkedAssetRecordId = const Value.absent(),
     Value<String?> linkedExpenseRecordId = const Value.absent(),
   }) => BillEntity(
@@ -4993,6 +5124,10 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     currencyCode: currencyCode ?? this.currencyCode,
     paymentStatus: paymentStatus ?? this.paymentStatus,
     paidAt: paidAt.present ? paidAt.value : this.paidAt,
+    recurrenceCycle: recurrenceCycle.present
+        ? recurrenceCycle.value
+        : this.recurrenceCycle,
+    autoLogPayment: autoLogPayment ?? this.autoLogPayment,
     linkedAssetRecordId: linkedAssetRecordId.present
         ? linkedAssetRecordId.value
         : this.linkedAssetRecordId,
@@ -5029,6 +5164,12 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
           ? data.paymentStatus.value
           : this.paymentStatus,
       paidAt: data.paidAt.present ? data.paidAt.value : this.paidAt,
+      recurrenceCycle: data.recurrenceCycle.present
+          ? data.recurrenceCycle.value
+          : this.recurrenceCycle,
+      autoLogPayment: data.autoLogPayment.present
+          ? data.autoLogPayment.value
+          : this.autoLogPayment,
       linkedAssetRecordId: data.linkedAssetRecordId.present
           ? data.linkedAssetRecordId.value
           : this.linkedAssetRecordId,
@@ -5052,6 +5193,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
           ..write('currencyCode: $currencyCode, ')
           ..write('paymentStatus: $paymentStatus, ')
           ..write('paidAt: $paidAt, ')
+          ..write('recurrenceCycle: $recurrenceCycle, ')
+          ..write('autoLogPayment: $autoLogPayment, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedExpenseRecordId: $linkedExpenseRecordId')
           ..write(')'))
@@ -5071,6 +5214,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
     currencyCode,
     paymentStatus,
     paidAt,
+    recurrenceCycle,
+    autoLogPayment,
     linkedAssetRecordId,
     linkedExpenseRecordId,
   );
@@ -5089,6 +5234,8 @@ class BillEntity extends DataClass implements Insertable<BillEntity> {
           other.currencyCode == this.currencyCode &&
           other.paymentStatus == this.paymentStatus &&
           other.paidAt == this.paidAt &&
+          other.recurrenceCycle == this.recurrenceCycle &&
+          other.autoLogPayment == this.autoLogPayment &&
           other.linkedAssetRecordId == this.linkedAssetRecordId &&
           other.linkedExpenseRecordId == this.linkedExpenseRecordId);
 }
@@ -5105,6 +5252,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
   final Value<String> currencyCode;
   final Value<String> paymentStatus;
   final Value<DateTime?> paidAt;
+  final Value<String?> recurrenceCycle;
+  final Value<bool> autoLogPayment;
   final Value<String?> linkedAssetRecordId;
   final Value<String?> linkedExpenseRecordId;
   final Value<int> rowid;
@@ -5120,6 +5269,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     this.currencyCode = const Value.absent(),
     this.paymentStatus = const Value.absent(),
     this.paidAt = const Value.absent(),
+    this.recurrenceCycle = const Value.absent(),
+    this.autoLogPayment = const Value.absent(),
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedExpenseRecordId = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5136,6 +5287,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     this.currencyCode = const Value.absent(),
     this.paymentStatus = const Value.absent(),
     this.paidAt = const Value.absent(),
+    this.recurrenceCycle = const Value.absent(),
+    this.autoLogPayment = const Value.absent(),
     this.linkedAssetRecordId = const Value.absent(),
     this.linkedExpenseRecordId = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5153,6 +5306,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     Expression<String>? currencyCode,
     Expression<String>? paymentStatus,
     Expression<DateTime>? paidAt,
+    Expression<String>? recurrenceCycle,
+    Expression<bool>? autoLogPayment,
     Expression<String>? linkedAssetRecordId,
     Expression<String>? linkedExpenseRecordId,
     Expression<int>? rowid,
@@ -5170,6 +5325,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
       if (currencyCode != null) 'currency_code': currencyCode,
       if (paymentStatus != null) 'payment_status': paymentStatus,
       if (paidAt != null) 'paid_at': paidAt,
+      if (recurrenceCycle != null) 'recurrence_cycle': recurrenceCycle,
+      if (autoLogPayment != null) 'auto_log_payment': autoLogPayment,
       if (linkedAssetRecordId != null)
         'linked_asset_record_id': linkedAssetRecordId,
       if (linkedExpenseRecordId != null)
@@ -5190,6 +5347,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     Value<String>? currencyCode,
     Value<String>? paymentStatus,
     Value<DateTime?>? paidAt,
+    Value<String?>? recurrenceCycle,
+    Value<bool>? autoLogPayment,
     Value<String?>? linkedAssetRecordId,
     Value<String?>? linkedExpenseRecordId,
     Value<int>? rowid,
@@ -5206,6 +5365,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
       currencyCode: currencyCode ?? this.currencyCode,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       paidAt: paidAt ?? this.paidAt,
+      recurrenceCycle: recurrenceCycle ?? this.recurrenceCycle,
+      autoLogPayment: autoLogPayment ?? this.autoLogPayment,
       linkedAssetRecordId: linkedAssetRecordId ?? this.linkedAssetRecordId,
       linkedExpenseRecordId:
           linkedExpenseRecordId ?? this.linkedExpenseRecordId,
@@ -5251,6 +5412,12 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
     if (paidAt.present) {
       map['paid_at'] = Variable<DateTime>(paidAt.value);
     }
+    if (recurrenceCycle.present) {
+      map['recurrence_cycle'] = Variable<String>(recurrenceCycle.value);
+    }
+    if (autoLogPayment.present) {
+      map['auto_log_payment'] = Variable<bool>(autoLogPayment.value);
+    }
     if (linkedAssetRecordId.present) {
       map['linked_asset_record_id'] = Variable<String>(
         linkedAssetRecordId.value,
@@ -5281,6 +5448,8 @@ class BillsCompanion extends UpdateCompanion<BillEntity> {
           ..write('currencyCode: $currencyCode, ')
           ..write('paymentStatus: $paymentStatus, ')
           ..write('paidAt: $paidAt, ')
+          ..write('recurrenceCycle: $recurrenceCycle, ')
+          ..write('autoLogPayment: $autoLogPayment, ')
           ..write('linkedAssetRecordId: $linkedAssetRecordId, ')
           ..write('linkedExpenseRecordId: $linkedExpenseRecordId, ')
           ..write('rowid: $rowid')
@@ -6271,6 +6440,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'categories_workspace_name_idx',
     'CREATE INDEX categories_workspace_name_idx ON categories (workspace_id, name)',
   );
+  late final Index categoriesWorkspaceParentIdx = Index(
+    'categories_workspace_parent_idx',
+    'CREATE INDEX categories_workspace_parent_idx ON categories (workspace_id, parent_category_id)',
+  );
   late final Index recordsWorkspaceTypeIdx = Index(
     'records_workspace_type_idx',
     'CREATE INDEX records_workspace_type_idx ON records (workspace_id, record_type)',
@@ -6339,6 +6512,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     fieldDefinitions,
     fieldValues,
     categoriesWorkspaceNameIdx,
+    categoriesWorkspaceParentIdx,
     recordsWorkspaceTypeIdx,
     recordsDeletedIdx,
     tasksStatusDueIdx,
@@ -6358,6 +6532,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'workspaces',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('categories', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'categories',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('categories', kind: UpdateKind.delete)],
@@ -7042,6 +7223,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String?> iconKey,
       Value<String?> colorHex,
       Value<bool> isSystem,
+      Value<String?> parentCategoryId,
       required DateTime createdAt,
       Value<DateTime?> archivedAt,
       Value<int> rowid,
@@ -7054,6 +7236,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String?> iconKey,
       Value<String?> colorHex,
       Value<bool> isSystem,
+      Value<String?> parentCategoryId,
       Value<DateTime> createdAt,
       Value<DateTime?> archivedAt,
       Value<int> rowid,
@@ -7074,6 +7257,24 @@ final class $$CategoriesTableReferences
       $_db.workspaces,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_workspaceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CategoriesTable _parentCategoryIdTable(_$AppDatabase db) => db
+      .categories
+      .createAlias('categories__parent_category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager? get parentCategoryId {
+    final $_column = $_itemColumn<String>('parent_category_id');
+    if ($_column == null) return null;
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentCategoryIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7178,6 +7379,29 @@ class $$CategoriesTableFilterComposer
           }) => $$WorkspacesTableFilterComposer(
             $db: $db,
             $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableFilterComposer get parentCategoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentCategoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7304,6 +7528,29 @@ class $$CategoriesTableOrderingComposer
     );
     return composer;
   }
+
+  $$CategoriesTableOrderingComposer get parentCategoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentCategoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -7352,6 +7599,29 @@ class $$CategoriesTableAnnotationComposer
           }) => $$WorkspacesTableAnnotationComposer(
             $db: $db,
             $table: $db.workspaces,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableAnnotationComposer get parentCategoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentCategoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7427,6 +7697,7 @@ class $$CategoriesTableTableManager
           CategoryEntity,
           PrefetchHooks Function({
             bool workspaceId,
+            bool parentCategoryId,
             bool recordsInCategory,
             bool fieldsInCategory,
           })
@@ -7450,6 +7721,7 @@ class $$CategoriesTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<String?> colorHex = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
+                Value<String?> parentCategoryId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7460,6 +7732,7 @@ class $$CategoriesTableTableManager
                 iconKey: iconKey,
                 colorHex: colorHex,
                 isSystem: isSystem,
+                parentCategoryId: parentCategoryId,
                 createdAt: createdAt,
                 archivedAt: archivedAt,
                 rowid: rowid,
@@ -7472,6 +7745,7 @@ class $$CategoriesTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<String?> colorHex = const Value.absent(),
                 Value<bool> isSystem = const Value.absent(),
+                Value<String?> parentCategoryId = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7482,6 +7756,7 @@ class $$CategoriesTableTableManager
                 iconKey: iconKey,
                 colorHex: colorHex,
                 isSystem: isSystem,
+                parentCategoryId: parentCategoryId,
                 createdAt: createdAt,
                 archivedAt: archivedAt,
                 rowid: rowid,
@@ -7497,6 +7772,7 @@ class $$CategoriesTableTableManager
           prefetchHooksCallback:
               ({
                 workspaceId = false,
+                parentCategoryId = false,
                 recordsInCategory = false,
                 fieldsInCategory = false,
               }) {
@@ -7532,6 +7808,20 @@ class $$CategoriesTableTableManager
                                     referencedColumn:
                                         $$CategoriesTableReferences
                                             ._workspaceIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (parentCategoryId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentCategoryId,
+                                    referencedTable: $$CategoriesTableReferences
+                                        ._parentCategoryIdTable(db),
+                                    referencedColumn:
+                                        $$CategoriesTableReferences
+                                            ._parentCategoryIdTable(db)
                                             .id,
                                   )
                                   as T;
@@ -7603,6 +7893,7 @@ typedef $$CategoriesTableProcessedTableManager =
       CategoryEntity,
       PrefetchHooks Function({
         bool workspaceId,
+        bool parentCategoryId,
         bool recordsInCategory,
         bool fieldsInCategory,
       })
@@ -11509,6 +11800,8 @@ typedef $$BillsTableCreateCompanionBuilder =
       Value<String> currencyCode,
       Value<String> paymentStatus,
       Value<DateTime?> paidAt,
+      Value<String?> recurrenceCycle,
+      Value<bool> autoLogPayment,
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedExpenseRecordId,
       Value<int> rowid,
@@ -11526,6 +11819,8 @@ typedef $$BillsTableUpdateCompanionBuilder =
       Value<String> currencyCode,
       Value<String> paymentStatus,
       Value<DateTime?> paidAt,
+      Value<String?> recurrenceCycle,
+      Value<bool> autoLogPayment,
       Value<String?> linkedAssetRecordId,
       Value<String?> linkedExpenseRecordId,
       Value<int> rowid,
@@ -11644,6 +11939,16 @@ class $$BillsTableFilterComposer extends Composer<_$AppDatabase, $BillsTable> {
 
   ColumnFilters<DateTime> get paidAt => $composableBuilder(
     column: $table.paidAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrenceCycle => $composableBuilder(
+    column: $table.recurrenceCycle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoLogPayment => $composableBuilder(
+    column: $table.autoLogPayment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11776,6 +12081,16 @@ class $$BillsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get recurrenceCycle => $composableBuilder(
+    column: $table.recurrenceCycle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get autoLogPayment => $composableBuilder(
+    column: $table.autoLogPayment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RecordsTableOrderingComposer get recordId {
     final $$RecordsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -11901,6 +12216,16 @@ class $$BillsTableAnnotationComposer
   GeneratedColumn<DateTime> get paidAt =>
       $composableBuilder(column: $table.paidAt, builder: (column) => column);
 
+  GeneratedColumn<String> get recurrenceCycle => $composableBuilder(
+    column: $table.recurrenceCycle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get autoLogPayment => $composableBuilder(
+    column: $table.autoLogPayment,
+    builder: (column) => column,
+  );
+
   $$RecordsTableAnnotationComposer get recordId {
     final $$RecordsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -12014,6 +12339,8 @@ class $$BillsTableTableManager
                 Value<String> currencyCode = const Value.absent(),
                 Value<String> paymentStatus = const Value.absent(),
                 Value<DateTime?> paidAt = const Value.absent(),
+                Value<String?> recurrenceCycle = const Value.absent(),
+                Value<bool> autoLogPayment = const Value.absent(),
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedExpenseRecordId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -12029,6 +12356,8 @@ class $$BillsTableTableManager
                 currencyCode: currencyCode,
                 paymentStatus: paymentStatus,
                 paidAt: paidAt,
+                recurrenceCycle: recurrenceCycle,
+                autoLogPayment: autoLogPayment,
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedExpenseRecordId: linkedExpenseRecordId,
                 rowid: rowid,
@@ -12046,6 +12375,8 @@ class $$BillsTableTableManager
                 Value<String> currencyCode = const Value.absent(),
                 Value<String> paymentStatus = const Value.absent(),
                 Value<DateTime?> paidAt = const Value.absent(),
+                Value<String?> recurrenceCycle = const Value.absent(),
+                Value<bool> autoLogPayment = const Value.absent(),
                 Value<String?> linkedAssetRecordId = const Value.absent(),
                 Value<String?> linkedExpenseRecordId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -12061,6 +12392,8 @@ class $$BillsTableTableManager
                 currencyCode: currencyCode,
                 paymentStatus: paymentStatus,
                 paidAt: paidAt,
+                recurrenceCycle: recurrenceCycle,
+                autoLogPayment: autoLogPayment,
                 linkedAssetRecordId: linkedAssetRecordId,
                 linkedExpenseRecordId: linkedExpenseRecordId,
                 rowid: rowid,

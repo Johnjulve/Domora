@@ -9,6 +9,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
 
   const CategoryRepositoryImpl(this._db);
 
+  static const String billsExpensesCategoryId = 'cat-bills-expenses';
+
   static const List<Map<String, String>> defaultCategorySeeds = [
     {'id': 'cat-properties', 'name': 'Properties', 'icon': 'home', 'color': '#1E4B38'},
     {'id': 'cat-vehicles', 'name': 'Vehicles', 'icon': 'directions_car', 'color': '#2E7D5B'},
@@ -17,6 +19,15 @@ class CategoryRepositoryImpl implements CategoryRepository {
     {'id': 'cat-furniture', 'name': 'Furniture', 'icon': 'chair', 'color': '#78593A'},
     {'id': 'cat-tools', 'name': 'Tools', 'icon': 'home_repair_service', 'color': '#4A5568'},
     {'id': 'cat-family', 'name': 'Family', 'icon': 'people', 'color': '#5D6860'},
+    {'id': billsExpensesCategoryId, 'name': 'Bills & Expenses', 'icon': 'receipt_long', 'color': '#1E4B38'},
+  ];
+
+  static const List<Map<String, String>> defaultSubCategorySeeds = [
+    {'id': 'cat-sub-bill', 'name': 'Bill', 'icon': 'receipt_long'},
+    {'id': 'cat-sub-subscription', 'name': 'Subscription', 'icon': 'autorenew'},
+    {'id': 'cat-sub-withdraw-deposit', 'name': 'Withdraw / Deposit', 'icon': 'swap_horiz'},
+    {'id': 'cat-sub-maintenance', 'name': 'Maintenance', 'icon': 'build'},
+    {'id': 'cat-sub-general-expense', 'name': 'General Expense', 'icon': 'payments'},
   ];
 
   @override
@@ -38,13 +49,32 @@ class CategoryRepositoryImpl implements CategoryRepository {
           mode: InsertMode.insertOrIgnore,
         );
       }
+
+      for (final seed in defaultSubCategorySeeds) {
+        batch.insert(
+          _db.categories,
+          CategoriesCompanion.insert(
+            id: seed['id']!,
+            workspaceId: workspaceId,
+            name: seed['name']!,
+            iconKey: Value(seed['icon']),
+            isSystem: const Value(true),
+            parentCategoryId: const Value(billsExpensesCategoryId),
+            createdAt: now,
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
     });
   }
 
   @override
   Future<List<Category>> getCategoriesByWorkspace(String workspaceId) async {
     final entities = await (_db.select(_db.categories)
-          ..where((c) => c.workspaceId.equals(workspaceId) & c.archivedAt.isNull())
+          ..where((c) =>
+              c.workspaceId.equals(workspaceId) &
+              c.parentCategoryId.isNull() &
+              c.archivedAt.isNull())
           ..orderBy([(c) => OrderingTerm.asc(c.name)]))
         .get();
 
@@ -54,7 +84,33 @@ class CategoryRepositoryImpl implements CategoryRepository {
   @override
   Stream<List<Category>> watchCategoriesByWorkspace(String workspaceId) {
     return (_db.select(_db.categories)
-          ..where((c) => c.workspaceId.equals(workspaceId) & c.archivedAt.isNull())
+          ..where((c) =>
+              c.workspaceId.equals(workspaceId) &
+              c.parentCategoryId.isNull() &
+              c.archivedAt.isNull())
+          ..orderBy([(c) => OrderingTerm.asc(c.name)]))
+        .watch()
+        .map((entities) => entities.map(_toDomain).toList());
+  }
+
+  @override
+  Future<List<Category>> getSubCategories(String parentCategoryId) async {
+    final entities = await (_db.select(_db.categories)
+          ..where((c) =>
+              c.parentCategoryId.equals(parentCategoryId) &
+              c.archivedAt.isNull())
+          ..orderBy([(c) => OrderingTerm.asc(c.name)]))
+        .get();
+
+    return entities.map(_toDomain).toList();
+  }
+
+  @override
+  Stream<List<Category>> watchSubCategories(String parentCategoryId) {
+    return (_db.select(_db.categories)
+          ..where((c) =>
+              c.parentCategoryId.equals(parentCategoryId) &
+              c.archivedAt.isNull())
           ..orderBy([(c) => OrderingTerm.asc(c.name)]))
         .watch()
         .map((entities) => entities.map(_toDomain).toList());
@@ -62,21 +118,80 @@ class CategoryRepositoryImpl implements CategoryRepository {
 
   @override
   Future<Category> createCategory(Category category) async {
-    await _db.into(_db.categories).insert(_toCompanion(category));
-    return category;
+    final trimmedName = category.name.trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError.value(
+        category.name,
+        'category.name',
+        'Category name must not be empty',
+      );
+    }
+
+    final parentId = category.parentCategoryId;
+    if (parentId != null) {
+      await _validateParentCategory(
+        categoryId: category.id,
+        workspaceId: category.workspaceId,
+        parentId: parentId,
+      );
+    }
+
+    final normalized = category.copyWith(name: trimmedName);
+    await _db.into(_db.categories).insert(_toCompanion(normalized));
+    return normalized;
+  }
+
+  Future<void> _validateParentCategory({
+    required String categoryId,
+    required String workspaceId,
+    required String parentId,
+  }) async {
+    if (parentId == categoryId) {
+      throw ArgumentError.value(
+        parentId,
+        'category.parentCategoryId',
+        'Category cannot be its own parent',
+      );
+    }
+
+    final parent = await (_db.select(_db.categories)
+          ..where((c) => c.id.equals(parentId)))
+        .getSingleOrNull();
+    if (parent == null || parent.workspaceId != workspaceId) {
+      throw ArgumentError.value(
+        parentId,
+        'category.parentCategoryId',
+        'Parent category must exist in the same workspace',
+      );
+    }
+
+    if (parent.parentCategoryId != null) {
+      throw ArgumentError.value(
+        parentId,
+        'category.parentCategoryId',
+        'Nested sub-categories deeper than one level are not supported',
+      );
+    }
   }
 
   @override
   Future<void> archiveCategory(String id) async {
     final now = DateTime.now().toUtc();
-    await (_db.update(_db.categories)..where((c) => c.id.equals(id)))
+    await (_db.update(_db.categories)
+          ..where((c) =>
+              (c.id.equals(id) | c.parentCategoryId.equals(id)) &
+              c.archivedAt.isNull()))
         .write(CategoriesCompanion(archivedAt: Value(now)));
   }
 
   @override
   Future<void> renameCategory(String id, String newName) async {
+    final trimmed = newName.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError.value(newName, 'newName', 'Category name must not be empty');
+    }
     await (_db.update(_db.categories)..where((c) => c.id.equals(id)))
-        .write(CategoriesCompanion(name: Value(newName)));
+        .write(CategoriesCompanion(name: Value(trimmed)));
   }
 
   Category _toDomain(CategoryEntity entity) {
@@ -87,6 +202,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
       iconKey: entity.iconKey,
       colorHex: entity.colorHex,
       isSystem: entity.isSystem,
+      parentCategoryId: entity.parentCategoryId,
       createdAt: entity.createdAt.toUtc(),
       archivedAt: entity.archivedAt?.toUtc(),
     );
@@ -100,6 +216,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
       iconKey: Value(category.iconKey),
       colorHex: Value(category.colorHex),
       isSystem: Value(category.isSystem),
+      parentCategoryId: Value(category.parentCategoryId),
       createdAt: Value(category.createdAt.toUtc()),
       archivedAt: Value(category.archivedAt?.toUtc()),
     );

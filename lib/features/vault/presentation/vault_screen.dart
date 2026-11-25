@@ -15,7 +15,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
+import '../../records/presentation/widgets/record_section_card.dart';
 import '../domain/document_item.dart';
+import '../domain/vault_asset_matcher.dart';
 
 class VaultScreen extends ConsumerStatefulWidget {
   const VaultScreen({super.key});
@@ -399,20 +401,102 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
   String? _pickedFilePath;
   String? _pickedMimeType;
   bool _isSubmitting = false;
+  bool _userDismissedAutoMatch = false;
+  bool _wasAutoMatched = false;
+  String? _autoMatchedReason;
+  VaultAssetMatch? _topMatch;
 
   @override
   void initState() {
     super.initState();
     _selectedAssetRecordId = widget.initialAssetRecordId;
+    _titleController.addListener(_onMetadataChanged);
+    _fileNameController.addListener(_onMetadataChanged);
+    _notesController.addListener(_onMetadataChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _evaluateAutoMatch());
   }
 
   @override
   void dispose() {
+    _titleController.removeListener(_onMetadataChanged);
+    _fileNameController.removeListener(_onMetadataChanged);
+    _notesController.removeListener(_onMetadataChanged);
     _titleController.dispose();
     _fileNameController.dispose();
     _fileSizeController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  List<VaultAssetCandidate> _buildCandidates(
+    List<RecordWithAsset> activeAssets,
+    Map<String, String> plates,
+  ) {
+    return [
+      for (final asset in activeAssets)
+        VaultAssetCandidate(
+          asset: asset,
+          licensePlate: plates[asset.record.id],
+        ),
+    ];
+  }
+
+  void _onMetadataChanged() {
+    _evaluateAutoMatch(rebuildAlways: true);
+  }
+
+  void _evaluateAutoMatch({bool rebuildAlways = false}) {
+    if (!mounted) return;
+    if (widget.initialAssetRecordId != null) {
+      if (rebuildAlways) setState(() {});
+      return;
+    }
+
+    final activeAssets = ref.read(activeAssetsStreamProvider).asData?.value ?? const [];
+    final plates = ref.read(workspaceLicensePlatesStreamProvider).asData?.value ?? const {};
+    final topMatch = VaultAssetMatcher.findMatchingAssetsForDocument(
+      title: _titleController.text,
+      fileName: _fileNameController.text,
+      description: _notesController.text,
+      candidates: _buildCandidates(activeAssets, plates),
+    ).firstOrNull;
+
+    var nextSelectedId = _selectedAssetRecordId;
+    var nextWasAutoMatched = _wasAutoMatched;
+    var nextReason = _autoMatchedReason;
+
+    if (_wasAutoMatched) {
+      if (topMatch != null && topMatch.shouldAutoPreselect && !_userDismissedAutoMatch) {
+        nextSelectedId = topMatch.asset.record.id;
+        nextReason = topMatch.reason;
+      } else {
+        nextSelectedId = null;
+        nextWasAutoMatched = false;
+        nextReason = null;
+      }
+    } else if (_selectedAssetRecordId == null &&
+        topMatch != null &&
+        topMatch.shouldAutoPreselect &&
+        !_userDismissedAutoMatch) {
+      nextSelectedId = topMatch.asset.record.id;
+      nextWasAutoMatched = true;
+      nextReason = topMatch.reason;
+    }
+
+    final changed = nextSelectedId != _selectedAssetRecordId ||
+        nextWasAutoMatched != _wasAutoMatched ||
+        nextReason != _autoMatchedReason ||
+        topMatch?.asset.record.id != _topMatch?.asset.record.id ||
+        topMatch?.reason != _topMatch?.reason;
+
+    if (changed || rebuildAlways) {
+      setState(() {
+        _topMatch = topMatch;
+        _selectedAssetRecordId = nextSelectedId;
+        _wasAutoMatched = nextWasAutoMatched;
+        _autoMatchedReason = nextReason;
+      });
+    }
   }
 
   String _detectMimeType(String fileName) {
@@ -549,7 +633,20 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(activeAssetsStreamProvider, (_, _) => _evaluateAutoMatch());
+    ref.listen(workspaceLicensePlatesStreamProvider, (_, _) => _evaluateAutoMatch());
+
     final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
+    final activeAssets = ref.watch(activeAssetsStreamProvider).asData?.value ?? const [];
+    ref.watch(workspaceLicensePlatesStreamProvider);
+    final topMatch = _topMatch;
+    final linkedAssetTitle = _selectedAssetRecordId == null
+        ? null
+        : activeAssets
+            .where((a) => a.record.id == _selectedAssetRecordId)
+            .firstOrNull
+            ?.record
+            .title;
 
     return Container(
       decoration: BoxDecoration(
@@ -668,10 +765,14 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _documentType,
                         decoration: const InputDecoration(labelText: 'Document Type'),
                         items: DocumentType.values.map((t) {
-                          return DropdownMenuItem(value: t.value, child: Text(t.label));
+                          return DropdownMenuItem(
+                            value: t.value,
+                            child: Text(t.label, overflow: TextOverflow.ellipsis),
+                          );
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) setState(() => _documentType = val);
@@ -712,20 +813,51 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
                 ),
                 const SizedBox(height: 16),
 
+                if (_wasAutoMatched && _selectedAssetRecordId != null && _autoMatchedReason != null) ...[
+                  _buildAutoMatchBanner(
+                    context,
+                    assetTitle: linkedAssetTitle ?? 'Asset',
+                    reason: _autoMatchedReason!,
+                  ),
+                  const SizedBox(height: 10),
+                ] else if (widget.initialAssetRecordId == null &&
+                    _selectedAssetRecordId == null &&
+                    topMatch != null &&
+                    !topMatch.shouldAutoPreselect) ...[
+                  _buildSuggestedMatchBanner(context, topMatch),
+                  const SizedBox(height: 10),
+                ],
+
                 // Reusable AssetPickerTile eliminating popup dropdown misalignment
                 AssetPickerTile(
                   selectedAssetRecordId: _selectedAssetRecordId,
-                  onAssetChanged: (assetId) => setState(() => _selectedAssetRecordId = assetId),
+                  onAssetChanged: (assetId) {
+                    setState(() {
+                      _selectedAssetRecordId = assetId;
+                      _wasAutoMatched = false;
+                      _autoMatchedReason = null;
+                      if (assetId == null) {
+                        _userDismissedAutoMatch = true;
+                      }
+                    });
+                  },
                 ),
 
                 const SizedBox(height: 20),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
                   onPressed: _isSubmitting ? null : _submit,
                   child: _isSubmitting
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
                         )
                       : const Text('Save Document'),
                 ),
@@ -736,19 +868,180 @@ class _AddDocumentSheetState extends ConsumerState<AddDocumentSheet> {
       ),
     );
   }
+
+  Widget _buildAutoMatchBanner(
+    BuildContext context, {
+    required String assetTitle,
+    required String reason,
+  }) {
+    return Container(
+      key: const Key('vault_auto_match_banner'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: adaptiveSageFill(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.brandAccent.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome_outlined, size: 18, color: context.brandAccent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Auto-linked to $assetTitle ($reason)',
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton(
+            key: const Key('vault_auto_match_unlink_button'),
+            onPressed: () {
+              setState(() {
+                _userDismissedAutoMatch = true;
+                _wasAutoMatched = false;
+                _autoMatchedReason = null;
+                _selectedAssetRecordId = null;
+              });
+            },
+            child: const Text('Unlink'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestedMatchBanner(BuildContext context, VaultAssetMatch match) {
+    return Container(
+      key: const Key('vault_suggested_match_banner'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.link_outlined, size: 18, color: context.brandAccent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Suggested match: ${match.asset.record.title} (${match.reason})',
+              style: AppTypography.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.textPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton(
+            key: const Key('vault_suggested_match_link_button'),
+            onPressed: () {
+              setState(() {
+                _selectedAssetRecordId = match.asset.record.id;
+                _wasAutoMatched = false;
+                _autoMatchedReason = null;
+              });
+            },
+            child: const Text('Link'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class DocumentDetailSheet extends ConsumerWidget {
+class DocumentDetailSheet extends ConsumerStatefulWidget {
   final RecordWithDocument item;
 
   const DocumentDetailSheet({super.key, required this.item});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final record = item.record;
-    final doc = item.document;
+  ConsumerState<DocumentDetailSheet> createState() => _DocumentDetailSheetState();
+}
+
+class _DocumentDetailSheetState extends ConsumerState<DocumentDetailSheet> {
+  bool _isUpdatingLink = false;
+
+  Future<void> _updateLink({
+    required RecordWithDocument currentItem,
+    required String? targetAssetId,
+    required String successMessage,
+  }) async {
+    if (_isUpdatingLink) return;
+    setState(() => _isUpdatingLink = true);
+
+    final previousAssetId = currentItem.document.linkedAssetRecordId;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    try {
+      await ref.read(documentRepositoryProvider).updateDocumentAssetLink(
+            documentRecordId: currentItem.record.id,
+            linkedAssetRecordId: targetAssetId,
+          );
+      ref.invalidate(activeDocumentsStreamProvider);
+      ref.invalidate(dashboardDocumentsStreamProvider);
+      if (previousAssetId != null) {
+        ref.invalidate(assetDocumentsStreamProvider(previousAssetId));
+      }
+      if (targetAssetId != null) {
+        ref.invalidate(assetDocumentsStreamProvider(targetAssetId));
+      }
+
+      if (!mounted) return;
+      setState(() => _isUpdatingLink = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(successMessage, style: TextStyle(color: colorScheme.onPrimary)),
+          backgroundColor: colorScheme.primary,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUpdatingLink = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update document link: $e',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: AppColors.statusDangerStroke,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final liveDocs = ref.watch(dashboardDocumentsStreamProvider).asData?.value;
+    final currentItem =
+        liveDocs?.where((d) => d.record.id == widget.item.record.id).firstOrNull ?? widget.item;
+    final record = currentItem.record;
+    final doc = currentItem.document;
     final docType = DocumentType.fromString(doc.documentType);
     final sheetBg = Theme.of(context).bottomSheetTheme.backgroundColor ?? context.surfaceCard;
+    final dangerForeground =
+        context.isDarkMode ? AppColors.statusDangerStroke : AppColors.statusDangerText;
+
+    final activeAssets = ref.watch(activeAssetsStreamProvider).asData?.value ?? const [];
+    final plates = ref.watch(workspaceLicensePlatesStreamProvider).asData?.value ?? const {};
+    final suggestedMatch = doc.linkedAssetRecordId != null
+        ? null
+        : VaultAssetMatcher.findMatchingAssetsForDocument(
+            title: record.title,
+            fileName: doc.fileName,
+            description: record.description,
+            candidates: [
+              for (final a in activeAssets)
+                VaultAssetCandidate(asset: a, licensePlate: plates[a.record.id]),
+            ],
+          ).firstOrNull;
 
     return Container(
       decoration: BoxDecoration(
@@ -773,11 +1066,14 @@ class DocumentDetailSheet extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       record.title,
-                      style: AppTypography.pageHeader.copyWith(fontSize: 22),
+                      style: AppTypography.pageHeader.copyWith(
+                        fontSize: 22,
+                        color: context.textPrimary,
+                      ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close, color: context.textSecondary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -788,27 +1084,31 @@ class DocumentDetailSheet extends ConsumerWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      _buildDetailRow('Document Type', docType.label.toUpperCase()),
+                      _buildDetailRow(context, 'Document Type', docType.label.toUpperCase()),
                       const Divider(),
-                      _buildDetailRow('File Name', doc.fileName),
+                      _buildDetailRow(context, 'File Name', doc.fileName),
                       const Divider(),
-                      _buildDetailRow('File Size', doc.formattedFileSize),
+                      _buildDetailRow(context, 'File Size', doc.formattedFileSize),
                       if (doc.mimeType != null) ...[
                         const Divider(),
-                        _buildDetailRow('MIME Type', doc.mimeType!),
+                        _buildDetailRow(context, 'MIME Type', doc.mimeType!),
                       ],
-                      if (item.linkedAssetTitle != null) ...[
+                      if (doc.linkedAssetRecordId != null) ...[
                         const Divider(),
-                        _buildDetailRow('Linked Asset', item.linkedAssetTitle!),
+                        _buildLinkedAssetRow(context, currentItem),
                       ],
                       if (record.description != null && record.description!.isNotEmpty) ...[
                         const Divider(),
-                        _buildDetailRow('Notes', record.description!),
+                        _buildDetailRow(context, 'Notes', record.description!),
                       ],
                     ],
                   ),
                 ),
               ),
+              if (suggestedMatch != null) ...[
+                const SizedBox(height: 14),
+                _buildSuggestedMatchCard(context, currentItem, suggestedMatch),
+              ],
               const SizedBox(height: 16),
               if (doc.filePath != null && doc.filePath!.isNotEmpty) ...[
                 FilledButton.icon(
@@ -817,7 +1117,10 @@ class DocumentDetailSheet extends ConsumerWidget {
                     if (result.type != ResultType.done && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Could not open file: ${result.message}'),
+                          content: Text(
+                            'Could not open file: ${result.message}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
                           backgroundColor: AppColors.statusDangerStroke,
                         ),
                       );
@@ -830,10 +1133,12 @@ class DocumentDetailSheet extends ConsumerWidget {
               ],
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.statusDangerText,
+                  foregroundColor: dangerForeground,
                   side: const BorderSide(color: AppColors.statusDangerStroke),
                 ),
-                onPressed: () => _confirmDeleteDocument(context, ref, record.id, record.title),
+                onPressed: _isUpdatingLink
+                    ? null
+                    : () => _confirmDeleteDocument(context, ref, record.id, record.title),
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Move to Trash'),
               ),
@@ -844,19 +1149,143 @@ class DocumentDetailSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildLinkedAssetRow(BuildContext context, RecordWithDocument currentItem) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Text(
+            'Linked Asset',
+            style: AppTypography.bodySecondary.copyWith(color: context.textSecondary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              currentItem.linkedAssetTitle ?? 'Archived / Deleted Asset',
+              textAlign: TextAlign.end,
+              style: AppTypography.bodyPrimary.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 6),
+          TextButton(
+            key: const Key('vault_unlink_asset_button'),
+            onPressed: _isUpdatingLink
+                ? null
+                : () => _updateLink(
+                      currentItem: currentItem,
+                      targetAssetId: null,
+                      successMessage: 'Unlinked "${currentItem.record.title}" from asset.',
+                    ),
+            child: const Text('Unlink'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestedMatchCard(
+    BuildContext context,
+    RecordWithDocument currentItem,
+    VaultAssetMatch match,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('vault_detail_suggested_match_card'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: adaptiveSageFill(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.brandAccent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome_outlined, size: 20, color: context.brandAccent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Suggested Asset Match',
+                  style: AppTypography.caption.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: context.brandAccent,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  match.asset.record.title,
+                  style: AppTypography.cardTitle.copyWith(
+                    fontSize: 14,
+                    color: context.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  match.reason,
+                  style: AppTypography.caption.copyWith(color: context.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            key: const Key('vault_detail_connect_button'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              minimumSize: const Size(0, 38),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            onPressed: _isUpdatingLink
+                ? null
+                : () => _updateLink(
+                      currentItem: currentItem,
+                      targetAssetId: match.asset.record.id,
+                      successMessage: 'Connected to ${match.asset.record.title}.',
+                    ),
+            child: _isUpdatingLink
+                ? SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colorScheme.onPrimary,
+                    ),
+                  )
+                : const Text('Connect'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.bodySecondary),
+          Text(
+            label,
+            style: AppTypography.bodySecondary.copyWith(color: context.textSecondary),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: AppTypography.bodyPrimary.copyWith(fontWeight: FontWeight.w600),
+              style: AppTypography.bodyPrimary.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.textPrimary,
+              ),
             ),
           ),
         ],
@@ -865,6 +1294,7 @@ class DocumentDetailSheet extends ConsumerWidget {
   }
 
   void _confirmDeleteDocument(BuildContext context, WidgetRef ref, String recordId, String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -873,10 +1303,13 @@ class DocumentDetailSheet extends ConsumerWidget {
           borderRadius: BorderRadius.circular(AppTheme.sheetRadius),
           side: BorderSide(color: ctx.borderSubtle),
         ),
-        title: const Text('Move to Trash?', style: AppTypography.cardTitle),
+        title: Text(
+          'Move to Trash?',
+          style: AppTypography.cardTitle.copyWith(color: ctx.textPrimary),
+        ),
         content: Text(
           'Are you sure you want to remove "$title"?',
-          style: AppTypography.bodyPrimary,
+          style: AppTypography.bodyPrimary.copyWith(color: ctx.textPrimary),
         ),
         actions: [
           TextButton(
@@ -886,6 +1319,7 @@ class DocumentDetailSheet extends ConsumerWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.statusDangerStroke,
+              foregroundColor: Colors.white,
               minimumSize: const Size(120, 44),
             ),
             onPressed: () async {
@@ -899,14 +1333,20 @@ class DocumentDetailSheet extends ConsumerWidget {
 
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text('Moved "$title" to trash'),
-                    backgroundColor: AppColors.brandPrimary,
+                    content: Text(
+                      'Moved "$title" to trash',
+                      style: TextStyle(color: colorScheme.onPrimary),
+                    ),
+                    backgroundColor: colorScheme.primary,
                   ),
                 );
               } catch (e) {
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text('Failed to delete document: $e'),
+                    content: Text(
+                      'Failed to delete document: $e',
+                      style: const TextStyle(color: Colors.white),
+                    ),
                     backgroundColor: AppColors.statusDangerStroke,
                   ),
                 );

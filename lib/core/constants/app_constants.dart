@@ -5,13 +5,13 @@ class AppConstants {
   /// Product name and active release version
   static const String appName = 'Domora';
   static const String appVersion = '0.1.0';
-  static const String appReleaseChannel = 'alpha.13';
-  static const int appBuildNumber = 13;
+  static const String appReleaseChannel = 'alpha.14';
+  static const int appBuildNumber = 14;
   static const String displayVersion = 'v$appVersion';
   static const String fullVersionTag = 'v$appVersion-$appReleaseChannel';
 
-  /// SQLite schema version for Drift (v8: Flexible Assets & Custom Fields Engine)
-  static const int schemaVersion = 8;
+  /// SQLite schema version for Drift (v10: Recurring Subscriptions & Auto-Log Engine)
+  static const int schemaVersion = 10;
 
   /// Default personal workspace identifier (deterministic fallback before multi-workspace)
   static const String defaultWorkspaceId = 'default-personal-workspace';

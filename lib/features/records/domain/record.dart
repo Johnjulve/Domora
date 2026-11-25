@@ -450,6 +450,15 @@ abstract class RecordRepository {
   /// Updates specialized asset details.
   Future<void> updateAsset(Asset asset);
 
+  /// Atomically updates editable record/asset details and synchronizes custom fields,
+  /// while preserving locked hardware identity (`brand`, `model`, `serialNumber`)
+  /// and record classification (`categoryId`, `recordType`).
+  Future<void> updateAssetRecord({
+    required Record record,
+    required Asset asset,
+    Map<String, String>? customFields,
+  });
+
   /// Soft deletes a record by setting its `deletedAt` timestamp.
   Future<void> softDeleteRecord(String recordId);
 
@@ -479,4 +488,7 @@ abstract class RecordRepository {
     required Map<String, String> fieldValues,
     String? categoryId,
   });
+
+  /// Watches active `'License Plate'` custom field values across a workspace (`recordId -> plate`).
+  Stream<Map<String, String>> watchLicensePlatesByWorkspace(String workspaceId);
 }

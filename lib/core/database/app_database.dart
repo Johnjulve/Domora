@@ -64,6 +64,16 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(fieldDefinitions);
           await m.createTable(fieldValues);
         }
+        if (from < 9) {
+          if (from >= 2) {
+            await m.addColumn(categories, categories.parentCategoryId);
+          }
+          await m.createIndex(categoriesWorkspaceParentIdx);
+        }
+        if (from < 10 && from >= 6) {
+          await m.addColumn(bills, bills.recurrenceCycle);
+          await m.addColumn(bills, bills.autoLogPayment);
+        }
       },
       beforeOpen: (details) async {
         // Enforce SQLite Foreign Key constraints and enable WAL mode for concurrent reliability

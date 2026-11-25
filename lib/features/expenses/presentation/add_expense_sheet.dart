@@ -7,19 +7,37 @@ import '../../../core/providers/database_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../categories/domain/category.dart';
 import '../../records/domain/record.dart';
 import '../../records/presentation/widgets/asset_picker_sheet.dart';
 import '../../tasks/domain/task_item.dart';
 import '../domain/expense_item.dart';
 
+class _ExpenseCategoryOption {
+  final String value;
+  final String label;
+  final String? subCategoryId;
+
+  const _ExpenseCategoryOption({
+    required this.value,
+    required this.label,
+    this.subCategoryId,
+  });
+}
+
 class AddExpenseSheet extends ConsumerStatefulWidget {
   final String? initialAssetRecordId;
   final String? initialTaskRecordId;
+  final String? initialExpenseCategory;
+  final bool prioritizeAssetLink;
 
   const AddExpenseSheet({
     super.key,
     this.initialAssetRecordId,
     this.initialTaskRecordId,
+    this.initialExpenseCategory,
+    this.prioritizeAssetLink = false,
   });
 
   @override
@@ -37,12 +55,13 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
   late DateTime _transactionDate;
   String? _paymentMethod = 'card';
   String? _selectedAssetRecordId;
+  bool _isMoreDetailsExpanded = false;
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    _expenseCategory = ExpenseCategory.maintenance.value;
+    _expenseCategory = widget.initialExpenseCategory ?? ExpenseCategory.maintenance.value;
     _transactionDate = DateTime.now();
     _selectedAssetRecordId = widget.initialAssetRecordId;
   }
@@ -54,6 +73,76 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
     _notesController.dispose();
     _odometerController.dispose();
     super.dispose();
+  }
+
+  bool get _shouldShowAssetProminently =>
+      widget.prioritizeAssetLink ||
+      widget.initialAssetRecordId != null ||
+      _expenseCategory == ExpenseCategory.maintenance.value;
+
+  String? _matchBuiltInExpenseSubCategoryId(ExpenseCategory cat, List<Category> subCategories) {
+    final valueLower = cat.value.toLowerCase();
+    final labelLower = cat.label.toLowerCase();
+    for (final sub in subCategories) {
+      final subLower = sub.name.trim().toLowerCase();
+      if (subLower == valueLower || subLower == labelLower) {
+        return sub.id;
+      }
+    }
+    switch (cat) {
+      case ExpenseCategory.maintenance:
+        return subCategories.where((s) => s.id == 'cat-sub-maintenance').firstOrNull?.id;
+      case ExpenseCategory.subscription:
+        return subCategories.where((s) => s.id == 'cat-sub-subscription').firstOrNull?.id;
+      case ExpenseCategory.other:
+        return subCategories.where((s) => s.id == 'cat-sub-general-expense').firstOrNull?.id;
+      default:
+        return null;
+    }
+  }
+
+  List<_ExpenseCategoryOption> _buildCategoryOptions(List<Category> subCategories) {
+    final options = <_ExpenseCategoryOption>[
+      for (final cat in ExpenseCategory.values)
+        _ExpenseCategoryOption(
+          value: cat.value,
+          label: cat.label,
+          subCategoryId: _matchBuiltInExpenseSubCategoryId(cat, subCategories),
+        ),
+    ];
+
+    final seenNormalized = <String>{
+      for (final opt in options) opt.value.toLowerCase(),
+      for (final opt in options) opt.label.toLowerCase(),
+    };
+
+    for (final sub in subCategories) {
+      final normalized = sub.name.trim().toLowerCase();
+      if (normalized.isEmpty || seenNormalized.contains(normalized)) continue;
+      if (sub.id == 'cat-sub-general-expense' && normalized == 'general expense') continue;
+      seenNormalized.add(normalized);
+      options.add(
+        _ExpenseCategoryOption(
+          value: sub.name.trim(),
+          label: sub.name.trim(),
+          subCategoryId: sub.id,
+        ),
+      );
+    }
+
+    if (!options.any((opt) => opt.value == _expenseCategory)) {
+      options.add(
+        _ExpenseCategoryOption(value: _expenseCategory, label: _expenseCategory),
+      );
+    }
+    return options;
+  }
+
+  bool _isVehicleAsset(RecordWithAsset? asset) {
+    if (asset == null) return false;
+    return asset.record.categoryId == 'cat-vehicles' ||
+        asset.asset?.odometerReading != null ||
+        asset.asset?.pmsDistanceIntervalKm != null;
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -77,20 +166,33 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
     return DateTime(targetYear, targetMonth, targetDay, from.hour, from.minute, from.second);
   }
 
-  Future<void> _submit(List<RecordWithAsset> activeAssets) async {
+  Future<void> _submit(
+    List<RecordWithAsset> activeAssets,
+    List<_ExpenseCategoryOption> categoryOptions,
+  ) async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
 
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final repo = ref.read(expenseRepositoryProvider);
     final recordId = const Uuid().v4();
     final now = DateTime.now().toUtc();
     final title = _titleController.text.trim();
     final notes = _notesController.text.trim();
 
-    final parsedAmount = double.parse(_amountController.text.trim());
-    final amountMinor = (parsedAmount * 100).round();
-    final parsedOdometer = int.tryParse(_odometerController.text.trim());
+    final amountMinor = CurrencyFormatter.parseMajorToMinor(_amountController.text);
+    if (amountMinor == null || amountMinor <= 0) {
+      if (mounted) setState(() => _isSubmitting = false);
+      return;
+    }
+    final selectedAsset = _selectedAssetRecordId == null
+        ? null
+        : activeAssets.where((a) => a.record.id == _selectedAssetRecordId).firstOrNull;
+    final parsedOdometer = _isVehicleAsset(selectedAsset)
+        ? int.tryParse(_odometerController.text.trim())
+        : null;
+    final matchedOption = categoryOptions.where((o) => o.value == _expenseCategory).firstOrNull;
 
     // 1. Persist the primary expense record first
     try {
@@ -98,6 +200,7 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
         record: Record(
           id: recordId,
           workspaceId: AppConstants.defaultWorkspaceId,
+          categoryId: matchedOption?.subCategoryId,
           recordType: 'expense',
           title: title,
           description: notes.isNotEmpty ? notes : null,
@@ -130,11 +233,8 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
     }
 
     // 2. Coordinate optional PMS scheduling loop before closing sheet
-    final selectedAsset = _selectedAssetRecordId == null
-        ? null
-        : activeAssets.where((a) => a.record.id == _selectedAssetRecordId).firstOrNull;
-
     bool scheduledPms = false;
+    String? pmsScheduleError;
     if (mounted &&
         selectedAsset != null &&
         parsedOdometer != null &&
@@ -160,7 +260,7 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
           ),
           content: Text(
             'Maintenance logged at $parsedOdometer km.\n\n'
-            'Based on configured limits ($intervalKm km / $intervalMonths mos), the next recommended PMS milestone is:\n\n'
+            'Based on configured limits ($intervalKm km / $intervalMonths months), the next recommended PMS milestone is:\n\n'
             '• Target Odometer: $nextTargetMileage km\n'
             '• Target Due Date: $nextDateStr\n\n'
             'Would you like to auto-create the next PMS reminder task?',
@@ -173,8 +273,8 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: ctx.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
-                foregroundColor: AppColors.brandOnPrimary,
+                backgroundColor: Theme.of(ctx).colorScheme.primary,
+                foregroundColor: Theme.of(ctx).colorScheme.onPrimary,
               ),
               onPressed: () => Navigator.of(ctx).pop(true),
               child: const Text('Schedule Next PMS'),
@@ -184,7 +284,6 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
       );
 
       if (shouldSchedule == true && mounted) {
-        scheduledPms = true;
         try {
           final taskRepo = ref.read(taskRepositoryProvider);
           final recordRepo = ref.read(recordRepositoryProvider);
@@ -209,6 +308,11 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
             ),
           );
 
+          await repo.linkTaskToExpense(
+            expenseRecordId: recordId,
+            taskRecordId: taskId,
+          );
+
           if (selectedAsset.asset != null) {
             await recordRepo.updateAsset(
               selectedAsset.asset!.copyWith(
@@ -218,22 +322,37 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
               ),
             );
           }
-        } catch (_) {
-          // Task scheduling failure logged; does not abort main expense completion
+          scheduledPms = true;
+        } catch (e) {
+          // Primary expense was already persisted; surface the PMS scheduling failure honestly.
+          pmsScheduleError = '$e';
         }
       }
     }
 
     if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
+    if (pmsScheduleError != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Logged expense, but failed to schedule next PMS: $pmsScheduleError',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: AppColors.statusDangerStroke,
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(
       SnackBar(
         content: Text(
           scheduledPms
               ? 'Logged expense & scheduled next PMS for ${selectedAsset?.record.title}'
-              : 'Logged expense: $title (${AppConstants.defaultCurrency} ${parsedAmount.toStringAsFixed(2)})',
+              : 'Logged expense: $title (${CurrencyFormatter.formatMinor(amountMinor, currencyCode: AppConstants.defaultCurrency)})',
         ),
-        backgroundColor: AppColors.brandPrimary,
+        backgroundColor: primaryColor,
       ),
     );
   }
@@ -242,10 +361,15 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
   Widget build(BuildContext context) {
     final assetsAsync = ref.watch(activeAssetsStreamProvider);
     final activeAssets = assetsAsync.value ?? <RecordWithAsset>[];
+    final subCategoriesAsync = ref.watch(billsExpensesSubCategoriesStreamProvider);
+    final subCategories = subCategoriesAsync.asData?.value ?? const <Category>[];
+    final categoryOptions = _buildCategoryOptions(subCategories);
 
     final selectedAsset = _selectedAssetRecordId == null
         ? null
         : activeAssets.where((a) => a.record.id == _selectedAssetRecordId).firstOrNull;
+    final showOdometer =
+        _expenseCategory == ExpenseCategory.maintenance.value && _isVehicleAsset(selectedAsset);
 
     return Container(
       decoration: BoxDecoration(
@@ -275,7 +399,7 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Log Expense / Maintenance',
+                      widget.prioritizeAssetLink ? 'Log Maintenance' : 'Log Expense',
                       style: AppTypography.sectionTitle.copyWith(color: context.textPrimary),
                     ),
                     IconButton(
@@ -290,7 +414,9 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                   style: TextStyle(color: context.textPrimary),
                   decoration: InputDecoration(
                     labelText: 'Expense Title *',
-                    hintText: 'e.g. Engine Oil & Filter Change',
+                    hintText: widget.prioritizeAssetLink
+                        ? 'e.g. Engine Oil & Filter Change'
+                        : 'e.g. Groceries, Fuel, Deposit',
                     filled: true,
                     fillColor: context.surfaceContainerLow,
                   ),
@@ -303,6 +429,38 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                   },
                 ),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: const Key('expense_category_dropdown'),
+                  isExpanded: true,
+                  dropdownColor: context.surfaceCard,
+                  initialValue: _expenseCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    filled: true,
+                    fillColor: context.surfaceContainerLow,
+                  ),
+                  items: categoryOptions.map((cat) {
+                    return DropdownMenuItem(
+                      value: cat.value,
+                      child: Text(
+                        cat.label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.textPrimary),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _expenseCategory = val);
+                  },
+                ),
+                if (subCategoriesAsync.hasError) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Custom categories unavailable: ${subCategoriesAsync.error}',
+                    style: AppTypography.caption.copyWith(color: AppColors.statusDangerStroke),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -312,9 +470,10 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                         controller: _amountController,
                         style: TextStyle(color: context.textPrimary),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: const [ThousandsSeparatorInputFormatter()],
                         decoration: InputDecoration(
                           labelText: 'Amount (${AppConstants.defaultCurrency}) *',
-                          hintText: 'e.g. 1250.00',
+                          hintText: 'e.g. 1,250.00',
                           filled: true,
                           fillColor: context.surfaceContainerLow,
                         ),
@@ -322,8 +481,8 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                           if (val == null || val.trim().isEmpty) {
                             return 'Amount is required';
                           }
-                          final parsed = double.tryParse(val.trim());
-                          if (parsed == null || parsed <= 0) {
+                          final parsedMinor = CurrencyFormatter.parseMajorToMinor(val);
+                          if (parsedMinor == null || parsedMinor <= 0) {
                             return 'Enter a positive amount';
                           }
                           return null;
@@ -353,67 +512,13 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        dropdownColor: context.surfaceCard,
-                        initialValue: _expenseCategory,
-                        decoration: InputDecoration(
-                          labelText: 'Category',
-                          filled: true,
-                          fillColor: context.surfaceContainerLow,
-                        ),
-                        items: ExpenseCategory.values.map((cat) {
-                          return DropdownMenuItem(
-                            value: cat.value,
-                            child: Text(
-                              cat.label,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: context.textPrimary),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _expenseCategory = val);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        dropdownColor: context.surfaceCard,
-                        initialValue: _paymentMethod,
-                        decoration: InputDecoration(
-                          labelText: 'Payment Method',
-                          filled: true,
-                          fillColor: context.surfaceContainerLow,
-                        ),
-                        items: [
-                          DropdownMenuItem(value: 'card', child: Text('Credit/Debit Card', style: TextStyle(color: context.textPrimary))),
-                          DropdownMenuItem(value: 'cash', child: Text('Cash', style: TextStyle(color: context.textPrimary))),
-                          DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer', style: TextStyle(color: context.textPrimary))),
-                          DropdownMenuItem(value: 'e_wallet', child: Text('E-Wallet', style: TextStyle(color: context.textPrimary))),
-                          DropdownMenuItem(value: 'other', child: Text('Other', style: TextStyle(color: context.textPrimary))),
-                        ],
-                        onChanged: (val) => setState(() => _paymentMethod = val),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Reusable Asset Link Picker with active AsyncValue handling
-                AssetPickerTile(
-                  selectedAssetRecordId: _selectedAssetRecordId,
-                  noneLabel: 'None (General Expense)',
-                  onAssetChanged: (id) => setState(() => _selectedAssetRecordId = id),
-                ),
-
-                // Odometer at Service (Shown for maintenance logs on vehicle/asset)
-                if (_expenseCategory == ExpenseCategory.maintenance.value && _selectedAssetRecordId != null) ...[
+                if (_shouldShowAssetProminently)
+                  AssetPickerTile(
+                    selectedAssetRecordId: _selectedAssetRecordId,
+                    noneLabel: 'None (General Expense)',
+                    onAssetChanged: (id) => setState(() => _selectedAssetRecordId = id),
+                  ),
+                if (showOdometer) ...[
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: TextFormField(
@@ -432,25 +537,14 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
                     ),
                   ),
                 ],
-
-                TextFormField(
-                  controller: _notesController,
-                  style: TextStyle(color: context.textPrimary),
-                  decoration: InputDecoration(
-                    labelText: 'Notes / Description (Optional)',
-                    hintText: 'Warranty status, technician details, invoice notes...',
-                    filled: true,
-                    fillColor: context.surfaceContainerLow,
-                  ),
-                  maxLines: 2,
-                ),
+                _buildMoreDetailsDrawer(context),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: context.isDarkMode ? AppTheme.darkBrandPrimary : AppColors.brandPrimary,
-                    foregroundColor: AppColors.brandOnPrimary,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
-                  onPressed: _isSubmitting ? null : () => _submit(activeAssets),
+                  onPressed: _isSubmitting ? null : () => _submit(activeAssets, categoryOptions),
                   child: _isSubmitting
                       ? const SizedBox(
                           height: 20,
@@ -463,6 +557,129 @@ class _AddExpenseSheetState extends ConsumerState<AddExpenseSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMoreDetailsDrawer(BuildContext context) {
+    final hasExtraData = _notesController.text.trim().isNotEmpty ||
+        (!_shouldShowAssetProminently && _selectedAssetRecordId != null);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            key: const Key('expense_more_details_toggle'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _isMoreDetailsExpanded = !_isMoreDetailsExpanded),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 46),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.tune_rounded, size: 17, color: context.brandAccent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Payment Method & Notes',
+                        style: AppTypography.cardTitle.copyWith(
+                          fontSize: 13,
+                          color: context.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (hasExtraData) ...[
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: context.brandAccent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Icon(
+                      _isMoreDetailsExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: context.textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_isMoreDetailsExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    dropdownColor: context.surfaceCard,
+                    initialValue: _paymentMethod,
+                    decoration: InputDecoration(
+                      labelText: 'Payment Method',
+                      filled: true,
+                      fillColor: context.surfaceCard,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'card',
+                        child: Text('Credit/Debit Card', style: TextStyle(color: context.textPrimary)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'cash',
+                        child: Text('Cash', style: TextStyle(color: context.textPrimary)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'bank_transfer',
+                        child: Text('Bank Transfer', style: TextStyle(color: context.textPrimary)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'e_wallet',
+                        child: Text('E-Wallet', style: TextStyle(color: context.textPrimary)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'other',
+                        child: Text('Other', style: TextStyle(color: context.textPrimary)),
+                      ),
+                    ],
+                    onChanged: (val) => setState(() => _paymentMethod = val),
+                  ),
+                  const SizedBox(height: 10),
+                  if (!_shouldShowAssetProminently)
+                    AssetPickerTile(
+                      selectedAssetRecordId: _selectedAssetRecordId,
+                      noneLabel: 'None (General Expense)',
+                      onAssetChanged: (id) => setState(() => _selectedAssetRecordId = id),
+                    ),
+                  TextFormField(
+                    controller: _notesController,
+                    style: TextStyle(color: context.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Notes / Description (Optional)',
+                      hintText: 'Warranty status, technician details, invoice notes...',
+                      filled: true,
+                      fillColor: context.surfaceCard,
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

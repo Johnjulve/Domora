@@ -41,6 +41,49 @@ class DocumentRepositoryImpl implements DocumentRepository {
   }
 
   @override
+  Future<void> updateDocumentAssetLink({
+    required String documentRecordId,
+    required String? linkedAssetRecordId,
+  }) async {
+    await _db.transaction(() async {
+      final activeDoc = await (_db.select(_db.records)
+            ..where(
+              (r) =>
+                  r.id.equals(documentRecordId) &
+                  r.recordType.equals('document') &
+                  r.deletedAt.isNull(),
+            ))
+          .getSingleOrNull();
+      if (activeDoc == null) {
+        throw StateError('Active document record not found: $documentRecordId');
+      }
+
+      if (linkedAssetRecordId != null) {
+        final activeAsset = await (_db.select(_db.records)
+              ..where(
+                (r) =>
+                    r.id.equals(linkedAssetRecordId) &
+                    r.recordType.equals('asset') &
+                    r.workspaceId.equals(activeDoc.workspaceId) &
+                    r.deletedAt.isNull(),
+              ))
+            .getSingleOrNull();
+        if (activeAsset == null) {
+          throw StateError(
+            'Active asset record not found in workspace: $linkedAssetRecordId',
+          );
+        }
+      }
+
+      final now = DateTime.now().toUtc();
+      await (_db.update(_db.documents)..where((d) => d.recordId.equals(documentRecordId)))
+          .write(DocumentsCompanion(linkedAssetRecordId: Value(linkedAssetRecordId)));
+      await (_db.update(_db.records)..where((r) => r.id.equals(documentRecordId)))
+          .write(RecordsCompanion(updatedAt: Value(now)));
+    });
+  }
+
+  @override
   Stream<List<RecordWithDocument>> watchDocumentsByWorkspace(
     String workspaceId, {
     String? documentType,

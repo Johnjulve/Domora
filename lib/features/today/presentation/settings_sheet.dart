@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/external_url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
@@ -21,7 +21,9 @@ class SettingsSheet extends ConsumerStatefulWidget {
 
 class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   bool _isCheckingUpdate = false;
+  bool _isLaunchingRelease = false;
   String? _updateStatusMessage;
+  String? _launchErrorMessage;
   String? _releaseUrl;
   bool _hasNewUpdate = false;
   bool _checkFailed = false;
@@ -50,6 +52,8 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     setState(() {
       _isCheckingUpdate = true;
       _updateStatusMessage = 'Connecting to GitHub Releases...';
+      _launchErrorMessage = null;
+      _releaseUrl = null;
       _checkFailed = false;
       _hasNewUpdate = false;
     });
@@ -104,15 +108,34 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   }
 
   Future<void> _launchReleaseUrl() async {
-    if (_releaseUrl == null) return;
-    final uri = Uri.parse(_releaseUrl!);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final releaseUrl = _releaseUrl;
+    if (releaseUrl == null || _isLaunchingRelease) return;
+
+    setState(() {
+      _isLaunchingRelease = true;
+      _launchErrorMessage = null;
+    });
+
+    try {
+      final error = await ref.read(externalUrlLauncherProvider).openHttpUrl(releaseUrl);
+      if (!mounted || _releaseUrl != releaseUrl || _isCheckingUpdate) {
+        return;
+      }
+      if (error != null) {
+        setState(() => _launchErrorMessage = error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLaunchingRelease = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasUpdateError = _checkFailed || _launchErrorMessage != null;
+    final updateStatusMessage = _launchErrorMessage ?? _updateStatusMessage;
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
@@ -241,49 +264,49 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       'Checks GitHub releases repository for new builds, security updates, and offline engine patches.',
                       style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
                     ),
-                    if (_updateStatusMessage != null) ...[
+                    if (updateStatusMessage != null) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _hasNewUpdate
-                              ? AppColors.statusSuccessFill
-                              : _checkFailed
-                                  ? AppColors.statusDangerFill
+                          color: hasUpdateError
+                              ? AppColors.statusDangerFill
+                              : _hasNewUpdate
+                                  ? AppColors.statusSuccessFill
                                   : AppColors.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _hasNewUpdate
-                                ? AppColors.statusSuccessStroke
-                                : _checkFailed
-                                    ? AppColors.statusDangerStroke
+                            color: hasUpdateError
+                                ? AppColors.statusDangerStroke
+                                : _hasNewUpdate
+                                    ? AppColors.statusSuccessStroke
                                     : AppColors.borderSubtle,
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              _hasNewUpdate
-                                  ? Icons.download_for_offline_outlined
-                                  : _checkFailed
-                                      ? Icons.wifi_off_outlined
+                              hasUpdateError
+                                  ? Icons.error_outline
+                                  : _hasNewUpdate
+                                      ? Icons.download_for_offline_outlined
                                       : Icons.check_circle_outline,
                               size: 16,
-                              color: _hasNewUpdate
-                                  ? AppColors.statusSuccessText
-                                  : _checkFailed
-                                      ? AppColors.statusDangerText
+                              color: hasUpdateError
+                                  ? AppColors.statusDangerText
+                                  : _hasNewUpdate
+                                      ? AppColors.statusSuccessText
                                       : AppColors.brandPrimary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _updateStatusMessage!,
+                                updateStatusMessage,
                                 style: AppTypography.caption.copyWith(
-                                  color: _hasNewUpdate
-                                      ? AppColors.statusSuccessText
-                                      : _checkFailed
-                                          ? AppColors.statusDangerText
+                                  color: hasUpdateError
+                                      ? AppColors.statusDangerText
+                                      : _hasNewUpdate
+                                          ? AppColors.statusSuccessText
                                           : AppColors.textPrimary,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -312,7 +335,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         if (_hasNewUpdate) ...[
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
-                            onPressed: _launchReleaseUrl,
+                            onPressed: _isLaunchingRelease ? null : _launchReleaseUrl,
                             icon: const Icon(Icons.open_in_new, size: 16),
                             label: const Text('Download'),
                           ),

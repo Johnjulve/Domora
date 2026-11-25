@@ -1,3 +1,4 @@
+import '../../expenses/domain/expense_item.dart';
 import '../../records/domain/record.dart';
 import 'bill_item.dart';
 
@@ -16,12 +17,33 @@ abstract class BillRepository {
   });
 
   /// Atomically marks a bill as paid and executes the transactional bridge:
-  /// creates a linked [Expense] record with category 'utility' and links both records.
+  /// creates a linked [Expense] record, annotates late manual payments, and
+  /// advances recurring bills to the next upcoming cycle.
   Future<RecordWithBill> markBillAsPaid({
     required String billRecordId,
     required DateTime paidAt,
     String? paymentMethod,
   });
+
+  /// Atomically auto-logs all due cycles for active recurring bills with
+  /// `autoLogPayment == true`, returning the total number of newly logged cycles.
+  Future<int> processDueSubscriptions(String workspaceId, {DateTime? now});
+
+  /// Pauses a recurring bill/subscription without losing its recurrence settings.
+  Future<RecordWithBill> pauseSubscription(String billRecordId);
+
+  /// Cancels a recurring bill/subscription and disables auto-logging.
+  Future<RecordWithBill> cancelSubscription(String billRecordId);
+
+  /// Resumes a paused or cancelled bill/subscription without back-charging missed cycles.
+  Future<RecordWithBill> resumeSubscription({
+    required String billRecordId,
+    DateTime? nextDueDate,
+    bool? autoLogPayment,
+  });
+
+  /// Watches active linked payment expenses for [billRecordId], newest first.
+  Stream<List<RecordWithExpense>> watchPaymentHistoryForBill(String billRecordId);
 
   /// Fetches a single bill record by universal record ID.
   Future<RecordWithBill?> getBillById(String recordId);

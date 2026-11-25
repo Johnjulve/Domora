@@ -1,3 +1,4 @@
+import '../../../core/utils/currency_formatter.dart';
 import '../../records/domain/record.dart';
 
 /// Semantic category definitions for financial expenses and maintenance costs.
@@ -88,11 +89,11 @@ class ExpenseItem {
     this.odometerReading,
   });
 
-  /// Formatted currency string with minor unit conversion (e.g. 150050 -> "PHP 1500.50").
-  String get formattedAmount {
-    final major = amountMinor / 100.0;
-    return '$currencyCode ${major.toStringAsFixed(2)}';
-  }
+  /// Formatted currency string with minor unit conversion (e.g. 150050 -> "PHP 1,500.50").
+  String get formattedAmount => CurrencyFormatter.formatMinor(
+        amountMinor,
+        currencyCode: currencyCode,
+      );
 
   ExpenseItem copyWith({
     String? recordId,
